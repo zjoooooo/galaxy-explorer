@@ -1,0 +1,10 @@
+# Operator-added music (don't commit copyrighted audio)
+audio/*.mp3
+audio/*.ogg
+audio/*.m4a
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
