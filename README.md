@@ -1,6 +1,8 @@
 # Galaxy Explorer 🌌
+Demo Page
 https://zjoooooo.github.io/galaxy-explorer/
-![Uploading image.png…]()
+<img width="1920" height="945" alt="Image_2026-07-04_141404_478" src="https://github.com/user-attachments/assets/ce6388f3-5854-4c13-9d6c-daccac89bf24" />
+
 An interactive, procedurally-generated **Milky Way galaxy** that runs entirely in
 the browser with WebGL (three.js). No backend, no build step, no dependencies to
 install, no API keys — just open the page and explore.
