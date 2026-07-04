@@ -3,6 +3,11 @@ audio/*.mp3
 audio/*.ogg
 audio/*.m4a
 
+# ...except the licensed demo tracks that ship with the site:
+!audio/ambient-space 1.mp3
+!audio/ambient-space 2.mp3
+!audio/the_mountain.mp3
+
 # OS / editor
 .DS_Store
 Thumbs.db
