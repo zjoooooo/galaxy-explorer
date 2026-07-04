@@ -17,6 +17,9 @@ and supernovae are all math.
 
 ---
 
+![Uploading image.png…]()
+
+
 ## ✨ Features
 
 - **Spiral disc** — ~85,000 dust points on four density-wave arms, with a warm
