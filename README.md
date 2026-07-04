@@ -1,5 +1,6 @@
 # Galaxy Explorer 🌌
-
+https://zjoooooo.github.io/galaxy-explorer/
+![Uploading image.png…]()
 An interactive, procedurally-generated **Milky Way galaxy** that runs entirely in
 the browser with WebGL (three.js). No backend, no build step, no dependencies to
 install, no API keys — just open the page and explore.
@@ -10,14 +11,6 @@ and supernovae are all math.
 
 **Free for any use** — personal, commercial, academic and teaching — under the
 [MIT License](LICENSE).
-
-> Live demo: enable **GitHub Pages** on this repo (Settings → Pages → Deploy from
-> `main` / root) and it will be served at
-> `https://zjoooooo.github.io/galaxy-explorer/`.
-
----
-
-![Uploading image.png…]()
 
 
 ## ✨ Features
