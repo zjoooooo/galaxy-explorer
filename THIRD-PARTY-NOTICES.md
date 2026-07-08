@@ -1,6 +1,23 @@
-MIT License
+# Third-Party Notices
 
-Copyright (c) 2026 Justin Zhang Jun
+This project bundles third-party software under `vendor/`. Their copyright and
+license notices are reproduced below. The project itself is under the
+[MIT License](LICENSE).
+
+---
+
+## three.js (r128) and example modules
+
+Bundled under `vendor/`.
+
+Copyright © 2010-2021 three.js authors
+
+Distributed under the MIT License:
+
+```
+The MIT License
+
+Copyright © 2010-2021 three.js authors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +36,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+See https://github.com/mrdoob/three.js for the full source and details.
