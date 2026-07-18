@@ -33,6 +33,13 @@
   #skyback { top: 64px; left: 18px; z-index: 6; display: none; cursor: pointer; font-size: 13px;
     color: #cbd5e1; background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 6px 12px; }
   #skyback:hover { border-color: #6366f1; color: #fff; }
+  #skylabels { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+  .skylabel { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
+    font-size: 13px; letter-spacing: .08em; color: #cfe0ff; white-space: nowrap; text-align: center;
+    text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(120,170,255,.45); transition: opacity .2s ease; }
+  .skylabel small { display: block; font-size: 10px; color: #8fa3c8; letter-spacing: .12em; }
+  .skylabel.dim { opacity: .35; }
+  .skylabel.sel { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 14px rgba(150,190,255,.9); }
 
   /* location beacons: borderless glow-dot + pulse rings + floating label (no boxes, no borders) */
   #beacons { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
@@ -729,7 +736,7 @@
     var mg = new THREE.BufferGeometry();
     mg.setAttribute('position', new THREE.BufferAttribute(mp, 3));
     mg.setAttribute('color', new THREE.BufferAttribute(mc, 3));
-    skyScene.add(new THREE.Points(mg, new THREE.PointsMaterial({ size: 7, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true })));
+    skyScene.add(new THREE.Points(mg, new THREE.PointsMaterial({ size: 9, map: GLOW_TEX, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true })));
     // faint ecliptic circle (obliquity 23.44°) — the zodiac's spine
     var E = 128, ep = new Float32Array(E * 3), eps = 23.439 * Math.PI / 180;
     for (var e = 0; e < E; e++) {
@@ -875,6 +882,63 @@
     });
     return true;
   }
+  var SKY_CONS = [];
+  (function buildZodiac() {
+    var host = document.createElement('div'); host.id = 'skylabels'; document.body.appendChild(host);
+    var starVert = 'uniform float uSize; uniform float uMul; attribute float aScale; varying float vA;' +
+      'void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp;' +
+      ' gl_PointSize = uSize * aScale * uMul; vA = uMul; }';
+    var starFrag = 'varying float vA; void main(){ float d = distance(gl_PointCoord, vec2(0.5)); if (d > 0.5) discard;' +
+      ' float s = pow(max(0.0, 1.0 - d * 2.0), 1.6); gl_FragColor = vec4(vec3(0.86, 0.92, 1.0) * vA, s); }';
+    ZODIAC.forEach(function (z, zi) {
+      var n = z.stars.length, pos = new Float32Array(n * 3), scl = new Float32Array(n), centroid = new THREE.Vector3();
+      var dirs = z.stars.map(function (s) { return raDecDir(s[0], s[1]); });
+      dirs.forEach(function (d, i) {
+        pos[i * 3] = d.x * SKY_R; pos[i * 3 + 1] = d.y * SKY_R; pos[i * 3 + 2] = d.z * SKY_R;
+        scl[i] = Math.max(0.55, Math.pow(1.45, 2.0 - z.stars[i][2])); // brighter (lower mag) → bigger
+        centroid.add(d);
+      });
+      centroid.normalize();
+      var sg = new THREE.BufferGeometry();
+      sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      sg.setAttribute('aScale', new THREE.BufferAttribute(scl, 1));
+      var sm = new THREE.ShaderMaterial({ uniforms: { uSize: { value: 5.5 * renderer.getPixelRatio() }, uMul: { value: 1 } },
+        vertexShader: starVert, fragmentShader: starFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+      skyScene.add(new THREE.Points(sg, sm));
+      var lp = new Float32Array(z.lines.length * 6);
+      z.lines.forEach(function (l, li) {
+        var a = dirs[l[0]], b = dirs[l[1]];
+        lp[li * 6] = a.x * SKY_R; lp[li * 6 + 1] = a.y * SKY_R; lp[li * 6 + 2] = a.z * SKY_R;
+        lp[li * 6 + 3] = b.x * SKY_R; lp[li * 6 + 4] = b.y * SKY_R; lp[li * 6 + 5] = b.z * SKY_R;
+      });
+      var lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(lp, 3));
+      var lm = new THREE.LineBasicMaterial({ color: 0x6f9fe8, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending });
+      skyScene.add(new THREE.LineSegments(lg, lm));
+      var el = document.createElement('div'); el.className = 'skylabel';
+      host.appendChild(el);
+      SKY_CONS.push({ z: z, el: el, dir: centroid, lineMat: lm, starMat: sm, shown: true });
+    });
+    paintSkyLabels(beaconLang);
+    host.style.display = 'none'; // hidden until enterSky
+  })();
+  function paintSkyLabels(lang) {
+    SKY_CONS.forEach(function (c) {
+      c.el.innerHTML = (c.z.t[lang] || c.z.t.en) + '<small>' + c.z.symbol + '</small>';
+    });
+  }
+  var skyTmp = new THREE.Vector3();
+  window.updateSkyLabels = function () {
+    for (var i = 0; i < SKY_CONS.length; i++) {
+      var c = SKY_CONS[i];
+      skyTmp.copy(c.dir).multiplyScalar(SKY_R).project(skyCamera);
+      var vis = viewMode === 'sky' && skyTmp.z < 1 && skyTmp.x > -1.05 && skyTmp.x < 1.05 && skyTmp.y > -1.05 && skyTmp.y < 1.05;
+      if (vis !== c.shown) { c.el.style.display = vis ? '' : 'none'; c.shown = vis; }
+      if (vis) {
+        c.el.style.left = ((skyTmp.x * 0.5 + 0.5) * window.innerWidth) + 'px';
+        c.el.style.top = ((-skyTmp.y * 0.5 + 0.5) * window.innerHeight) + 'px';
+      }
+    }
+  };
   var skybackEl = document.getElementById('skyback');
   function enterSky() {
     if (viewMode === 'sky') return;
