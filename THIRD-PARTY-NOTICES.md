@@ -92,3 +92,17 @@ sourced from Wikimedia Commons.
 - `images/proxima.jpg` — ESA/Hubble & NASA · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:New_shot_of_Proxima_Centauri,_our_nearest_neighbour.jpg)
 - `images/uy-scuti.jpg` — ESO/Digitized Sky Survey 2 · CC BY-SA 3.0 · [source](https://commons.wikimedia.org/wiki/File:UY_Scuti_zoomed_in,_DSS2_survey,_2003.png)
 - `images/trappist1.jpg` — Artist’s impression: NASA, ESA, and G. Bacon (STScI) · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Artist%27s_view_of_planets_transiting_red_dwarf_star_in_TRAPPIST-1_system.jpg)
+
+### Constellation card images (`images/cons-*.jpg`)
+
+Wide-field photographs of the 8 famous non-zodiac constellations, from the same
+Eckhard Slawik / NOIRLab series as the zodiac cards (Wikimedia Commons).
+
+- `images/cons-ursa-major.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Ursa_Major_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(ursa-major).jpg)
+- `images/cons-orion.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Orion_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(orion).jpg)
+- `images/cons-cassiopeia.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Cassiopeia_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(cassiopeia).jpg)
+- `images/cons-crux.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Crux_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(crux).jpg)
+- `images/cons-cygnus.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Cygnus_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(cygnus).jpg)
+- `images/cons-lyra.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Lyra_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(lyra).jpg)
+- `images/cons-ursa-minor.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Ursa_Minor_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(ursa-minor).jpg)
+- `images/cons-canis-major.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Canis_Major_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(canis-major).jpg)

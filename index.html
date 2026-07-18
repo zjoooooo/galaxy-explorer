@@ -702,7 +702,7 @@
       '<div id="bp-desc">' + esc(o.desc) + '</div>' +
       (o.catalog ? '<div id="bp-cat">' + esc(o.catalog) + '</div>' : '');
     if (i === 0) { // Solar System card → doorway to the Earth-sky view
-      var zl = { en: '♈ Zodiac Constellations · view the sky →', hans: '♈ 十二星座 · 查看星空 →', hant: '♈ 十二星座 · 查看星空 →', ja: '♈ 黄道十二星座 · 星空を見る →', ko: '♈ 황도 12궁 · 하늘 보기 →' };
+      var zl = { en: '✨ Constellations · view the night sky →', hans: '✨ 星座天空 · 查看星空 →', hant: '✨ 星座天空 · 查看星空 →', ja: '✨ 星座の空 · 星空を見る →', ko: '✨ 별자리 하늘 · 밤하늘 보기 →' };
       bpBody.innerHTML += '<div id="bp-zodiac-link">' + (zl[lang] || zl.en) + '</div>';
     }
   }
@@ -971,6 +971,16 @@
         if (l[0] >= z.stars.length || l[1] >= z.stars.length || l[0] < 0 || l[1] < 0) throw new Error(z.key + ' line index out of range');
       });
     });
+    if (typeof CONS_EXTRA !== 'undefined') CONS_EXTRA.forEach(function (z) {
+      langs.forEach(function (L) {
+        if (!z.t[L]) throw new Error(z.key + ' missing name ' + L);
+        var o = z.info[L];
+        if (!o || !o.season || !o.brightest || !o.desc) throw new Error(z.key + ' missing info.' + L);
+      });
+      if (z.starNames.length !== z.stars.length) throw new Error(z.key + ' starNames length mismatch');
+      z.stars.forEach(function (s) { if (s[0] < 0 || s[0] >= 24 || s[1] < -90 || s[1] > 90) throw new Error(z.key + ' star out of range'); });
+      z.lines.forEach(function (l) { if (l[0] >= z.stars.length || l[1] >= z.stars.length || l[0] < 0 || l[1] < 0) throw new Error(z.key + ' line index out of range'); });
+    });
     return true;
   }
   // ── Japanese + Korean localisation, merged into the beacon + zodiac data ──
@@ -1037,6 +1047,50 @@
     {"img":"images/zodiac-pisces.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"}
   ];
   ZODIAC_IMGS.forEach(function (x, i) { ZODIAC[i].img = x.img; ZODIAC[i].credit = x.credit; });
+  // ── 8 famous non-zodiac constellations (Big Dipper, Orion, Southern Cross, …) ──
+  // Same star-map structure as ZODIAC but with season/hemisphere instead of astrology dates.
+  var CONS_EXTRA = [
+    { key:"ursa-major",
+      t:{"en":"Ursa Major","hans":"大熊座","hant":"大熊座","ja":"おおぐま座","ko":"큰곰자리"},
+      stars:[[11.06,61.75,1.79],[11.03,56.38,2.37],[11.9,53.69,2.44],[12.26,57.03,3.31],[12.9,55.96,1.77],[13.4,54.93,2.23],[13.79,49.31,1.86]], starNames:["Dubhe","Merak","Phecda","Megrez","Alioth","Mizar","Alkaid"], lines:[[0,1],[1,2],[2,3],[3,0],[3,4],[4,5],[5,6]],
+      info:{ en:{"season":"Spring · Northern Hemisphere (circumpolar)","brightest":"Alioth","desc":"Ursa Major is the Great Bear of Greek myth—the nymph Callisto, whom Zeus placed among the stars. Its seven brightest stars form the Big Dipper, and the two outer stars of the bowl, Dubhe and Merak, point straight to Polaris, the North Star, making it the sky's most famous signpost for finding true north."}, hans:{"season":"春季 · 北半球（拱极星座）","brightest":"玉衡","desc":"大熊座是希腊神话中的大熊——仙女卡利斯托被宙斯化作星辰。它最亮的七颗星组成北斗七星，斗口外侧的天枢与天璇两星连线，直指北极星，自古就是人们辨认北方、寻找方向的最著名指引。"}, hant:{"season":"春季 · 北半球（拱極星座）","brightest":"玉衡","desc":"大熊座是希臘神話中的大熊——仙女卡利斯托被宙斯化作星辰。它最亮的七顆星組成北斗七星，斗口外側的天樞與天璇兩星連線，直指北極星，自古就是人們辨認北方、尋找方向的最著名指引。"}, ja:{"season":"春 · 北半球（周極星）","brightest":"アリオト","desc":"おおぐま座はギリシア神話の大熊——ゼウスによって星にされたニンフ、カリストの姿です。明るい七つの星が北斗七星をかたちづくり、ますの先にある二つの星、ドゥーベとメラクを結んだ線を伸ばすと北極星に至り、北の方角を知る道しるべとして古くから親しまれてきました。"}, ko:{"season":"봄 · 북반구(주극성)","brightest":"알리오트","desc":"큰곰자리는 그리스 신화의 큰 곰으로, 제우스가 하늘에 올린 요정 칼리스토의 모습입니다. 가장 밝은 일곱 별이 북두칠성을 이루며, 국자 바깥쪽 끝의 두베와 메라크 두 별을 이으면 바로 북극성에 닿아, 예로부터 북쪽 방향을 찾는 가장 유명한 길잡이가 되어 왔습니다."} },
+      img:"images/cons-ursa-major.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"orion",
+      t:{"en":"Orion","hans":"猎户座","hant":"獵戶座","ja":"オリオン座","ko":"오리온자리"},
+      stars:[[5.92,7.41,0.42],[5.24,-8.2,0.13],[5.42,6.35,1.64],[5.8,-9.67,2.09],[5.68,-1.94,1.77],[5.6,-1.2,1.69],[5.53,-0.3,2.23]], starNames:["Betelgeuse","Rigel","Bellatrix","Saiph","Alnitak","Alnilam","Mintaka"], lines:[[0,2],[0,4],[2,6],[4,5],[5,6],[4,3],[6,1]],
+      info:{ en:{"season":"Winter · equatorial (visible from both hemispheres)","brightest":"Rigel","desc":"Orion is the great hunter of Greek myth, placed among the stars after his death from a scorpion's sting. His famous three-star Belt points down to Sirius, the brightest star in the night sky, making Orion a handy signpost for finding your way around the winter heavens. Just below the Belt hangs the Orion Nebula, a glowing stellar nursery where new stars are being born."}, hans:{"season":"冬季 · 赤道带(南北半球均可见)","brightest":"参宿七","desc":"猎户座是希腊神话中伟大的猎人俄里翁,他被蝎子蜇死后被安置在群星之间。著名的“腰带”三星连成一线,向下指向夜空中最亮的恒星天狼星,是冬季星空中最好用的指路标。腰带下方悬挂着猎户座大星云,那是一处正在孕育新恒星的恒星育婴室。"}, hant:{"season":"冬季 · 赤道帶(南北半球皆可見)","brightest":"參宿七","desc":"獵戶座是希臘神話中偉大的獵人俄里翁,他被蠍子螫死後被安置在群星之間。著名的「腰帶」三星連成一線,向下指向夜空中最亮的恆星天狼星,是冬季星空中最好用的指路標。腰帶下方懸掛著獵戶座大星雲,那是一處正在孕育新恆星的恆星育嬰室。"}, ja:{"season":"冬 · 天の赤道付近(南北両半球で見える)","brightest":"リゲル","desc":"オリオン座はギリシャ神話の偉大な狩人オリオンで、サソリに刺されて死んだ後、星々の間に置かれました。有名な三つ星の「ベルト」は一直線に並び、夜空で最も明るい星シリウスへと導く、冬の星空の便利な道しるべです。ベルトのすぐ下には、新しい星々が生まれつつある輝く星のゆりかご、オリオン大星雲がかかっています。"}, ko:{"season":"겨울 · 천구 적도 부근 (남북 양반구에서 관측 가능)","brightest":"리겔","desc":"오리온자리는 그리스 신화의 위대한 사냥꾼 오리온으로, 전갈에 쏘여 죽은 뒤 별들 사이에 놓였습니다. 나란히 늘어선 세 별로 이루어진 유명한 ‘허리띠’는 밤하늘에서 가장 밝은 별 시리우스를 가리키며, 겨울 밤하늘의 훌륭한 길잡이가 됩니다. 허리띠 바로 아래에는 새로운 별들이 태어나고 있는 빛나는 별의 요람, 오리온 대성운이 걸려 있습니다."} },
+      img:"images/cons-orion.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"cassiopeia",
+      t:{"en":"Cassiopeia","hans":"仙后座","hant":"仙后座","ja":"カシオペア座","ko":"카시오페이아자리"},
+      stars:[[0.153,59.15,2.28],[0.675,56.54,2.24],[0.945,60.72,2.47],[1.43,60.24,2.68],[1.907,63.67,3.35]], starNames:["Caph","Schedar","Gamma Cas","Ruchbah","Segin"], lines:[[0,1],[1,2],[2,3],[3,4]],
+      info:{ en:{"season":"Autumn · Northern Hemisphere (circumpolar, visible all year up north)","brightest":"Schedar","desc":"Cassiopeia was the vain queen of Aethiopia in Greek myth, punished by being fixed to her throne in the sky, where she circles the pole upside down for half the year. Her five bright stars trace an unmistakable W (or M) that, sitting opposite the Big Dipper across the North Star, serves as a backup pointer to Polaris. Her brightest star, Schedar, marks the queen's heart."}, hans:{"season":"秋季 · 北半球（拱极星座，北方全年可见）","brightest":"王良四","desc":"仙后座代表希腊神话中高傲的埃塞俄比亚王后，因自负而被罚紧锁在王座上，半年都头朝下地绕北极旋转。它的五颗亮星勾勒出鲜明的 W（或 M）形，与北斗隔着北极星遥遥相对，可作为寻找北极星的另一个指引。其最亮的王良四代表王后的心脏。"}, hant:{"season":"秋季 · 北半球（拱極星座，北方全年可見）","brightest":"王良四","desc":"仙后座代表希臘神話中高傲的埃塞俄比亞王后，因自負而被罰緊鎖在王座上，半年都頭朝下地繞北極旋轉。它的五顆亮星勾勒出鮮明的 W（或 M）形，與北斗隔著北極星遙遙相對，可作為尋找北極星的另一個指引。其最亮的王良四代表王后的心臟。"}, ja:{"season":"秋 · 北半球（周極星、北の地方では一年中見える）","brightest":"シェダル","desc":"カシオペア座は、ギリシア神話で虚栄心の強いエチオピアの妃カシオペアを表し、罰として玉座に縛りつけられ、半年は逆さまに天の北極をまわります。五つの明るい星が描く形は W（または M）に見え、北極星をはさんで北斗七星の反対側に位置するため、北極星を見つけるもう一つの目印になります。最も明るいシェダルは妃の心臓を示します。"}, ko:{"season":"가을 · 북반구(주극성, 북쪽 지방에서는 일 년 내내 보임)","brightest":"쉐다르","desc":"카시오페이아자리는 그리스 신화에서 오만했던 에티오피아의 왕비 카시오페이아를 나타내며, 벌로 왕좌에 묶여 반년 동안 거꾸로 매달려 천구의 북극을 돕니다. 다섯 개의 밝은 별이 그리는 뚜렷한 W(또는 M) 모양은 북극성을 사이에 두고 북두칠성과 마주 보여, 북극성을 찾는 또 하나의 길잡이가 됩니다. 가장 밝은 쉐다르는 왕비의 심장을 나타냅니다."} },
+      img:"images/cons-cassiopeia.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"crux",
+      t:{"en":"Crux (the Southern Cross)","hans":"南十字座","hant":"南十字座","ja":"みなみじゅうじ座","ko":"남십자자리"},
+      stars:[[12.443,-63.1,0.77],[12.795,-59.69,1.25],[12.519,-57.11,1.63],[12.252,-58.75,2.79],[12.357,-60.4,3.59]], starNames:["Acrux","Mimosa","Gacrux","Delta Crucis","Epsilon Crucis"], lines:[[2,0],[3,1],[0,4]],
+      info:{ en:{"season":"Autumn · Southern Hemisphere","brightest":"Acrux","desc":"Too far south for the ancient Greeks to see, Crux was once counted as part of the Centaur and was named a constellation of its own by Renaissance navigators. Sailors extend its long arm about four and a half times to locate the south celestial pole, making the cross the great signpost of the southern sky and a familiar emblem on several national flags. Right beside it glitter the colorful Jewel Box star cluster and the inky Coalsack dark nebula."}, hans:{"season":"秋季 · 南半球","brightest":"十字架二","desc":"身处北方的古希腊人从未见过南十字座，它原本只是半人马座的一部分，直到文艺复兴时期才被航海家单独命名成星座。水手把十字的长轴延长约四倍半，就能找到南天极，因此它是南半球夜空最重要的指向标，也出现在好几个国家的国旗上。它旁边还点缀着色彩缤纷的珠宝盒星团和漆黑的煤袋暗星云。"}, hant:{"season":"秋季 · 南半球","brightest":"十字架二","desc":"身處北方的古希臘人從未見過南十字座，它原本只是半人馬座的一部分，直到文藝復興時期才被航海家單獨命名成星座。水手把十字的長軸延長約四倍半，就能找到南天極，因此它是南半球夜空最重要的指向標，也出現在好幾個國家的國旗上。它旁邊還點綴著色彩繽紛的珠寶盒星團與漆黑的煤袋暗星雲。"}, ja:{"season":"秋 · 南半球","brightest":"アクルックス","desc":"北にいた古代ギリシャ人には見えず、みなみじゅうじ座はもともとケンタウルス座の一部で、大航海時代の航海者によって独立した星座となりました。十字の長い軸を約四倍半に伸ばすと天の南極が見つかるため、南天の道しるべとして親しまれ、いくつかの国の国旗にも描かれています。すぐそばには色とりどりの宝石箱星団と、漆黒の石炭袋暗黒星雲が広がっています。"}, ko:{"season":"가을 · 남반구","brightest":"아크룩스","desc":"북쪽에 살던 고대 그리스인은 볼 수 없었던 남십자자리는 본래 센타우루스자리의 일부였으며, 대항해시대 항해자들이 독립된 별자리로 이름 붙였습니다. 십자의 긴 축을 약 네 배 반 늘이면 천구의 남극을 찾을 수 있어 남쪽 하늘의 길잡이로 쓰이며, 여러 나라의 국기에도 그려져 있습니다. 바로 곁에는 화려한 보석상자 성단과 새까만 석탄자루 암흑성운이 자리합니다."} },
+      img:"images/cons-crux.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"cygnus",
+      t:{"en":"Cygnus","hans":"天鹅座","hant":"天鵝座","ja":"はくちょう座","ko":"백조자리"},
+      stars:[[20.690528,45.280339,1.25],[20.370473,40.256679,2.23],[19.512023,27.959681,3.05],[20.77018,33.970256,2.48],[19.749585,45.13081,2.87],[19.4951,51.729778,3.79],[21.215694,30.226924,3.2]], starNames:["Deneb","Sadr","Albireo","Gienah","Delta Cygni","Iota Cygni","Zeta Cygni"], lines:[[0,1],[1,4],[1,3],[1,2],[4,5],[3,6]],
+      info:{ en:{"season":"Summer · Northern Hemisphere","brightest":"Deneb","desc":"Cygnus is the swan into which Zeus transformed himself, and in another myth the loyal friend Cycnus who mourned Phaethon along the river Eridanus. Its brightest stars form the Northern Cross, a landmark that stands high overhead on summer evenings. Deneb, the swan's tail, is one corner of the Summer Triangle and among the most luminous stars known to us."}, hans:{"season":"夏季 · 北半球","brightest":"天津四","desc":"天鹅座是宙斯为接近凡间女子而化身的天鹅，也有神话说它是为坠落的法厄同悲伤而化为天鹅的忠诚友人库克诺斯。它最亮的几颗星组成了醒目的“北十字”，在夏夜高悬于头顶。座中最亮的天津四是天鹅的尾羽，也是“夏季大三角”的一角，属于人类已知最明亮的恒星之一。"}, hant:{"season":"夏季 · 北半球","brightest":"天津四","desc":"天鵝座是宙斯為接近凡間女子而化身的天鵝，也有神話說牠是為墜落的法厄同悲傷而化為天鵝的忠誠友人庫克諾斯。牠最亮的幾顆星組成醒目的「北十字」，在夏夜高懸於頭頂。座中最亮的天津四是天鵝的尾羽，也是「夏季大三角」的一角，屬於人類已知最明亮的恆星之一。"}, ja:{"season":"夏 · 北半球","brightest":"デネブ","desc":"はくちょう座は、ゼウスが姿を変えた白鳥、あるいは墜落したパエトーンを悼んで白鳥になった忠実な友キュクノスの姿とされます。明るい星々が「北十字（ノーザンクロス）」を描き、夏の夜空の高くに輝きます。尾にあたるデネブは「夏の大三角」の一角で、宇宙で最も明るい部類の恒星として知られています。"}, ko:{"season":"여름 · 북반구","brightest":"데네브","desc":"백조자리는 제우스가 변신한 백조, 또는 추락한 파에톤을 애도하다 백조가 된 충실한 친구 키크노스의 모습으로 전해집니다. 밝은 별들이 '북십자'를 이루어 여름밤 하늘 높이 빛납니다. 백조의 꼬리에 해당하는 데네브는 '여름의 대삼각형'을 이루는 한 꼭짓점이며, 우주에서 가장 밝은 별 가운데 하나로 알려져 있습니다."} },
+      img:"images/cons-cygnus.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"lyra",
+      t:{"en":"Lyra","hans":"天琴座","hant":"天琴座","ja":"こと座","ko":"거문고자리"},
+      stars:[[18.615,38.78,0.03],[18.738,39.67,4.59],[18.746,37.6,4.36],[18.908,36.9,4.3],[18.982,32.69,3.24],[18.835,33.36,3.52]], starNames:["Vega","Epsilon Lyrae","Zeta Lyrae","Delta Lyrae","Sulafat","Sheliak"], lines:[[0,1],[0,2],[1,2],[2,3],[3,4],[4,5],[5,2]],
+      info:{ en:{"season":"Summer · Northern Hemisphere","brightest":"Vega","desc":"Lyra represents the lyre of Orpheus, the legendary musician whose songs could charm all living things and even the gods of the underworld. Its brightest star, Vega, is one of the three stars of the Summer Triangle, an easy pattern for finding your way around the summer sky. Lyra is also home to the famous Ring Nebula, a glowing shell of gas puffed off by a dying star."}, hans:{"season":"夏季 · 北半球","brightest":"织女星","desc":"天琴座代表传说中音乐家俄耳甫斯的琴，他的乐声能打动万物，甚至感化冥界的神。它最亮的星织女星是“夏季大三角”的三颗星之一，是夏夜辨认方向的好帮手。天琴座里还有著名的环状星云，那是一颗垂死恒星抛出的发光气壳。"}, hant:{"season":"夏季 · 北半球","brightest":"織女星","desc":"天琴座代表傳說中音樂家奧菲斯的琴，他的樂聲能打動萬物，甚至感化冥界的神。它最亮的星織女星是「夏季大三角」的三顆星之一，是夏夜辨認方向的好幫手。天琴座裡還有著名的環狀星雲，那是一顆垂死恆星拋出的發光氣殼。"}, ja:{"season":"夏 · 北半球","brightest":"ベガ（織女星）","desc":"こと座は、歌であらゆるものを魅了し、冥界の神さえも動かしたという伝説の音楽家オルフェウスの竪琴（リラ）を表します。最も明るい星ベガ（織女星）は「夏の大三角」をなす三つの星の一つで、夏の夜空で方角をつかむ目印になります。こと座には有名な環状星雲（リング星雲）もあり、これは寿命を終えつつある星が放出したガスの殻です。"}, ko:{"season":"여름 · 북반구","brightest":"직녀성(베가)","desc":"거문고자리는 노래로 모든 생명체를 매혹하고 저승의 신들까지 감동시켰다는 전설적인 음악가 오르페우스의 수금(리라)을 나타냅니다. 가장 밝은 별인 직녀성(베가)은 '여름의 대삼각형'을 이루는 세 별 중 하나로, 여름밤 하늘에서 방향을 찾는 좋은 길잡이가 됩니다. 거문고자리에는 유명한 고리 성운도 있는데, 이는 생을 마감하는 별이 뿜어낸 빛나는 가스 껍질입니다."} },
+      img:"images/cons-lyra.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"ursa-minor",
+      t:{"en":"Ursa Minor","hans":"小熊座","hant":"小熊座","ja":"こぐま座","ko":"작은곰자리"},
+      stars:[[2.53,89.26,1.98],[14.85,74.16,2.08],[15.35,71.83,3.05],[17.54,86.59,4.36],[16.77,82.04,4.22],[15.73,77.79,4.32],[16.29,75.76,4.95]], starNames:["Polaris","Kochab","Pherkad","Yildun","Epsilon UMi","Zeta UMi","Eta UMi"], lines:[[0,3],[3,4],[4,5],[5,1],[1,2],[2,6],[6,5]],
+      info:{ en:{"season":"Summer evenings, best in June · Circumpolar in the Northern Hemisphere","brightest":"Polaris","desc":"In Greek myth, Ursa Minor is the little bear Arcas, son of Callisto, placed in the sky beside his mother (Ursa Major) by Zeus. Its brightest star, Polaris, sits almost exactly at the North Celestial Pole, so it barely moves as the other stars wheel around it. For centuries sailors and travelers found true north simply by locating Polaris at the tip of the Little Dipper's handle."}, hans:{"season":"夏季夜晚，六月最佳 · 北半球拱极星座","brightest":"北极星","desc":"在希腊神话中，小熊座是卡利斯托之子小熊阿卡斯，宙斯将他升上天空，安放在母亲大熊座的身旁。它最亮的恒星北极星几乎正处于天球北极，因此当其他星辰绕它旋转时，它几乎纹丝不动。数百年来，水手和旅人只需在小北斗勺柄末端找到北极星，便能确定正北方向。"}, hant:{"season":"夏季夜晚，六月最佳 · 北半球拱極星座","brightest":"北極星","desc":"在希臘神話中，小熊座是卡利斯托之子小熊阿卡斯，宙斯將他升上天空，安放在母親大熊座的身旁。它最亮的恆星北極星幾乎正處於天球北極，因此當其他星辰繞它旋轉時，它幾乎紋絲不動。數百年來，水手與旅人只需在小北斗杓柄末端找到北極星，便能辨明正北方向。"}, ja:{"season":"夏の宵、6月が見頃 · 北半球の周極星座","brightest":"北極星（ポラリス）","desc":"ギリシャ神話では、こぐま座はカリストの息子である小熊アルカスで、ゼウスが天に上げて母（おおぐま座）のそばに置いた姿とされます。最も明るい星ポラリス（北極星）は天の北極のごく近くにあり、ほかの星がその周りを回っても、ほとんど動きません。そのため何世紀もの間、船乗りや旅人は小北斗の柄の先にある北極星を頼りに真北を知りました。"}, ko:{"season":"여름 저녁, 6월에 가장 좋음 · 북반구 주극 별자리","brightest":"북극성","desc":"그리스 신화에서 작은곰자리는 칼리스토의 아들인 작은 곰 아르카스로, 제우스가 어머니(큰곰자리) 곁에 두려고 하늘로 올린 모습이라 전해집니다. 가장 밝은 별인 북극성은 천구의 북극 가까이에 자리해, 다른 별들이 그 둘레를 도는 동안에도 거의 움직이지 않습니다. 그래서 수백 년 동안 뱃사람과 나그네는 작은 국자 손잡이 끝의 북극성을 찾아 정북 방향을 알아냈습니다."} },
+      img:"images/cons-ursa-minor.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"canis-major",
+      t:{"en":"Canis Major","hans":"大犬座","hant":"大犬座","ja":"おおいぬ座","ko":"큰개자리"},
+      stars:[[6.752,-16.72,-1.46],[6.378,-17.96,1.98],[7.14,-26.39,1.83],[6.977,-28.97,1.5],[7.402,-29.3,2.45]], starNames:["Sirius","Mirzam","Wezen","Adhara","Aludra"], lines:[[1,0],[0,3],[3,2],[2,4]],
+      info:{ en:{"season":"Winter · Southern sky","brightest":"Sirius","desc":"Canis Major is the greater of the two hunting dogs following Orion across the sky, often linked to Laelaps, a mythological hound so swift it always caught its prey. Its brightest star, Sirius, is the most brilliant star in the entire night sky, and its predawn 'heliacal' rising once told the ancient Egyptians that the Nile's annual flood was near. Look just below and to the left of Orion on a winter evening to spot the Dog Star gleaming with a faint blue-white sparkle."}, hans:{"season":"冬季 · 南天","brightest":"天狼星","desc":"大犬座是跟随猎户座奔驰于天际的两只猎犬中较大的一只，常与神话中的猎犬拉埃拉普斯相联系——它奔跑极快，追逐的猎物无一能够逃脱。它最亮的恒星天狼星是整个夜空中最明亮的恒星；在古埃及，天狼星黎明前的偕日升起曾预示着尼罗河一年一度的泛滥即将来临。冬夜里，只要望向猎户座的左下方，就能看到这颗闪着淡淡蓝白光芒的天狼星。"}, hant:{"season":"冬季 · 南天","brightest":"天狼星","desc":"大犬座是跟隨獵戶座奔馳於天際的兩隻獵犬中較大的一隻，常與神話中的獵犬拉埃拉普斯相聯繫——牠奔跑極快，追逐的獵物無一能夠逃脫。牠最亮的恆星天狼星是整個夜空中最明亮的恆星；在古埃及，天狼星黎明前的偕日升起曾預示著尼羅河一年一度的氾濫即將來臨。冬夜裡，只要望向獵戶座的左下方，就能看到這顆閃著淡淡藍白光芒的天狼星。"}, ja:{"season":"冬 · 南天","brightest":"シリウス","desc":"おおいぬ座は、天を駆けるオリオンに従う二匹の猟犬のうち大きいほうで、どんな獲物も逃さない俊足の神話の猟犬ライラプスとしばしば結びつけられます。最も明るい星シリウスは全天で最も輝く恒星で、その夜明け前の出現（ヘリアカル・ライジング）は、かつて古代エジプトでナイル川の氾濫が近いことを告げる目印でした。冬の夕空でオリオンの左下を見れば、青白くきらめくこの「犬の星」を見つけられます。"}, ko:{"season":"겨울 · 남쪽 하늘","brightest":"시리우스","desc":"큰개자리는 하늘을 가로질러 오리온을 뒤따르는 두 마리 사냥개 중 큰 쪽으로, 어떤 사냥감도 놓치지 않을 만큼 빠른 신화 속 사냥개 라일랍스와 자주 연결됩니다. 가장 밝은 별 시리우스는 밤하늘 전체에서 가장 밝게 빛나는 항성으로, 새벽녘 동트기 직전에 떠오르는 '일출 직전 출현(헬리아컬 라이징)'은 고대 이집트에서 나일강의 연례 범람이 다가왔음을 알려 주는 신호였습니다. 겨울 저녁 오리온의 왼쪽 아래를 바라보면 푸른빛이 도는 흰빛으로 반짝이는 이 '개의 별'을 찾을 수 있습니다."} },
+      img:"images/cons-canis-major.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" }
+  ];
   var SKY_CONS = [];
   (function buildZodiac() {
     var host = document.createElement('div'); host.id = 'skylabels'; document.body.appendChild(host);
@@ -1045,7 +1099,7 @@
       ' gl_PointSize = uSize * aScale * uMul; vA = uMul; }';
     var starFrag = 'varying float vA; void main(){ float d = distance(gl_PointCoord, vec2(0.5)); if (d > 0.5) discard;' +
       ' float s = pow(max(0.0, 1.0 - d * 2.0), 1.6); gl_FragColor = vec4(vec3(0.86, 0.92, 1.0) * vA, s); }';
-    ZODIAC.forEach(function (z, zi) {
+    ZODIAC.concat(CONS_EXTRA).forEach(function (z, zi) {
       var n = z.stars.length, pos = new Float32Array(n * 3), scl = new Float32Array(n), centroid = new THREE.Vector3();
       var dirs = z.stars.map(function (s) { return raDecDir(s[0], s[1]); });
       dirs.forEach(function (d, i) {
@@ -1079,7 +1133,7 @@
   })();
   function paintSkyLabels(lang) {
     SKY_CONS.forEach(function (c) {
-      c.el.innerHTML = (c.z.t[lang] || c.z.t.en) + '<small>' + c.z.symbol + '</small>';
+      c.el.innerHTML = (c.z.t[lang] || c.z.t.en) + (c.z.symbol ? '<small>' + c.z.symbol + '</small>' : '');
     });
   }
   var skyTmp = new THREE.Vector3();
@@ -1097,18 +1151,19 @@
   };
   window.skySelected = null;
   function renderConstellationPanel(i, lang) {
-    var z = SKY_CONS[i].z, o = z.info[lang] || z.info.en, name = z.t[lang] || z.t.en;
+    var z = SKY_CONS[i].z, o = z.info[lang] || z.info.en, name = z.t[lang] || z.t.en, isZod = !!z.symbol;
     var K = { en: ['Zodiac constellation', 'Dates', 'Brightest star', 'Main stars'], hans: ['黄道星座', '日期', '最亮星', '主要亮星'], hant: ['黃道星座', '日期', '最亮星', '主要亮星'], ja: ['黄道十二星座', '期間', '最も明るい星', '主要な星'], ko: ['황도 12궁 별자리', '기간', '가장 밝은 별', '주요 별'] };
-    var k = K[lang] || K.en;
+    var KC = { en: ['Constellation', 'Best seen'], hans: ['星座', '最佳观测'], hant: ['星座', '最佳觀測'], ja: ['星座', '見頃'], ko: ['별자리', '관측 시기'] };
+    var k = K[lang] || K.en, kc = KC[lang] || KC.en;
     bpBody.innerHTML =
-      '<div id="bp-name" style="color:#9cc0ff">' + esc(name) + ' ' + z.symbol + '</div>' +
-      '<span id="bp-type">' + esc(k[0]) + '</span>' +
+      '<div id="bp-name" style="color:#9cc0ff">' + esc(name) + (z.symbol ? ' ' + z.symbol : '') + '</div>' +
+      '<span id="bp-type">' + esc(isZod ? k[0] : kc[0]) + '</span>' +
       (z.img ? '<img id="bp-img" src="' + z.img + '" alt="' + esc(name) + '" loading="lazy"><div id="bp-credit">' + esc(z.credit || '') + '</div>' : '') +
-      '<div class="bp-row"><span class="k">' + esc(k[1]) + '</span><span class="v">' + esc(o.dates) + '</span></div>' +
+      '<div class="bp-row"><span class="k">' + esc(isZod ? k[1] : kc[1]) + '</span><span class="v">' + esc(isZod ? o.dates : o.season) + '</span></div>' +
       '<div class="bp-row"><span class="k">' + esc(k[2]) + '</span><span class="v">' + esc(o.brightest) + '</span></div>' +
       '<div class="bp-row"><span class="k">' + esc(k[3]) + '</span><span class="v">' + z.stars.length + '</span></div>' +
       '<div id="bp-desc">' + esc(o.desc) + '</div>' +
-      '<div id="bp-cat">' + z.symbol + ' · ' + esc(z.t.en) + '</div>';
+      '<div id="bp-cat">' + (z.symbol ? z.symbol + ' · ' : '') + esc(z.t.en) + '</div>';
   }
   function selectSky(i) {
     if (i === skySelected) { clearSkySelection(); return; }
