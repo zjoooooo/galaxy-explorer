@@ -1084,15 +1084,8 @@
     {"img":"images/andromeda.jpg","credit":"Adam Evans"}
   ];
   BEACON_IMGS.forEach(function (x, i) { BEACONS[i].img = x.img; BEACONS[i].credit = x.credit; });
-  // Andromeda: its real photo as a far-sky billboard at the beacon's direction (additive so the black frame vanishes)
-  (function () {
-    var ax = null; for (var i = 0; i < BEACONS.length; i++) if (BEACONS[i].fixed) { ax = BEACONS[i]; break; }
-    if (!ax) return;
-    new THREE.TextureLoader().load('images/andromeda.jpg', function (tex) {
-      var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending }));
-      sp.position.copy(ax.p); sp.scale.set(340, 340 * 591 / 900, 1); scene.add(sp);
-    });
-  })();
+  // (Andromeda's beacon is anchored onto the procedural "great neighbour" spiral below —
+  //  a real-photo billboard here looked like a washed-out purple blob; the card keeps the real M31 photo.)
   var ZODIAC_IMGS = [
     {"img":"images/zodiac-aries.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
     {"img":"images/zodiac-taurus.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
@@ -1820,11 +1813,12 @@
       cx4.fillStyle = 'rgba(225,235,255,' + r2(0.2, 0.75).toFixed(2) + ')';
       cx4.fillRect(Math.round(256 + ax4 * 235), Math.round(256 + ay4 * 235), 1, 1);
     }
-    var gnTh = r2(0, 6.283), gnPh = r2(0.6, 1.1); // upper-sky corner, away from the disc plane clutter
-    var gnR = 1150;
+    // fixed upper-sky spot, isolated against black (the spiral reads best there, away from the bulge)
+    var gnR = 1150, gnPh = 0.72, gnTh = 2.1;
+    var gnP = new THREE.Vector3(gnR * Math.sin(gnPh) * Math.cos(gnTh), gnR * Math.cos(gnPh), gnR * Math.sin(gnPh) * Math.sin(gnTh));
+    for (var gj = 0; gj < BEACONS.length; gj++) if (BEACONS[gj].fixed) { BEACONS[gj].p.copy(gnP); break; } // the Andromeda beacon sits on the spiral (M31 = the great neighbour)
     scene.add(billboardBatch(new THREE.CanvasTexture(cnv4),
-      [{ p: [gnR * Math.sin(gnPh) * Math.cos(gnTh), gnR * Math.cos(gnPh), gnR * Math.sin(gnPh) * Math.sin(gnTh)],
-         size: 330, rot: r2(0, 6.283), cell: 0, fade: 0.55 }], 1));
+      [{ p: [gnP.x, gnP.y, gnP.z], size: 330, rot: r2(0, 6.283), cell: 0, fade: 0.7 }], 1));
   })();
 
   // ── background music (speaker button / M, autoplays on load): local mp3s in ./audio/,
