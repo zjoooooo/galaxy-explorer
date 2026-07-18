@@ -21,7 +21,34 @@
   #msg { top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 13px; color: #9ca3af; pointer-events: none; }
 
   /* cinema mode (F): hide all UI chrome */
-  body.gx-cinema #title, body.gx-cinema #audio { display: none !important; }
+  body.gx-cinema #title, body.gx-cinema #audio, body.gx-cinema #beacons, body.gx-cinema #lang { display: none !important; }
+
+  /* language selector (native <select>, dark) */
+  #lang { top: 12px; right: 14px; z-index: 6; font: inherit; font-size: 12px; color: #cbd5e1;
+    background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 5px 8px; cursor: pointer; }
+  #lang:hover { border-color: #6366f1; }
+
+  /* location beacons: borderless glow-dot + pulse rings + floating label (no boxes, no borders) */
+  #beacons { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+  .beacon { position: absolute; --bc: #8fc2ff; text-align: center; transform: translate(-50%, -7px);
+    display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .beacon.up { flex-direction: column-reverse; transform: translate(-50%, calc(-100% + 7px)); } /* label above the dot — avoids pile-ups in the crowded solar neighbourhood */
+  .b-mark { position: relative; width: 14px; height: 14px; margin: 0 auto; }
+  .b-dot { position: absolute; inset: 2px; border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, var(--bc) 55%, transparent 78%);
+    box-shadow: 0 0 10px 2px var(--bc); }
+  .b-ring { position: absolute; inset: 0; border-radius: 50%; opacity: 0;
+    box-shadow: 0 0 6px 1px var(--bc), inset 0 0 6px 1px var(--bc);
+    animation: bping 3.2s cubic-bezier(.2, .6, .4, 1) infinite; }
+  .b-ring.r2 { animation-delay: 1.6s; }
+  @keyframes bping { 0% { transform: scale(.35); opacity: .85; } 75% { opacity: .15; } 100% { transform: scale(3); opacity: 0; } }
+  .b-label { font-size: 12px; letter-spacing: .06em; color: #dfeaff; white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(120,170,255,.5); }
+  .b-label small { display: block; font-size: 9.5px; letter-spacing: .05em; color: #93a5c4; margin-top: 1px; }
+  .beacon.sun { --bc: #ffd27a; }
+  .beacon.sun .b-dot { inset: 1px; }
+  .beacon.sun .b-label { color: #ffe9c2; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 12px rgba(255,200,110,.6); }
+  .beacon.sun .b-label small { color: #c8ab7d; }
 
   /* background-music control: speaker button + a hover popup listing tracks by name */
   #audio { right: 16px; bottom: 14px; z-index: 6; text-align: right; }
@@ -41,6 +68,12 @@
 
 <div id="title" class="overlay">Milky Way Galaxy
   <small>drag to orbit · scroll to zoom · F cinema · M music</small></div>
+
+<select id="lang" class="overlay" title="Language">
+  <option value="en">English</option>
+  <option value="hans">简体中文</option>
+  <option value="hant">繁體中文</option>
+</select>
 
 <div id="msg" class="overlay"></div>
 
@@ -370,6 +403,62 @@
     })));
   })();
 
+  // ── location beacons: the Solar System + famous Milky-Way landmarks ──────────
+  // Positions live in galaxyRoot space (they ride the rotation, staying on their
+  // arm). Each frame the 3D point is projected to the screen and a borderless
+  // HTML beacon (glow dot + pulse rings + label) is moved onto it.
+  var BEACONS = [], beaconLang = 'en'; // default: English
+  function setBeaconLang(lang) {
+    beaconLang = lang;
+    for (var i = 0; i < BEACONS.length; i++) {
+      var t = BEACONS[i].t[lang] || BEACONS[i].t.en;
+      BEACONS[i].el.querySelector('.b-label').innerHTML = t[0] + (t[1] ? '<small>' + t[1] + '</small>' : '');
+    }
+  }
+  (function buildBeacons() {
+    var TAU = Math.PI * 2;
+    function armXZ(rf, idx) { var a = idx * (TAU / DUST.arms) + rf * DUST.tight * TAU; return new THREE.Vector3(Math.cos(a) * rf * DUST.radius, 0, Math.sin(a) * rf * DUST.radius); }
+    var sun = armXZ(0.51, 1); // Orion spur: a MINOR arm, ~half-way out (26.7 of ~52 kly)
+    var inward = sun.clone().negate().normalize();          // toward the galactic centre
+    var along = new THREE.Vector3(-inward.z, 0, inward.x);  // roughly along the local arm
+    function near(dIn, dAlong) { return sun.clone().addScaledVector(inward, dIn).addScaledVector(along, dAlong); }
+    // ponytail: bearings are real-ish, distances stretched ~2-3x so labels don't collide at the default zoom
+    // t: label text per language — [name, optional subtitle]. en / hans (简体) / hant (繁體)
+    var DEFS = [
+      { p: sun, cls: 'sun', t: { en: ['Solar System', 'you are here'], hans: ['太阳系', '你在这里'], hant: ['太陽系', '你在這裡'] } },
+      { p: new THREE.Vector3(0, 4, 0), t: { en: ['Sagittarius A∗', 'galactic centre'], hans: ['人马座 A*', '银河系中心'], hant: ['人馬座 A*', '銀河系中心'] } },
+      { p: near(-40, 10), cls: 'up', t: { en: ['Orion Nebula'], hans: ['猎户座大星云'], hant: ['獵戶座大星雲'] } },
+      { p: near(-75, 55), t: { en: ['Crab Nebula'], hans: ['蟹状星云'], hant: ['蟹狀星雲'] } },
+      { p: near(70, 38), cls: 'up', t: { en: ['Eagle Nebula'], hans: ['鹰状星云'], hant: ['鷹狀星雲'] } },
+      { p: near(95, -52), t: { en: ['Carina Nebula'], hans: ['船底座大星云'], hant: ['船底座大星雲'] } },
+      { p: near(15, 80), t: { en: ['Cygnus X-1'], hans: ['天鹅座 X-1'], hant: ['天鵝座 X-1'] } }
+    ];
+    var host = document.createElement('div'); host.id = 'beacons'; document.body.appendChild(host);
+    for (var i = 0; i < DEFS.length; i++) {
+      var d = DEFS[i], el = document.createElement('div');
+      el.className = 'beacon' + (d.cls ? ' ' + d.cls : '');
+      el.innerHTML = '<div class="b-mark"><span class="b-ring"></span><span class="b-ring r2"></span><span class="b-dot"></span></div><div class="b-label"></div>';
+      host.appendChild(el);
+      BEACONS.push({ p: d.p, el: el, t: d.t, shown: true });
+    }
+    setBeaconLang(beaconLang);
+    var langSel = document.getElementById('lang');
+    if (langSel) langSel.addEventListener('change', function () { setBeaconLang(langSel.value); });
+  })();
+  var beaconTmp = new THREE.Vector3();
+  function updateBeacons() { // call AFTER render() — galaxyRoot/camera matrices are fresh then
+    for (var i = 0; i < BEACONS.length; i++) {
+      var b = BEACONS[i];
+      beaconTmp.copy(b.p).applyMatrix4(galaxyRoot.matrixWorld).project(camera);
+      var vis = beaconTmp.z < 1 && beaconTmp.x > -1.05 && beaconTmp.x < 1.05 && beaconTmp.y > -1.05 && beaconTmp.y < 1.05;
+      if (vis !== b.shown) { b.el.style.display = vis ? '' : 'none'; b.shown = vis; }
+      if (vis) {
+        b.el.style.left = ((beaconTmp.x * 0.5 + 0.5) * window.innerWidth) + 'px';
+        b.el.style.top = ((-beaconTmp.y * 0.5 + 0.5) * window.innerHeight) + 'px';
+      }
+    }
+  }
+
   // ── render loop (continuous while visible; drives spin + twinkle + breathe + fx) ──
   var t0 = performance.now(), rafId = null;
   // FPS watchdog: weak GPUs choke on 85k dust points. Keep an EMA of frame time
@@ -405,6 +494,7 @@
     }
     controls.update();
     render();
+    updateBeacons(); // after render: galaxyRoot/camera world matrices are fresh
     rafId = requestAnimationFrame(frame);
   }
   function startLoop() { if (rafId == null && !document.hidden) rafId = requestAnimationFrame(frame); }
@@ -893,7 +983,7 @@
          size: 330, rot: r2(0, 6.283), cell: 0, fade: 0.55 }], 1));
   })();
 
-  // ── background music (speaker button / M, default OFF): local mp3s in ./audio/,
+  // ── background music (speaker button / M, autoplays on load): local mp3s in ./audio/,
   // listed by FILE NAME. The speaker toggles play/mute; a hover popup picks the
   // track. Playback starts only on a user gesture (autoplay policy). To add music,
   // drop .mp3 files in ./audio/ and list their file names here. Empty → the speaker
@@ -925,6 +1015,17 @@
     musicPaint();
   }
   audioBtn.addEventListener('click', musicToggle);
+
+  // autoplay on load; browsers block sound before a user gesture, so if the initial
+  // play() is refused, fall back to starting on the first click/key/touch.
+  if (MUSIC_TRACKS.length) {
+    musicPlay(0);
+    var kickMusic = function () {
+      if (musicEl && musicEl.paused) musicPlay(0);
+      if (musicEl && !musicEl.paused) ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { window.removeEventListener(ev, kickMusic); });
+    };
+    ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { window.addEventListener(ev, kickMusic, { passive: true }); });
+  }
 
   // ── ?fx=1 — demo mode: force one ambient event every 4s (meteor → shower → nova,
   // round-robin) so you can see each effect without waiting for the real schedule.
