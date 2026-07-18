@@ -33,7 +33,7 @@
   #skyback { top: 64px; left: 18px; z-index: 6; display: none; cursor: pointer; font-size: 13px;
     color: #cbd5e1; background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 6px 12px; }
   #skyback:hover { border-color: #6366f1; color: #fff; }
-  #skylabels { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+  #skylabels { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
   .skylabel { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
     font-size: 13px; letter-spacing: .08em; color: #cfe0ff; white-space: nowrap; text-align: center;
     text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(120,170,255,.45); transition: opacity .2s ease; }
@@ -42,7 +42,9 @@
   .skylabel.sel { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 14px rgba(150,190,255,.9); }
 
   /* location beacons: borderless glow-dot + pulse rings + floating label (no boxes, no borders) */
-  #beacons { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+  /* absolute (not fixed): under Safari pinch/page-zoom, fixed layers detach from the
+     canvas while absolute ones transform with the content and stay glued to the galaxy */
+  #beacons { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
   .beacon { position: absolute; --bc: #8fc2ff; text-align: center; transform: translate(-50%, -7px);
     display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .beacon.up { flex-direction: column-reverse; transform: translate(-50%, calc(-100% + 7px)); } /* label above the dot — avoids pile-ups in the crowded solar neighbourhood */
@@ -1709,6 +1711,23 @@
     else if (k === 'm') musicToggle();
     else if (k === 'escape') toggleCinema(false);
   });
+
+  // Safari trackpad pinch fires proprietary gesture events and zooms the PAGE,
+  // which detaches the HTML overlays from the canvas. Capture it and dolly the
+  // camera instead (in the sky view just swallow it — rotate-only there).
+  var gestureDist = 0;
+  window.addEventListener('gesturestart', function (e) {
+    e.preventDefault();
+    gestureDist = camera.position.distanceTo(controls.target);
+  });
+  window.addEventListener('gesturechange', function (e) {
+    e.preventDefault();
+    if (viewMode !== 'galaxy' || !e.scale) return;
+    var d = Math.min(controls.maxDistance, Math.max(controls.minDistance, gestureDist / e.scale));
+    var dir = camera.position.clone().sub(controls.target).normalize();
+    camera.position.copy(controls.target).addScaledVector(dir, d);
+  });
+  window.addEventListener('gestureend', function (e) { e.preventDefault(); });
 
   // ── go ───────────────────────────────────────────────────────────────────────
   startLoop();
