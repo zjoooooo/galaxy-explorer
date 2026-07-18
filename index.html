@@ -95,6 +95,9 @@
   .bp-row .k { color: #93a5c4; } .bp-row .v { color: #e5e7eb; text-align: right; }
   #bp-desc { font-size: 13px; line-height: 1.55; color: #cbd5e1; margin-top: 10px; }
   #bp-cat { font-size: 10.5px; color: #6b7280; margin-top: 10px; }
+  #bp-img { display: block; width: 100%; height: 150px; object-fit: cover; border-radius: 8px;
+    margin: 10px 0 3px; background: rgba(255,255,255,.04); }
+  #bp-credit { font-size: 9px; line-height: 1.35; color: #5b6578; margin-bottom: 6px; }
   #bp-zodiac-link { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.07);
     color: #9cc0ff; cursor: pointer; font-size: 13px; }
   #bp-zodiac-link:hover { color: #cfe2ff; }
@@ -644,6 +647,7 @@
     bpBody.innerHTML =
       '<div id="bp-name" style="color:' + ac + '">' + esc(name) + '</div>' +
       '<span id="bp-type">' + esc(o.type) + '</span>' +
+      (b.img ? '<img id="bp-img" src="' + b.img + '" alt="' + esc(name) + '" loading="lazy"><div id="bp-credit">' + esc(b.credit || '') + '</div>' : '') +
       rows.join('') +
       '<div id="bp-desc">' + esc(o.desc) + '</div>' +
       (o.catalog ? '<div id="bp-cat">' + esc(o.catalog) + '</div>' : '');
@@ -918,6 +922,26 @@
     });
   });
   setBeaconLang(beaconLang); // repaint labels in case the saved language is ja/ko
+
+  // ── real telescope photos for the beacon cards (see THIRD-PARTY-NOTICES.md) ──
+  var BEACON_IMGS = [
+    {"img":"images/solar-system.jpg","credit":"NASA / Apollo 17 crew (Harrison Schmitt or Ron Evans)"},
+    {"img":"images/sgr-a.jpg","credit":"EHT Collaboration"},
+    {"img":"images/orion-nebula.jpg","credit":"NASA, ESA, M. Robberto (STScI/ESA) and the Hubble Space Telescope Orion Treasury Project Team"},
+    {"img":"images/crab-nebula.jpg","credit":"NASA, ESA, J. Hester and A. Loll (Arizona State University) — Hubble"},
+    {"img":"images/eagle-nebula.jpg","credit":"NASA, ESA, CSA, STScI; image processing: J. DePasquale, A. Koekemoer, A. Pagan (STScI) — JWST"},
+    {"img":"images/carina-nebula.jpg","credit":"NASA, ESA, CSA, STScI — JWST NIRCam"},
+    {"img":"images/cygnus-x1.jpg","credit":"NASA/CXC — Chandra X-ray Observatory"},
+    {"img":"images/pleiades.jpg","credit":"NASA, ESA, AURA/Caltech, Palomar Observatory"},
+    {"img":"images/omega-centauri.jpg","credit":"NASA, ESA, J. Anderson and R. van der Marel (STScI) — Hubble WFC3"},
+    {"img":"images/betelgeuse.jpg","credit":"ALMA (ESO/NAOJ/NRAO)/E. O'Gorman/P. Kervella"},
+    {"img":"images/veil-nebula.jpg","credit":"ESA/Hubble & NASA, Z. Levay — Hubble"},
+    {"img":"images/lagoon-nebula.jpg","credit":"NASA, ESA, STScI — Hubble"},
+    {"img":"images/hercules-cluster.jpg","credit":"NASA, ESA, and the Hubble Heritage Team (STScI/AURA) — Hubble"},
+    {"img":"images/sirius.jpg","credit":"NASA, ESA, H. Bond (STScI), M. Barstow (Univ. of Leicester) — Hubble"},
+    {"img":"images/antares.jpg","credit":"ESO/K. Ohnaka — VLTI"}
+  ];
+  BEACON_IMGS.forEach(function (x, i) { BEACONS[i].img = x.img; BEACONS[i].credit = x.credit; });
   var SKY_CONS = [];
   (function buildZodiac() {
     var host = document.createElement('div'); host.id = 'skylabels'; document.body.appendChild(host);
