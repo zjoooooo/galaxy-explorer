@@ -61,3 +61,21 @@ credited as required by the license.
 - `images/hercules-cluster.jpg` — NASA, ESA, and the Hubble Heritage Team (STScI/AURA) — Hubble · Public domain · [source](https://commons.wikimedia.org/wiki/File:Hubble_image_of_globular_cluster_M13_(opo0840a).jpg)
 - `images/sirius.jpg` — NASA, ESA, H. Bond (STScI), M. Barstow (Univ. of Leicester) — Hubble · Public domain · [source](https://commons.wikimedia.org/wiki/File:The_Dog_Star,_Sirius,_and_its_Tiny_Companion_(2005-36-1820).jpg)
 - `images/antares.jpg` — ESO/K. Ohnaka — VLTI · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:VLTI_reconstructed_view_of_the_surface_of_Antares.jpg)
+
+## Zodiac card images (`images/zodiac-*.jpg`)
+
+Wide-field constellation photographs shown in the zodiac cards,
+sourced from Wikimedia Commons.
+
+- `images/zodiac-aries.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Aries_produced_by_NOIRLab,_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(aries).jpg)
+- `images/zodiac-taurus.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Taurus_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(taurus).jpg)
+- `images/zodiac-gemini.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Gemini_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(gemini).jpg)
+- `images/zodiac-cancer.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Cancer_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(cancer).jpg)
+- `images/zodiac-leo.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Leo_(leoh).jpg)
+- `images/zodiac-virgo.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Virgo_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(virgo).jpg)
+- `images/zodiac-libra.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Libra_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(libra).jpg)
+- `images/zodiac-scorpius.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Scorpius_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(scorpius).jpg)
+- `images/zodiac-sagittarius.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Sagittarius_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(sagittarius).jpg)
+- `images/zodiac-capricornus.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Capricornus_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(capricornus).jpg)
+- `images/zodiac-aquarius.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Aquarius_produced_by_NOIRLab,_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(aquarius).jpg)
+- `images/zodiac-pisces.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Pisces_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(pisces).jpg)

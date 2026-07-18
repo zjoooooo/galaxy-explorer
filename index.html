@@ -978,6 +978,21 @@
     {"img":"images/antares.jpg","credit":"ESO/K. Ohnaka — VLTI"}
   ];
   BEACON_IMGS.forEach(function (x, i) { BEACONS[i].img = x.img; BEACONS[i].credit = x.credit; });
+  var ZODIAC_IMGS = [
+    {"img":"images/zodiac-aries.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
+    {"img":"images/zodiac-taurus.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
+    {"img":"images/zodiac-gemini.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
+    {"img":"images/zodiac-cancer.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
+    {"img":"images/zodiac-leo.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
+    {"img":"images/zodiac-virgo.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
+    {"img":"images/zodiac-libra.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
+    {"img":"images/zodiac-scorpius.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
+    {"img":"images/zodiac-sagittarius.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
+    {"img":"images/zodiac-capricornus.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
+    {"img":"images/zodiac-aquarius.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"},
+    {"img":"images/zodiac-pisces.jpg","credit":"E. Slawik/NOIRLab/NSF/AURA/M. Zamani"}
+  ];
+  ZODIAC_IMGS.forEach(function (x, i) { ZODIAC[i].img = x.img; ZODIAC[i].credit = x.credit; });
   var SKY_CONS = [];
   (function buildZodiac() {
     var host = document.createElement('div'); host.id = 'skylabels'; document.body.appendChild(host);
@@ -1044,6 +1059,7 @@
     bpBody.innerHTML =
       '<div id="bp-name" style="color:#9cc0ff">' + esc(name) + ' ' + z.symbol + '</div>' +
       '<span id="bp-type">' + esc(k[0]) + '</span>' +
+      (z.img ? '<img id="bp-img" src="' + z.img + '" alt="' + esc(name) + '" loading="lazy"><div id="bp-credit">' + esc(z.credit || '') + '</div>' : '') +
       '<div class="bp-row"><span class="k">' + esc(k[1]) + '</span><span class="v">' + esc(o.dates) + '</span></div>' +
       '<div class="bp-row"><span class="k">' + esc(k[2]) + '</span><span class="v">' + esc(o.brightest) + '</span></div>' +
       '<div class="bp-row"><span class="k">' + esc(k[3]) + '</span><span class="v">' + z.stars.length + '</span></div>' +
