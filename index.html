@@ -95,6 +95,9 @@
   .bp-row .k { color: #93a5c4; } .bp-row .v { color: #e5e7eb; text-align: right; }
   #bp-desc { font-size: 13px; line-height: 1.55; color: #cbd5e1; margin-top: 10px; }
   #bp-cat { font-size: 10.5px; color: #6b7280; margin-top: 10px; }
+  #bp-zodiac-link { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.07);
+    color: #9cc0ff; cursor: pointer; font-size: 13px; }
+  #bp-zodiac-link:hover { color: #cfe2ff; }
   body.gx-cinema #beacon-panel { display: none !important; }
   /* mobile: panel becomes a bottom drawer */
   @media (max-width: 640px) {
@@ -637,6 +640,10 @@
       rows.join('') +
       '<div id="bp-desc">' + esc(o.desc) + '</div>' +
       (o.catalog ? '<div id="bp-cat">' + esc(o.catalog) + '</div>' : '');
+    if (i === 0) { // Solar System card → doorway to the Earth-sky view
+      var zl = { en: '♈ Zodiac Constellations · view the sky →', hans: '♈ 十二星座 · 查看星空 →', hant: '♈ 十二星座 · 查看星空 →' };
+      bpBody.innerHTML += '<div id="bp-zodiac-link">' + (zl[lang] || zl.en) + '</div>';
+    }
   }
   window.openBeaconExtras = function (i) {
     renderPanel(i, beaconLang); bpEl.classList.add('open');
@@ -649,6 +656,9 @@
   document.getElementById('bp-close').addEventListener('click', function (e) { e.stopPropagation(); clearSelection(); });
   window.addEventListener('click', function () { if (selectedBeacon !== null) clearSelection(); }); // outside click closes
   bpEl.addEventListener('click', function (e) { e.stopPropagation(); }); // clicks inside the panel don't close it
+  bpBody.addEventListener('click', function (e) {
+    if (e.target && e.target.id === 'bp-zodiac-link') enterSky();
+  });
   window.addEventListener('keydown', function (e) { if ((e.key || '').toLowerCase() === 'escape' && selectedBeacon !== null) clearSelection(); });
   var beaconTmp = new THREE.Vector3();
   function updateBeacons() { // call AFTER render() — galaxyRoot/camera matrices are fresh then
