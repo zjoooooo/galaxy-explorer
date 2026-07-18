@@ -805,8 +805,10 @@
       uniforms: { uTime: { value: 0 }, uSize: { value: 3.0 * renderer.getPixelRatio() } },
       vertexShader: 'uniform float uTime; uniform float uSize; attribute vec3 aColor; attribute float aPhase; attribute float aSpd; varying vec3 vColor;' +
         'void main(){ vec4 vp = modelViewMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp;' +
-        ' float tw = 0.75 + 0.25 * sin(uTime * aSpd + aPhase);' +
-        ' gl_PointSize = uSize * (0.7 + 0.5 * tw); vColor = aColor * tw; }',
+        ' float tw = 0.6 + 0.4 * sin(uTime * aSpd + aPhase);' +
+        ' float flare = pow(max(0.0, sin(uTime * (0.25 + aSpd * 0.2) + aPhase * 2.3)), 24.0);' + // rare brief scintillation flash
+        ' float br = tw + flare;' +
+        ' gl_PointSize = uSize * (0.7 + 0.6 * br); vColor = aColor * br; }',
       fragmentShader: 'varying vec3 vColor; void main(){ float d = distance(gl_PointCoord, vec2(0.5)); if (d > 0.5) discard; float s = pow(max(0.0, 1.0 - d * 2.0), 1.4); gl_FragColor = vec4(vColor, s); }',
       transparent: true, depthWrite: false
     });
@@ -839,6 +841,47 @@
     var eg = new THREE.BufferGeometry(); eg.setAttribute('position', new THREE.BufferAttribute(ep, 3));
     skyScene.add(new THREE.LineLoop(eg, new THREE.LineBasicMaterial({ color: 0xc9a86a, transparent: true, opacity: 0.22 })));
   })();
+  // sky-view bloom composer — a gentle glow on the brightest stars (defensive: fall back to plain render)
+  var skyComposer = null;
+  try {
+    skyComposer = new THREE.EffectComposer(renderer);
+    skyComposer.addPass(new THREE.RenderPass(skyScene, skyCamera));
+    skyComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.7, 0.6, 0.15));
+    skyComposer.addPass(new THREE.ShaderPass(THREE.CopyShader)); // final output pass — UnrealBloomPass alone renders black to screen
+    skyComposer.setSize(window.innerWidth, window.innerHeight);
+  } catch (e) { skyComposer = null; }
+  // occasional shooting stars streaking across the dome (reuses the galaxy meteor texture)
+  var skyFx = [], skyMeteorNext = performance.now() + 7000 + Math.random() * 10000;
+  function spawnSkyMeteor() {
+    var nx = Math.random() * 1.4 - 0.7, ny = Math.random() * 1.0 - 0.25;
+    var d0 = new THREE.Vector3(nx, ny, 0.5).unproject(skyCamera).normalize();
+    var ddx = (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 0.4), ddy = -(0.25 + Math.random() * 0.4);
+    var d1 = new THREE.Vector3(nx + ddx, ny + ddy, 0.5).unproject(skyCamera).normalize();
+    var from = d0.multiplyScalar(SKY_R * 0.85), to = d1.multiplyScalar(SKY_R * 0.85);
+    var dir = to.clone().sub(from), dist = dir.length(); dir.multiplyScalar(1 / dist);
+    var viewDir = from.clone().sub(skyCamera.position).normalize();
+    var side = new THREE.Vector3().crossVectors(dir, viewDir); if (side.lengthSq() < 1e-4) side.set(0, 1, 0); else side.normalize();
+    var normal = new THREE.Vector3().crossVectors(dir, side);
+    var m = new THREE.MeshBasicMaterial({ map: METEOR_TEX, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    var mesh = new THREE.Mesh(METEOR_GEO, m);
+    mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(dir, side, normal));
+    mesh.scale.set(0.001, 3.2, 1); mesh.frustumCulled = false;
+    skyScene.add(mesh);
+    skyFx.push({ obj: mesh, mat: m, from: from, dir: dir, dist: dist, t0: performance.now(), dur: 1100 + Math.random() * 500 });
+  }
+  function updateSkyFx(nowMs) {
+    if (viewMode !== 'sky') return;
+    if (nowMs >= skyMeteorNext) { spawnSkyMeteor(); skyMeteorNext = nowMs + 9000 + Math.random() * 15000; }
+    for (var i = skyFx.length - 1; i >= 0; i--) {
+      var f = skyFx[i], k = (nowMs - f.t0) / f.dur;
+      if (k >= 1) { skyScene.remove(f.obj); f.mat.dispose(); skyFx.splice(i, 1); continue; }
+      var kh = Math.min(1, k), kt = Math.max(0, kh - 0.4), curLen = Math.max(f.dist * (kh - kt), 0.001);
+      var hx = f.from.x + f.dir.x * f.dist * kh, hy = f.from.y + f.dir.y * f.dist * kh, hz = f.from.z + f.dir.z * f.dist * kh;
+      f.obj.position.set(hx - f.dir.x * curLen * 0.5, hy - f.dir.y * curLen * 0.5, hz - f.dir.z * curLen * 0.5);
+      f.obj.scale.x = curLen;
+      f.mat.opacity = Math.pow(Math.sin(Math.min(1, k) * Math.PI), 0.8);
+    }
+  }
   // ── the 12 zodiac constellations: real J2000 star positions + traditional figures ──
   // (authored + adversarially cross-checked; raHours decimal, decDeg, visual mag)
   var ZODIAC = [
@@ -1094,24 +1137,33 @@
   var SKY_CONS = [];
   (function buildZodiac() {
     var host = document.createElement('div'); host.id = 'skylabels'; document.body.appendChild(host);
-    var starVert = 'uniform float uSize; uniform float uMul; attribute float aScale; varying float vA;' +
+    // stars twinkle (per-star sine phase) and glint with 4-point diffraction spikes
+    var starVert = 'uniform float uSize; uniform float uMul; uniform float uTime; attribute float aScale; attribute float aPhase; varying float vA; varying float vTw;' +
       'void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp;' +
-      ' gl_PointSize = uSize * aScale * uMul; vA = uMul; }';
-    var starFrag = 'varying float vA; void main(){ float d = distance(gl_PointCoord, vec2(0.5)); if (d > 0.5) discard;' +
-      ' float s = pow(max(0.0, 1.0 - d * 2.0), 1.6); gl_FragColor = vec4(vec3(0.86, 0.92, 1.0) * vA, s); }';
+      ' float tw = 0.65 + 0.35 * sin(uTime * (0.6 + aPhase) + aPhase * 6.2831);' +
+      ' vTw = tw; vA = uMul; gl_PointSize = uSize * aScale * uMul * (0.82 + 0.28 * tw); }';
+    var starFrag = 'varying float vA; varying float vTw; void main(){ vec2 pc = gl_PointCoord - vec2(0.5); float d = length(pc);' +
+      ' float core = pow(max(0.0, 1.0 - d * 2.6), 1.8);' +           // tight bright core
+      ' float ax = abs(pc.x), ay = abs(pc.y);' +
+      ' float hor = max(0.0, 1.0 - ay / 0.045) * max(0.0, 1.0 - ax / 0.5);' + // horizontal spike
+      ' float ver = max(0.0, 1.0 - ax / 0.045) * max(0.0, 1.0 - ay / 0.5);' + // vertical spike
+      ' float s = (core + (hor + ver) * 0.5) * (0.5 + 0.6 * vTw);' + // spikes + twinkle
+      ' if (s < 0.01) discard; gl_FragColor = vec4(vec3(0.86, 0.92, 1.0) * vA, s); }';
     ZODIAC.concat(CONS_EXTRA).forEach(function (z, zi) {
-      var n = z.stars.length, pos = new Float32Array(n * 3), scl = new Float32Array(n), centroid = new THREE.Vector3();
+      var n = z.stars.length, pos = new Float32Array(n * 3), scl = new Float32Array(n), phs2 = new Float32Array(n), centroid = new THREE.Vector3();
       var dirs = z.stars.map(function (s) { return raDecDir(s[0], s[1]); });
       dirs.forEach(function (d, i) {
         pos[i * 3] = d.x * SKY_R; pos[i * 3 + 1] = d.y * SKY_R; pos[i * 3 + 2] = d.z * SKY_R;
         scl[i] = Math.max(0.55, Math.pow(1.45, 2.0 - z.stars[i][2])); // brighter (lower mag) → bigger
+        phs2[i] = Math.random(); // per-star twinkle phase
         centroid.add(d);
       });
       centroid.normalize();
       var sg = new THREE.BufferGeometry();
       sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       sg.setAttribute('aScale', new THREE.BufferAttribute(scl, 1));
-      var sm = new THREE.ShaderMaterial({ uniforms: { uSize: { value: 5.5 * renderer.getPixelRatio() }, uMul: { value: 1 } },
+      sg.setAttribute('aPhase', new THREE.BufferAttribute(phs2, 1));
+      var sm = new THREE.ShaderMaterial({ uniforms: { uSize: { value: 8.0 * renderer.getPixelRatio() }, uMul: { value: 1 }, uTime: { value: 0 } },
         vertexShader: starVert, fragmentShader: starFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
       skyScene.add(new THREE.Points(sg, sm));
       var lp = new Float32Array(z.lines.length * 6);
@@ -1234,8 +1286,10 @@
     var t = (performance.now() - t0) / 1000;
     if (viewMode === 'sky') {
       if (skyTwinkleMat) skyTwinkleMat.uniforms.uTime.value = t;
+      for (var si = 0; si < SKY_CONS.length; si++) SKY_CONS[si].starMat.uniforms.uTime.value = t; // twinkle the constellation stars
       skyControls.update();
-      renderer.render(skyScene, skyCamera);
+      if (skyComposer) skyComposer.render(); else renderer.render(skyScene, skyCamera);
+      updateSkyFx(performance.now());
       if (window.updateSkyLabels) updateSkyLabels();
       rafId = requestAnimationFrame(frame);
       return;
@@ -1274,6 +1328,7 @@
     skyCamera.aspect = window.innerWidth / window.innerHeight; skyCamera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     if (composer) composer.setSize(window.innerWidth, window.innerHeight);
+    if (skyComposer) skyComposer.setSize(window.innerWidth, window.innerHeight);
   });
 
   // ── ambient effects: shooting stars + supernovae ────────────────────────────
