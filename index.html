@@ -70,6 +70,9 @@
   .beacon.sel .b-mark { transform: scale(1.5); }
   .beacon.sel .b-dot { box-shadow: 0 0 16px 4px var(--bc); }
   .beacon.sel .b-label { color: #fff; }
+  /* label declutter: crowded labels hide (dot + rings stay clickable); they return on zoom-in */
+  .beacon .b-label { transition: opacity .25s ease; }
+  .beacon.ld .b-label { opacity: 0; pointer-events: none; }
   /* narrow / touch screens: shrink beacons and drop the English subtitle so the
      crowded solar neighbourhood doesn't pile up. ponytail: eases overlap, not a
      full collision solver (that'd need label de-clustering — see task 6). */
@@ -497,8 +500,20 @@
     var sun = armXZ(0.51, 1); // Orion spur: a MINOR arm, ~half-way out (26.7 of ~52 kly)
     var inward = sun.clone().negate().normalize();          // toward the galactic centre
     var along = new THREE.Vector3(-inward.z, 0, inward.x);  // roughly along the local arm
-    function near(dIn, dAlong, dy) { return sun.clone().addScaledVector(inward, dIn).addScaledVector(along, dAlong).setY(dy || 0); } // dy: galactic-latitude offset, spreads labels in screen-Y
-    // ponytail: bearings are real-ish, distances stretched ~2-3x so labels don't collide at the default zoom
+    // real galactic coordinates → model position. l = galactic longitude (0° = toward the
+    // centre), b = latitude, distKly = distance from the Sun in thousands of light-years.
+    var KLY = DUST.radius / 52; // model units per kly (disc radius 360u ≈ 52 kly)
+    function galPos(lDeg, bDeg, distKly) {
+      var l = lDeg * Math.PI / 180, b = bDeg * Math.PI / 180, d = distKly * KLY;
+      d = Math.max(d, 2.5); // ponytail: display floor — Sirius (8.6 ly ≈ 0.06u) would sit inside the Sun's dot
+      return sun.clone()
+        .addScaledVector(inward, d * Math.cos(b) * Math.cos(l))
+        .addScaledVector(along, d * Math.cos(b) * Math.sin(l))
+        .add(new THREE.Vector3(0, d * Math.sin(b), 0));
+    }
+    // Positions are REAL: galPos(l, b, distKly) from published galactic coordinates
+    // (multi-source cross-checked). The label declutter in updateBeacons handles the
+    // resulting solar-neighbourhood crowding — dots stay, crowded labels reappear on zoom.
     // t: label text per language — [name, optional subtitle]. en / hans (简体) / hant (繁體)
     var DEFS = [
       { p: sun, cls: 'sun',
@@ -513,79 +528,79 @@
           en:   { type:'Supermassive black hole', distance:'~26,000 light-years', constellation:'Sagittarius', facts:[['Mass','~4.3 million M☉']], desc:'The supermassive black hole anchoring the centre of the Milky Way.', catalog:'Sgr A*' },
           hans: { type:'超大质量黑洞', distance:'约 26,000 光年', constellation:'人马座', facts:[['质量','约 430 万倍太阳质量']], desc:'坐镇银河系中心的超大质量黑洞。', catalog:'Sgr A*' },
           hant: { type:'超大質量黑洞', distance:'約 26,000 光年', constellation:'人馬座', facts:[['質量','約 430 萬倍太陽質量']], desc:'坐鎮銀河系中心的超大質量黑洞。', catalog:'Sgr A*' } } },
-      { p: near(-46, -34, 20), cls: 'up',
+      { p: galPos(209, -19.4, 1.34), cls: 'up',
         t: { en: ['Orion Nebula'], hans: ['猎户座大星云'], hant: ['獵戶座大星雲'] },
         info: {
           en:   { type:'Emission nebula', distance:'~1,340 light-years', constellation:'Orion', facts:[['Diameter','~24 light-years'],['Apparent mag','4.0']], desc:'The nearest large stellar nursery, faintly visible to the naked eye below Orion’s Belt.', catalog:'M42' },
           hans: { type:'发射星云', distance:'约 1,340 光年', constellation:'猎户座', facts:[['直径','约 24 光年'],['视星等','4.0']], desc:'离我们最近的大型恒星摇篮,肉眼在猎户腰带下方隐约可见。', catalog:'M42' },
           hant: { type:'發射星雲', distance:'約 1,340 光年', constellation:'獵戶座', facts:[['直徑','約 24 光年'],['視星等','4.0']], desc:'離我們最近的大型恆星搖籃,肉眼在獵戶腰帶下方隱約可見。', catalog:'M42' } } },
-      { p: near(-75, 55, 24),
+      { p: galPos(184.6, -5.8, 6.5),
         t: { en: ['Crab Nebula'], hans: ['蟹状星云'], hant: ['蟹狀星雲'] },
         info: {
           en:   { type:'Supernova remnant', distance:'~6,500 light-years', constellation:'Taurus', facts:[['Supernova','1054 CE'],['Core','Crab Pulsar']], desc:'The expanding wreck of a star seen exploding in 1054 CE, with a spinning neutron star at its heart.', catalog:'M1' },
           hans: { type:'超新星遗迹', distance:'约 6,500 光年', constellation:'金牛座', facts:[['超新星','公元 1054 年'],['核心','蟹状星云脉冲星']], desc:'公元 1054 年被记录到爆发的恒星残骸,中心是一颗高速自转的中子星。', catalog:'M1' },
           hant: { type:'超新星遺跡', distance:'約 6,500 光年', constellation:'金牛座', facts:[['超新星','公元 1054 年'],['核心','蟹狀星雲脈衝星']], desc:'公元 1054 年被記錄到爆發的恆星殘骸,中心是一顆高速自轉的中子星。', catalog:'M1' } } },
-      { p: near(80, 20, -24), cls: 'up',
+      { p: galPos(17, 0.8, 7.0), cls: 'up',
         t: { en: ['Eagle Nebula'], hans: ['鹰状星云'], hant: ['鷹狀星雲'] },
         info: {
           en:   { type:'Emission nebula', distance:'~7,000 light-years', constellation:'Serpens', facts:[['Famous for','Pillars of Creation']], desc:'A star-forming region whose towering gas columns became famous as Hubble’s “Pillars of Creation”.', catalog:'M16' },
           hans: { type:'发射星云', distance:'约 7,000 光年', constellation:'巨蛇座', facts:[['著名','创生之柱']], desc:'一处恒星形成区,高耸的气柱因哈勃的“创生之柱”影像而闻名。', catalog:'M16' },
           hant: { type:'發射星雲', distance:'約 7,000 光年', constellation:'巨蛇座', facts:[['著名','創生之柱']], desc:'一處恆星形成區,高聳的氣柱因哈勃的「創生之柱」影像而聞名。', catalog:'M16' } } },
-      { p: near(70, -74, -22),
+      { p: galPos(287.6, -0.6, 7.5),
         t: { en: ['Carina Nebula'], hans: ['船底座大星云'], hant: ['船底座大星雲'] },
         info: {
           en:   { type:'Emission nebula', distance:'~7,500 light-years', constellation:'Carina', facts:[['Hosts','Eta Carinae']], desc:'One of the largest nebulae in the sky, home to the unstable, hugely massive star Eta Carinae.', catalog:'NGC 3372' },
           hans: { type:'发射星云', distance:'约 7,500 光年', constellation:'船底座', facts:[['包含','海山二']], desc:'天空中最大的星云之一,栖身着极不稳定、质量巨大的恒星海山二。', catalog:'NGC 3372' },
           hant: { type:'發射星雲', distance:'約 7,500 光年', constellation:'船底座', facts:[['包含','海山二']], desc:'天空中最大的星雲之一,棲身著極不穩定、質量巨大的恆星海山二。', catalog:'NGC 3372' } } },
-      { p: near(6, 100, -16),
+      { p: galPos(71.3, 3.1, 7.2),
         t: { en: ['Cygnus X-1'], hans: ['天鹅座 X-1'], hant: ['天鵝座 X-1'] },
         info: {
           en:   { type:'Stellar black hole', distance:'~7,000 light-years', constellation:'Cygnus', facts:[['Black hole','~21 M☉'],['System','X-ray binary']], desc:'The first object widely accepted as a black hole, pulling gas from a blue supergiant companion.', catalog:'Cyg X-1' },
           hans: { type:'恒星级黑洞', distance:'约 7,000 光年', constellation:'天鹅座', facts:[['黑洞','约 21 倍太阳质量'],['系统','X 射线双星']], desc:'第一个被广泛承认的黑洞,正从一颗蓝超巨星伴星吸积气体。', catalog:'Cyg X-1' },
           hant: { type:'恆星級黑洞', distance:'約 7,000 光年', constellation:'天鵝座', facts:[['黑洞','約 21 倍太陽質量'],['系統','X 射線雙星']], desc:'第一個被廣泛承認的黑洞,正從一顆藍超巨星伴星吸積氣體。', catalog:'Cyg X-1' } } },
-      { p: near(-14, 40, -30),
+      { p: galPos(166.6, -23.5, 0.444),
         t: { en: ['Pleiades'], hans: ['昴星团'], hant: ['昴星團'] },
         info: {
           en:   { type:'Open cluster', distance:'~440 light-years', constellation:'Taurus', facts:[['Stars','1,000+'],['Age','~100 million yr']], desc:'The naked-eye “Seven Sisters” — hot blue stars still wrapped in wisps of reflection nebulosity.', catalog:'M45' },
           hans: { type:'疏散星团', distance:'约 440 光年', constellation:'金牛座', facts:[['恒星','1000+ 颗'],['年龄','约 1 亿年']], desc:'肉眼可见的“七姐妹”,炽热的蓝色恒星仍笼罩在反射星云的薄纱中。', catalog:'M45' },
           hant: { type:'疏散星團', distance:'約 440 光年', constellation:'金牛座', facts:[['恆星','1000+ 顆'],['年齡','約 1 億年']], desc:'肉眼可見的「七姐妹」,熾熱的藍色恆星仍籠罩在反射星雲的薄紗中。', catalog:'M45' } } },
-      { p: near(66, -98, 26),
+      { p: galPos(309.1, 15, 17.0),
         t: { en: ['Omega Centauri'], hans: ['半人马 ω'], hant: ['半人馬 ω'] },
         info: {
           en:   { type:'Globular cluster', distance:'~17,000 light-years', constellation:'Centaurus', facts:[['Stars','~10 million'],['Note','Largest MW globular']], desc:'The Milky Way’s largest globular cluster, possibly the stripped core of a swallowed dwarf galaxy.', catalog:'NGC 5139' },
           hans: { type:'球状星团', distance:'约 17,000 光年', constellation:'半人马座', facts:[['恒星','约 1000 万颗'],['特点','银河系最大球状星团']], desc:'银河系中最大的球状星团,可能是一个被吞并的矮星系残核。', catalog:'NGC 5139' },
           hant: { type:'球狀星團', distance:'約 17,000 光年', constellation:'半人馬座', facts:[['恆星','約 1000 萬顆'],['特點','銀河系最大球狀星團']], desc:'銀河系中最大的球狀星團,可能是一個被吞併的矮星系殘核。', catalog:'NGC 5139' } } },
-      { p: near(-58, -70, 34), cls: 'up',
+      { p: galPos(199.8, -9, 0.55), cls: 'up',
         t: { en: ['Betelgeuse'], hans: ['参宿四'], hant: ['參宿四'] },
         info: {
           en:   { type:'Red supergiant', distance:'~550 light-years', constellation:'Orion', facts:[['Diameter','~700× Sun'],['Fate','Future supernova']], desc:'The red star on Orion’s shoulder — so vast it would swallow the inner planets, and destined to explode.', catalog:'α Ori' },
           hans: { type:'红超巨星', distance:'约 550 光年', constellation:'猎户座', facts:[['直径','约太阳的 700 倍'],['归宿','未来的超新星']], desc:'猎户座“肩头”的红色恒星,大到能吞下内太阳系行星,终将爆发为超新星。', catalog:'α Ori' },
           hant: { type:'紅超巨星', distance:'約 550 光年', constellation:'獵戶座', facts:[['直徑','約太陽的 700 倍'],['歸宿','未來的超新星']], desc:'獵戶座「肩頭」的紅色恆星,大到能吞下內太陽系行星,終將爆發為超新星。', catalog:'α Ori' } } },
-      { p: near(42, 132, 22),
+      { p: galPos(74, -8.5, 2.4),
         t: { en: ['Veil Nebula'], hans: ['面纱星云'], hant: ['面紗星雲'] },
         info: {
           en:   { type:'Supernova remnant', distance:'~2,400 light-years', constellation:'Cygnus', facts:[['Age','~10,000 yr'],['Form','Filamentary shell']], desc:'The delicate, lacework filaments of a supernova that detonated about 10,000 years ago.', catalog:'NGC 6960' },
           hans: { type:'超新星遗迹', distance:'约 2,400 光年', constellation:'天鹅座', facts:[['年龄','约 1 万年'],['形态','丝缕状壳层']], desc:'约 1 万年前爆发的超新星,留下如蕾丝般纤细的气体丝缕。', catalog:'NGC 6960' },
           hant: { type:'超新星遺跡', distance:'約 2,400 光年', constellation:'天鵝座', facts:[['年齡','約 1 萬年'],['形態','絲縷狀殼層']], desc:'約 1 萬年前爆發的超新星,留下如蕾絲般纖細的氣體絲縷。', catalog:'NGC 6960' } } },
-      { p: near(215, -55, -30),
+      { p: galPos(6, -1.2, 4.1),
         t: { en: ['Lagoon Nebula'], hans: ['礁湖星云'], hant: ['礁湖星雲'] },
         info: {
           en:   { type:'Emission nebula', distance:'~4,100 light-years', constellation:'Sagittarius', facts:[['Type','Star-forming region'],['Catalog','M8']], desc:'A vast, bright stellar nursery toward the galactic centre.', catalog:'M8' },
           hans: { type:'发射星云', distance:'约 4,100 光年', constellation:'人马座', facts:[['类型','恒星形成区'],['星表','M8']], desc:'朝银心方向的一片巨大明亮的恒星摇篮。', catalog:'M8' },
           hant: { type:'發射星雲', distance:'約 4,100 光年', constellation:'人馬座', facts:[['類型','恆星形成區'],['星表','M8']], desc:'朝銀心方向的一片巨大明亮的恆星搖籃。', catalog:'M8' } } },
-      { p: near(180, 70, -40),
+      { p: galPos(59, 40.9, 22.2), // halo globular — genuinely ~100u above the disc plane
         t: { en: ['Hercules Cluster'], hans: ['武仙座大星团'], hant: ['武仙座大星團'] },
         info: {
           en:   { type:'Globular cluster', distance:'~22,000 light-years', constellation:'Hercules', facts:[['Stars','~300,000'],['Age','~11.6 billion yr']], desc:'A brilliant northern globular of several hundred thousand ancient stars.', catalog:'M13' },
           hans: { type:'球状星团', distance:'约 22,000 光年', constellation:'武仙座', facts:[['恒星','约 30 万颗'],['年龄','约 116 亿年']], desc:'北天一个由数十万颗古老恒星组成的明亮球状星团。', catalog:'M13' },
           hant: { type:'球狀星團', distance:'約 22,000 光年', constellation:'武仙座', facts:[['恆星','約 30 萬顆'],['年齡','約 116 億年']], desc:'北天一個由數十萬顆古老恆星組成的明亮球狀星團。', catalog:'M13' } } },
-      { p: near(230, -80, -25),
+      { p: galPos(227.2, -8.9, 0.0086), // 8.6 ly — rendered at the display floor beside the Sun
         t: { en: ['Sirius'], hans: ['天狼星'], hant: ['天狼星'] },
         info: {
           en:   { type:'Binary star', distance:'~8.6 light-years', constellation:'Canis Major', facts:[['Brightness','Brightest in the sky'],['System','Sirius A + B']], desc:"The brightest star in Earth's night sky, a close stellar neighbour.", catalog:'α CMa' },
           hans: { type:'双星', distance:'约 8.6 光年', constellation:'大犬座', facts:[['亮度','全天最亮'],['系统','天狼 A + B']], desc:'地球夜空中最亮的恒星,是离我们很近的邻居。', catalog:'α CMa' },
           hant: { type:'雙星', distance:'約 8.6 光年', constellation:'大犬座', facts:[['亮度','全天最亮'],['系統','天狼 A + B']], desc:'地球夜空中最亮的恆星,是離我們很近的鄰居。', catalog:'α CMa' } } },
-      { p: near(200, 20, -32),
+      { p: galPos(351.9, 15.1, 0.55),
         t: { en: ['Antares'], hans: ['心宿二'], hant: ['心宿二'] },
         info: {
           en:   { type:'Red supergiant', distance:'~550 light-years', constellation:'Scorpius', facts:[['Diameter','~700× Sun'],['Note','Heart of the Scorpion']], desc:'A blazing red supergiant marking the heart of Scorpius.', catalog:'α Sco' },
@@ -679,9 +694,28 @@
       var vis = beaconTmp.z < 1 && beaconTmp.x > -1.05 && beaconTmp.x < 1.05 && beaconTmp.y > -1.05 && beaconTmp.y < 1.05;
       if (vis !== b.shown) { b.el.style.display = vis ? '' : 'none'; b.shown = vis; }
       if (vis) {
-        b.el.style.left = ((beaconTmp.x * 0.5 + 0.5) * window.innerWidth) + 'px';
-        b.el.style.top = ((-beaconTmp.y * 0.5 + 0.5) * window.innerHeight) + 'px';
+        b.sx = (beaconTmp.x * 0.5 + 0.5) * window.innerWidth;
+        b.sy = (-beaconTmp.y * 0.5 + 0.5) * window.innerHeight;
+        b.el.style.left = b.sx + 'px';
+        b.el.style.top = b.sy + 'px';
       }
+    }
+    // greedy label declutter: earlier (more famous) beacons win; selected always shows.
+    // Real astronomy packs the solar neighbourhood — hiding crowded labels (dots stay)
+    // keeps the view readable, and zooming in separates them again.
+    var kept = [];
+    for (var i = 0; i < BEACONS.length; i++) {
+      var b2 = BEACONS[i];
+      if (!b2.shown) { b2.el.classList.remove('ld'); continue; }
+      var sel = b2.el.classList.contains('sel'), clash = false;
+      if (!sel) {
+        for (var k = 0; k < kept.length; k++) {
+          var ddx = (b2.sx - kept[k][0]) / 78, ddy = (b2.sy - kept[k][1]) / 30;
+          if (ddx * ddx + ddy * ddy < 1) { clash = true; break; }
+        }
+      }
+      b2.el.classList.toggle('ld', clash);
+      if (!clash) kept.push([b2.sx, b2.sy]);
     }
   }
 
