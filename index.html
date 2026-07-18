@@ -130,6 +130,8 @@
   <option value="en">English</option>
   <option value="hans">简体中文</option>
   <option value="hant">繁體中文</option>
+  <option value="ja">日本語</option>
+  <option value="ko">한국어</option>
 </select>
 
 <div id="skyback" class="overlay">← Back to Galaxy</div>
@@ -480,6 +482,8 @@
       var t = BEACONS[i].t[lang] || BEACONS[i].t.en;
       BEACONS[i].el.querySelector('.b-label').innerHTML = t[0] + (t[1] ? '<small>' + t[1] + '</small>' : '');
     }
+    var sb = document.getElementById('skyback');
+    if (sb) { var SB = { en: '← Back to Galaxy', hans: '← 返回银河系', hant: '← 返回銀河系', ja: '← 銀河に戻る', ko: '← 은하로 돌아가기' }; sb.textContent = SB[lang] || SB.en; }
     if (typeof selectedBeacon !== 'undefined' && selectedBeacon !== null && typeof renderPanel === 'function') renderPanel(selectedBeacon, lang);
     if (typeof paintSkyLabels === 'function' && typeof SKY_CONS !== 'undefined' && SKY_CONS.length) paintSkyLabels(lang);
     if (typeof skySelected !== 'undefined' && skySelected !== null && typeof renderConstellationPanel === 'function') renderConstellationPanel(skySelected, lang);
@@ -600,7 +604,7 @@
   })();
   // self-check: every beacon has complete info in all 3 languages (run from console)
   function assertBeaconInfo() {
-    var langs = ['en', 'hans', 'hant'], fields = ['type', 'distance', 'constellation', 'facts', 'desc'];
+    var langs = ['en', 'hans', 'hant', 'ja', 'ko'], fields = ['type', 'distance', 'constellation', 'facts', 'desc'];
     BEACONS.forEach(function (b, i) {
       if (!b.info) throw new Error('beacon ' + i + ' missing info');
       langs.forEach(function (L) {
@@ -631,8 +635,9 @@
   function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
   function renderPanel(i, lang) {
     var b = BEACONS[i], o = b.info[lang] || b.info.en, name = (b.t[lang] || b.t.en)[0], ac = getComputedStyle(b.el).getPropertyValue('--bc').trim() || '#8fc2ff';
-    var rows = [[lang === 'en' ? 'Distance' : '距离', o.distance],
-                [lang === 'en' ? 'Constellation' : '星座', o.constellation]]
+    var RK = { en: ['Distance', 'Constellation'], hans: ['距离', '星座'], hant: ['距離', '星座'], ja: ['距離', '星座'], ko: ['거리', '별자리'] };
+    var rk = RK[lang] || RK.en;
+    var rows = [[rk[0], o.distance], [rk[1], o.constellation]]
       .filter(function (r) { return r[1]; })
       .map(function (r) { return '<div class="bp-row"><span class="k">' + esc(r[0]) + '</span><span class="v">' + esc(r[1]) + '</span></div>'; });
     o.facts.forEach(function (f) { rows.push('<div class="bp-row"><span class="k">' + esc(f[0]) + '</span><span class="v">' + esc(f[1]) + '</span></div>'); });
@@ -643,7 +648,7 @@
       '<div id="bp-desc">' + esc(o.desc) + '</div>' +
       (o.catalog ? '<div id="bp-cat">' + esc(o.catalog) + '</div>' : '');
     if (i === 0) { // Solar System card → doorway to the Earth-sky view
-      var zl = { en: '♈ Zodiac Constellations · view the sky →', hans: '♈ 十二星座 · 查看星空 →', hant: '♈ 十二星座 · 查看星空 →' };
+      var zl = { en: '♈ Zodiac Constellations · view the sky →', hans: '♈ 十二星座 · 查看星空 →', hant: '♈ 十二星座 · 查看星空 →', ja: '♈ 黄道十二星座 · 星空を見る →', ko: '♈ 황도 12궁 · 하늘 보기 →' };
       bpBody.innerHTML += '<div id="bp-zodiac-link">' + (zl[lang] || zl.en) + '</div>';
     }
   }
@@ -874,7 +879,7 @@
   ];
   function assertZodiacData() {
     if (ZODIAC.length !== 12) throw new Error('need 12 zodiac entries, got ' + ZODIAC.length);
-    var langs = ['en', 'hans', 'hant'];
+    var langs = ['en', 'hans', 'hant', 'ja', 'ko'];
     ZODIAC.forEach(function (z, zi) {
       if (!z.key || !z.symbol) throw new Error('zodiac ' + zi + ' missing key/symbol');
       langs.forEach(function (L) {
@@ -894,6 +899,25 @@
     });
     return true;
   }
+  // ── Japanese + Korean localisation, merged into the beacon + zodiac data ──
+  var L10N = {
+    beacons: { ja: [{"name":"太陽系","sub":"現在地","type":"恒星系","distance":"現在地","constellation":"—","facts":[["恒星","1個（太陽）"],["惑星","8個"]],"desc":"私たちの故郷である惑星系。約2億3000万年かけて、銀河系の中心のまわりを一周しています。","catalog":""},{"name":"いて座A*","sub":"銀河系の中心","type":"超大質量ブラックホール","distance":"約26,000光年","constellation":"いて座","facts":[["質量","太陽の約430万倍"]],"desc":"天の川銀河の中心にどっしりと構える超大質量ブラックホールです。","catalog":"Sgr A*"},{"name":"オリオン大星雲","sub":"","type":"散光星雲","distance":"約1,340光年","constellation":"オリオン座","facts":[["直径","約24光年"],["視等級","4.0"]],"desc":"地球に最も近い大規模な星のゆりかご。オリオン座の三つ星の下に、肉眼でもかすかに見えます。","catalog":"M42"},{"name":"かに星雲","sub":"","type":"超新星残骸","distance":"約6,500光年","constellation":"おうし座","facts":[["超新星","西暦1054年"],["中心天体","かにパルサー"]],"desc":"西暦1054年に爆発が記録された恒星の残骸。中心では中性子星が高速で自転しています。","catalog":"M1"},{"name":"わし星雲","sub":"","type":"散光星雲","distance":"約7,000光年","constellation":"へび座","facts":[["見どころ","創造の柱"]],"desc":"星形成領域のひとつ。そびえ立つガスの柱は、ハッブル宇宙望遠鏡の「創造の柱」の画像で有名になりました。","catalog":"M16"},{"name":"イータカリーナ星雲","sub":"","type":"散光星雲","distance":"約7,500光年","constellation":"りゅうこつ座","facts":[["注目の星","りゅうこつ座イータ星"]],"desc":"全天でも最大級の星雲のひとつ。不安定で非常に重い恒星、りゅうこつ座イータ星が潜んでいます。","catalog":"NGC 3372"},{"name":"はくちょう座X-1","sub":"","type":"恒星質量ブラックホール","distance":"約7,000光年","constellation":"はくちょう座","facts":[["ブラックホール","太陽の約21倍"],["連星系","X線連星"]],"desc":"ブラックホールとして初めて広く認められた天体。青色超巨星の伴星からガスを吸い込み続けています。","catalog":"Cyg X-1"},{"name":"プレアデス星団","sub":"","type":"散開星団","distance":"約440光年","constellation":"おうし座","facts":[["恒星","1,000個以上"],["年齢","約1億年"]],"desc":"肉眼でも見える「セブン・シスターズ」。日本では「すばる」の名で親しまれ、高温の青い星々が今も反射星雲の薄いベールに包まれています。","catalog":"M45"},{"name":"ケンタウルス座ω星団","sub":"","type":"球状星団","distance":"約17,000光年","constellation":"ケンタウルス座","facts":[["恒星","約1,000万個"],["特徴","銀河系最大の球状星団"]],"desc":"天の川銀河で最大の球状星団。かつて飲み込まれた矮小銀河の中心核の名残かもしれません。","catalog":"NGC 5139"},{"name":"ベテルギウス","sub":"","type":"赤色超巨星","distance":"約550光年","constellation":"オリオン座","facts":[["直径","太陽の約700倍"],["運命","将来の超新星"]],"desc":"オリオンの肩に輝く赤い星。太陽系の内側の惑星を飲み込むほど巨大で、やがて超新星爆発を起こす運命にあります。","catalog":"α Ori"},{"name":"網状星雲","sub":"","type":"超新星残骸","distance":"約2,400光年","constellation":"はくちょう座","facts":[["年齢","約1万年"],["形状","フィラメント状の殻"]],"desc":"約1万年前に爆発した超新星が残した、レース細工のように繊細なガスのフィラメントです。","catalog":"NGC 6960"},{"name":"干潟星雲","sub":"","type":"散光星雲","distance":"約4,100光年","constellation":"いて座","facts":[["種類","星形成領域"],["カタログ","M8"]],"desc":"銀河系の中心方向に広がる、巨大で明るい星のゆりかごです。","catalog":"M8"},{"name":"ヘルクレス座球状星団","sub":"","type":"球状星団","distance":"約22,000光年","constellation":"ヘルクレス座","facts":[["恒星","約30万個"],["年齢","約116億年"]],"desc":"数十万個の年老いた星々からなる、北天に輝く見事な球状星団です。","catalog":"M13"},{"name":"シリウス","sub":"","type":"連星","distance":"約8.6光年","constellation":"おおいぬ座","facts":[["明るさ","全天で最も明るい恒星"],["連星系","シリウスA + B"]],"desc":"地球の夜空で最も明るく輝く恒星で、太陽系のすぐ近くにあるお隣さんです。","catalog":"α CMa"},{"name":"アンタレス","sub":"","type":"赤色超巨星","distance":"約550光年","constellation":"さそり座","facts":[["直径","太陽の約700倍"],["別名","さそりの心臓"]],"desc":"さそり座の心臓部で燃えるように赤く輝く超巨星です。","catalog":"α Sco"}],
+               ko: [{"name":"태양계","sub":"현재 위치","type":"항성계","distance":"현재 위치","constellation":"—","facts":[["항성","1개 (태양)"],["행성","8개"]],"desc":"우리의 고향 항성계로, 약 2억 3천만 년에 한 번씩 은하 중심을 공전합니다.","catalog":""},{"name":"궁수자리 A*","sub":"은하 중심","type":"초대질량 블랙홀","distance":"약 26,000광년","constellation":"궁수자리","facts":[["질량","태양의 약 430만 배"]],"desc":"우리은하의 중심에 자리 잡고 은하 전체를 붙들고 있는 초대질량 블랙홀입니다.","catalog":"Sgr A*"},{"name":"오리온 대성운","sub":"","type":"발광 성운","distance":"약 1,340광년","constellation":"오리온자리","facts":[["지름","약 24광년"],["겉보기 등급","4.0"]],"desc":"지구에서 가장 가까운 대형 별 탄생 지역으로, 오리온의 허리띠 아래에서 맨눈으로도 희미하게 볼 수 있습니다.","catalog":"M42"},{"name":"게성운","sub":"","type":"초신성 잔해","distance":"약 6,500광년","constellation":"황소자리","facts":[["초신성","서기 1054년"],["중심핵","게성운 펄서"]],"desc":"서기 1054년에 폭발이 관측된 별의 잔해가 지금도 팽창하고 있으며, 그 중심에는 빠르게 자전하는 중성자별이 있습니다.","catalog":"M1"},{"name":"독수리 성운","sub":"","type":"발광 성운","distance":"약 7,000광년","constellation":"뱀자리","facts":[["명물","창조의 기둥"]],"desc":"높이 솟은 가스 기둥이 허블 우주망원경의 \"창조의 기둥\" 사진으로 유명해진 별 형성 지역입니다.","catalog":"M16"},{"name":"용골자리 성운","sub":"","type":"발광 성운","distance":"약 7,500광년","constellation":"용골자리","facts":[["포함 천체","용골자리 에타"]],"desc":"밤하늘에서 가장 큰 성운 중 하나로, 극도로 불안정하고 질량이 어마어마한 별인 용골자리 에타가 자리하고 있습니다.","catalog":"NGC 3372"},{"name":"백조자리 X-1","sub":"","type":"항성 질량 블랙홀","distance":"약 7,000광년","constellation":"백조자리","facts":[["블랙홀","태양 질량의 약 21배"],["형태","X선 쌍성"]],"desc":"블랙홀로 널리 인정받은 최초의 천체로, 동반성인 청색 초거성에서 가스를 끌어당기고 있습니다.","catalog":"Cyg X-1"},{"name":"플레이아데스 성단","sub":"","type":"산개 성단","distance":"약 440광년","constellation":"황소자리","facts":[["별","1,000개 이상"],["나이","약 1억 년"]],"desc":"맨눈으로도 보이는 \"일곱 자매\" 별들로, 뜨거운 푸른 별들이 아직 반사 성운의 엷은 베일에 싸여 있습니다.","catalog":"M45"},{"name":"오메가 센타우리","sub":"","type":"구상 성단","distance":"약 17,000광년","constellation":"센타우루스자리","facts":[["별","약 1,000만 개"],["특징","우리은하 최대의 구상 성단"]],"desc":"우리은하에서 가장 큰 구상 성단으로, 은하에 삼켜진 왜소은하의 중심핵만 남은 것일 가능성도 있습니다.","catalog":"NGC 5139"},{"name":"베텔게우스","sub":"","type":"적색 초거성","distance":"약 550광년","constellation":"오리온자리","facts":[["지름","태양의 약 700배"],["운명","미래의 초신성"]],"desc":"오리온의 어깨에서 빛나는 붉은 별로, 태양계 안쪽 행성들을 통째로 삼킬 만큼 거대하며 언젠가 초신성으로 폭발할 운명입니다.","catalog":"α Ori"},{"name":"면사포 성운","sub":"","type":"초신성 잔해","distance":"약 2,400광년","constellation":"백조자리","facts":[["나이","약 1만 년"],["형태","필라멘트 모양의 껍질"]],"desc":"약 1만 년 전에 폭발한 초신성이 남긴, 레이스처럼 섬세한 가스 필라멘트입니다.","catalog":"NGC 6960"},{"name":"석호 성운","sub":"","type":"발광 성운","distance":"약 4,100광년","constellation":"궁수자리","facts":[["유형","별 형성 지역"],["목록","M8"]],"desc":"은하 중심 방향에 펼쳐진 광대하고 밝은 별들의 요람입니다.","catalog":"M8"},{"name":"헤르쿨레스 대성단","sub":"","type":"구상 성단","distance":"약 22,000광년","constellation":"헤르쿨레스자리","facts":[["별","약 30만 개"],["나이","약 116억 년"]],"desc":"수십만 개의 늙은 별들이 모여 빛나는 북쪽 하늘의 찬란한 구상 성단입니다.","catalog":"M13"},{"name":"시리우스","sub":"","type":"쌍성","distance":"약 8.6광년","constellation":"큰개자리","facts":[["밝기","밤하늘에서 가장 밝음"],["구성","시리우스 A + B"]],"desc":"지구의 밤하늘에서 가장 밝은 별이자, 우리와 아주 가까운 이웃 별입니다.","catalog":"α CMa"},{"name":"안타레스","sub":"","type":"적색 초거성","distance":"약 550광년","constellation":"전갈자리","facts":[["지름","태양의 약 700배"],["별칭","전갈의 심장"]],"desc":"전갈자리의 심장 자리에서 타오르는 붉은 초거성입니다.","catalog":"α Sco"}] },
+    zodiac:  { ja: [{"name":"おひつじ座","dates":"3月21日 – 4月19日","brightest":"ハマル","desc":"おひつじ座は、ギリシャ神話で王子プリクソスを背に乗せて海を渡り救った金毛の牡羊の姿です。その毛皮こそ、イアソンとアルゴ船の英雄たちが探し求めた「金羊毛」でした。約2000年前には春分点がこの星座にあったため、春分点は今も「白羊宮の第一点」と呼ばれています。最も明るい星ハマルは、地球から約66光年離れたオレンジ色の巨星です。"},{"name":"おうし座","dates":"4月20日 – 5月20日","brightest":"アルデバラン","desc":"おうし座は、ゼウスが王女エウロペを背に乗せて海を渡るために変身した牡牛の姿です。燃えるようなオレンジ色に輝く「牡牛の目」は赤色巨星アルデバランで、牛の顔を描くV字形のヒアデス星団の中に位置し、角はエルナトとおうし座ζ星へと伸びています。この星座には有名なプレアデス星団や、1054年に観測された超新星の残骸であるかに星雲もあります。"},{"name":"ふたご座","dates":"5月21日 – 6月21日","brightest":"ポルックス","desc":"ふたご座は、ギリシャ神話の双子の兄弟カストルとポルックスの姿で、片時も離れることのなかったこの英雄たちを、ゼウスが共に天に上げたと伝えられます。最も明るい星ポルックスはわずか34光年先にあるオレンジ色の巨星で、確認済みの系外惑星を持ち、一方のカストルは実は6つの恒星が結びついた珍しい六重連星系です。"},{"name":"かに座","dates":"6月21日 – 7月22日","brightest":"タルフ（かに座β星）","desc":"ギリシャ神話では、かに座はヘラクレスがヒュドラと戦う際、その邪魔をするために女神ヘラが送り込んだ蟹の姿です。踏みつぶされた蟹は、その働きをたたえられて星座になりました。星々は暗いものの、この星座には有名なプレセペ星団（M44）があり、「ロバ」を意味する2つの星、アセルス・ボレアリスとアセルス・アウストラリスの間で、肉眼でも見える数百個の星の群れとして輝いています。"},{"name":"しし座","dates":"7月23日 – 8月22日","brightest":"レグルス","desc":"しし座は、ヘラクレスが十二の功業の最初に絞め殺した不死身の怪物「ネメアの獅子」の姿です。最も明るい星レグルスは「小さな王」を意味し、ほぼ黄道上に位置するため、たびたび月に隠されます。6つの星が裏返しにした「？」の形に並ぶ有名な「ししの大鎌」が、獅子の頭とたてがみを描き出しています。"},{"name":"おとめ座","dates":"8月23日 – 9月22日","brightest":"スピカ","desc":"おとめ座は麦の穂を手にした乙女の姿で、ギリシャ神話では豊穣の女神デメテル、あるいは正義の女神アストライアと同一視されます。最も明るい星スピカは約250光年先にある高温の青白い連星です。さらにこの星座には、約2000個の銀河がひしめくおとめ座銀河団があり、私たちの属する局部超銀河団の中心をなしています。"},{"name":"てんびん座","dates":"9月23日 – 10月22日","brightest":"ズベンエスカマリ","desc":"てんびん座は正義の女神アストライアが手にする天秤の姿で、黄道十二星座の中で唯一、生き物ではないものを表す星座です。2つの明るい星ズベンエルゲヌビとズベンエスカマリの名はアラビア語で「南の爪」「北の爪」を意味し、かつて隣のさそり座の爪とされていた時代の名残です。ズベンエスカマリは、肉眼で見える星としては珍しく、かすかに緑がかって見えると報告されることで知られています。"},{"name":"さそり座","dates":"10月23日 – 11月21日","brightest":"アンタレス","desc":"ギリシャ神話では、さそり座は大地の女神ガイアが傲慢な狩人オリオンを倒すために差し向けたサソリの姿です。神々は2人を天球の正反対に置いたため、両者が同時に空に昇ることはありません。その心臓に輝くアンタレスは直径が太陽の約700倍もある赤色超巨星で、赤い輝きから「火星に対抗するもの」と名付けられました。明るい毒針の星シャウラを先端とする長く曲がった尾は、夏の星空で最もよく知られた姿のひとつです。"},{"name":"いて座","dates":"11月22日 – 12月21日","brightest":"カウス・アウストラリス","desc":"いて座は、隣のさそり座の心臓に向かって弓を引き絞る半人半馬の射手の姿で、クロトス、あるいは賢者ケイロンと同一視されることもあります。この星座は天の川銀河の中心方向にあり、そこには超大質量ブラックホール「いて座A*」が潜んでいます。この星座の8つの明るい星は、有名な「ティーポット」と呼ばれる星の並びを形づくっています。"},{"name":"やぎ座","dates":"12月22日 – 1月19日","brightest":"デネブ・アルゲディ","desc":"やぎ座は「海山羊」とも呼ばれ、牧神パンが怪物テュポンから逃れるためナイル川に飛び込み、下半身が魚の尾に変わった姿とされます。最も明るい星デネブ・アルゲディは山羊の尾の位置にあり、星座は角の星アルゲディとダビーから尾へと続く、矢じりのような輪郭を描きます。1846年に海王星が発見されたのも、このやぎ座の領域でした。"},{"name":"みずがめ座","dates":"1月20日 – 2月18日","brightest":"サダルスウド","desc":"みずがめ座は水瓶を運ぶ者の姿で、ゼウスにオリュンポスへ連れて行かれ、神々に酒を注ぐ給仕となった美少年ガニュメデスを表します。彼の瓶からは絶えず水が注がれ続けています。最も明るい星サダルスウドは珍しい黄色超巨星で、この星座には地球に最も近い惑星状星雲のひとつである「らせん星雲」もあります。"},{"name":"うお座","dates":"2月19日 – 3月20日","brightest":"アルフェルグ（うお座η星）","desc":"ギリシャ神話では、うお座は怪物テュポンから逃れるため、女神アフロディテとその子エロスが2匹の魚に変身し、ひもで互いの体を結んだ姿とされます。西側の魚は「サーキュレット」と呼ばれる小さな星の輪で描かれ、2本のひもは「結び目」を意味する星アルレシャで結ばれています。この星座には春分点もあり、毎年3月に太陽が天の赤道を横切る場所となっています。"}],
+               ko: [{"name":"양자리","dates":"3월 21일 – 4월 19일","brightest":"하말","desc":"양자리는 그리스 신화에서 프릭소스 왕자를 태우고 바다를 건너 구해 준 황금 양털의 숫양을 상징하며, 그 양털이 바로 이아손과 아르고호 원정대가 찾아 나선 황금 양털이다. 약 2,000년 전에는 춘분점이 이 별자리 안에 있어 태양이 이곳에서 천구 적도를 지났기에, 그 지점은 지금도 '양자리의 첫 점'이라 불린다. 가장 밝은 별 하말은 지구에서 약 66광년 떨어진 주황색 거성이다."},{"name":"황소자리","dates":"4월 20일 – 5월 20일","brightest":"알데바란","desc":"황소자리는 제우스가 에우로페 공주를 태우고 바다를 건너기 위해 변신한 황소의 모습이다. 불타는 듯한 주황색 눈에 해당하는 알데바란은 적색 거성으로, 황소의 얼굴을 그리는 V자형 히아데스 성단 속에 자리하며 두 뿔은 엘나스와 황소자리 제타별까지 뻗어 있다. 이 별자리에는 유명한 플레이아데스 성단과 1054년에 관측된 초신성의 잔해인 게 성운도 있다."},{"name":"쌍둥이자리","dates":"5월 21일 – 6월 21일","brightest":"폴룩스","desc":"쌍둥이자리는 그리스 신화 속 쌍둥이 형제 카스토르와 폴룩스를 나타내며, 제우스는 늘 붙어 다니던 이 두 영웅을 나란히 하늘에 올렸다. 가장 밝은 별 폴룩스는 불과 34광년 떨어진 주황색 거성으로 확인된 외계 행성을 거느리고 있으며, 카스토르는 실제로 여섯 개의 별이 서로 묶여 있는 놀라운 다중성계다."},{"name":"게자리","dates":"6월 21일 – 7월 22일","brightest":"타르프(게자리 베타)","desc":"그리스 신화에서 게자리는 헤라클레스가 히드라와 싸울 때 헤라가 방해하라고 보낸 게로, 영웅의 발에 밟혀 부서진 뒤 하늘의 별자리가 되었다. 별들은 어둡지만 이 별자리에는 유명한 프레세페 성단(벌집 성단, M44)이 있는데, '당나귀'라 불리는 두 별 아셀루스 보레알리스와 아셀루스 아우스트랄리스 사이에서 맨눈으로도 보이는 수백 개 별의 무리다."},{"name":"사자자리","dates":"7월 23일 – 8월 22일","brightest":"레굴루스","desc":"사자자리는 헤라클레스가 열두 과업 중 첫 번째로 목 졸라 쓰러뜨린 불사신 네메아의 사자를 그린 별자리다. 가장 밝은 별 레굴루스는 '작은 왕'이라는 뜻으로, 거의 정확히 황도 위에 자리해 달에 자주 가려진다. 여섯 개의 별이 좌우가 뒤집힌 물음표 모양을 이루는 유명한 '낫' 성군은 사자의 머리와 갈기를 나타낸다."},{"name":"처녀자리","dates":"8월 23일 – 9월 22일","brightest":"스피카","desc":"처녀자리는 밀 이삭을 든 처녀의 모습으로, 그리스 신화에서는 수확의 여신 데메테르나 정의의 여신 아스트라이아와 동일시된다. 가장 밝은 별 스피카는 약 250광년 떨어진 뜨거운 청백색 쌍성이며, 이 별자리에는 우리 은하가 속한 국부 초은하단의 중심을 이루는 약 2,000개 은하의 무리인 처녀자리 은하단도 자리하고 있다."},{"name":"천칭자리","dates":"9월 23일 – 10월 22일","brightest":"주벤에스카말리","desc":"천칭자리는 정의의 여신 아스트라이아가 든 저울을 나타내며, 황도 12궁 가운데 유일하게 무생물을 상징하는 별자리다. 가장 밝은 두 별 주벤엘게누비와 주벤에스카말리는 각각 '남쪽 집게발'과 '북쪽 집게발'을 뜻하는 아랍어 이름으로, 이 별들이 이웃한 전갈자리의 집게발로 여겨지던 시절을 떠올리게 한다. 주벤에스카말리는 일부 관측자들에게 희미한 초록빛으로 보인다고 전해지는데, 이는 맨눈으로 볼 수 있는 별 가운데 매우 드문 경우로 유명하다."},{"name":"전갈자리","dates":"10월 23일 – 11월 21일","brightest":"안타레스","desc":"그리스 신화에서 전갈자리는 오만한 사냥꾼 오리온을 쓰러뜨리기 위해 가이아가 보낸 전갈로, 신들은 둘을 하늘의 반대편에 두어 결코 함께 보이지 않게 했다. 심장 자리에는 태양 지름의 약 700배에 이르는 적색 초거성 안타레스가 빛나는데, 그 붉은빛 때문에 '화성의 라이벌'이라는 이름을 얻었다. 밝은 독침별 샤울라로 끝나는 길게 굽은 꼬리는 여름 밤하늘에서 가장 알아보기 쉬운 모습 중 하나다."},{"name":"궁수자리","dates":"11월 22일 – 12월 21일","brightest":"카우스 아우스트랄리스","desc":"궁수자리는 이웃한 전갈자리의 심장을 향해 활을 겨눈 반인반마 켄타우로스 궁수로, 흔히 크로토스나 현자 케이론으로 여겨진다. 이 별자리는 초대질량 블랙홀 궁수자리 A*가 자리한 우리은하 중심 방향에 있으며, 밝은 별 여덟 개가 유명한 '찻주전자' 성군을 이룬다."},{"name":"염소자리","dates":"12월 22일 – 1월 19일","brightest":"데네브 알게디","desc":"염소자리는 '바다 염소'로, 괴물 티폰을 피해 나일강에 뛰어들다 하반신이 물고기 꼬리로 변한 목신 판의 모습을 그린 별자리다. 가장 밝은 별 데네브 알게디는 염소의 꼬리를 표시하며, 뿔에 해당하는 알게디와 다비흐에서 꼬리까지 화살촉 모양의 윤곽이 이어진다. 1846년 해왕성이 바로 이 염소자리 영역에서 발견되었다."},{"name":"물병자리","dates":"1월 20일 – 2월 18일","brightest":"사달수드","desc":"물병자리는 제우스가 올림포스로 데려가 신들에게 술을 따르게 한 아름다운 소년 가니메데스를 상징하며, 그는 물병에서 영원히 물을 쏟아붓고 있다. 가장 밝은 별 사달수드는 보기 드문 황색 초거성이고, 이 별자리에는 지구에서 가장 가까운 행성상 성운 중 하나인 나선 성운도 자리하고 있다."},{"name":"물고기자리","dates":"2월 19일 – 3월 20일","brightest":"알페르그(물고기자리 에타)","desc":"그리스 신화에서 물고기자리는 괴물 티폰을 피해 두 마리 물고기로 변신한 뒤 끈으로 서로를 묶은 아프로디테와 아들 에로스의 모습이다. 서쪽 물고기는 '서클릿'이라 불리는 작은 고리 모양의 성군으로 표시되며, 두 끈은 '매듭'을 뜻하는 별 알레샤에서 만난다. 이 별자리에는 태양이 해마다 3월에 천구 적도를 지나는 춘분점도 자리하고 있다."}] }
+  };
+  ['ja', 'ko'].forEach(function (L) {
+    L10N.beacons[L].forEach(function (x, i) {
+      var b = BEACONS[i];
+      b.t[L] = x.sub ? [x.name, x.sub] : [x.name];
+      b.info[L] = { type: x.type, distance: x.distance, constellation: x.constellation, facts: x.facts, desc: x.desc, catalog: x.catalog };
+    });
+    L10N.zodiac[L].forEach(function (x, i) {
+      ZODIAC[i].t[L] = x.name;
+      ZODIAC[i].info[L] = { dates: x.dates, brightest: x.brightest, desc: x.desc };
+    });
+  });
+  setBeaconLang(beaconLang); // repaint labels in case the saved language is ja/ko
   var SKY_CONS = [];
   (function buildZodiac() {
     var host = document.createElement('div'); host.id = 'skylabels'; document.body.appendChild(host);
@@ -955,7 +979,7 @@
   window.skySelected = null;
   function renderConstellationPanel(i, lang) {
     var z = SKY_CONS[i].z, o = z.info[lang] || z.info.en, name = z.t[lang] || z.t.en;
-    var K = { en: ['Zodiac constellation', 'Dates', 'Brightest star', 'Main stars'], hans: ['黄道星座', '日期', '最亮星', '主要亮星'], hant: ['黃道星座', '日期', '最亮星', '主要亮星'] };
+    var K = { en: ['Zodiac constellation', 'Dates', 'Brightest star', 'Main stars'], hans: ['黄道星座', '日期', '最亮星', '主要亮星'], hant: ['黃道星座', '日期', '最亮星', '主要亮星'], ja: ['黄道十二星座', '期間', '最も明るい星', '主要な星'], ko: ['황도 12궁 별자리', '기간', '가장 밝은 별', '주요 별'] };
     var k = K[lang] || K.en;
     bpBody.innerHTML =
       '<div id="bp-name" style="color:#9cc0ff">' + esc(name) + ' ' + z.symbol + '</div>' +
