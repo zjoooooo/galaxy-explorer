@@ -49,6 +49,14 @@
   .beacon.sun .b-dot { inset: 1px; }
   .beacon.sun .b-label { color: #ffe9c2; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 12px rgba(255,200,110,.6); }
   .beacon.sun .b-label small { color: #c8ab7d; }
+  /* interaction: only the mark + label catch clicks (container stays none) */
+  .beacon .b-mark, .beacon .b-label { pointer-events: auto; cursor: pointer; }
+  .beacon .b-mark { transition: transform .15s ease; }
+  .beacon.dim { opacity: .45; transition: opacity .2s ease; }
+  .beacon:hover .b-mark { transform: scale(1.25); }
+  .beacon.sel .b-mark { transform: scale(1.5); }
+  .beacon.sel .b-dot { box-shadow: 0 0 16px 4px var(--bc); }
+  .beacon.sel .b-label { color: #fff; }
   /* narrow / touch screens: shrink beacons and drop the English subtitle so the
      crowded solar neighbourhood doesn't pile up. ponytail: eases overlap, not a
      full collision solver (that'd need label de-clustering — see task 6). */
@@ -508,6 +516,7 @@
       el.className = 'beacon' + (d.cls ? ' ' + d.cls : '');
       el.innerHTML = '<div class="b-mark"><span class="b-ring"></span><span class="b-ring r2"></span><span class="b-dot"></span></div><div class="b-label"></div>';
       host.appendChild(el);
+      (function (idx) { el.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(idx); }); })(i);
       BEACONS.push({ p: d.p, el: el, t: d.t, info: d.info, shown: true });
     }
     setBeaconLang(beaconLang);
@@ -527,6 +536,21 @@
       });
     });
     return true;
+  }
+  var selectedBeacon = null;
+  function selectBeacon(i) {
+    if (i === selectedBeacon) { clearSelection(); return; }
+    selectedBeacon = i;
+    for (var k = 0; k < BEACONS.length; k++) {
+      BEACONS[k].el.classList.toggle('sel', k === i);
+      BEACONS[k].el.classList.toggle('dim', k !== i);
+    }
+    if (window.openBeaconExtras) window.openBeaconExtras(i);
+  }
+  function clearSelection() {
+    selectedBeacon = null;
+    for (var k = 0; k < BEACONS.length; k++) { BEACONS[k].el.classList.remove('sel', 'dim'); }
+    if (window.closeBeaconExtras) window.closeBeaconExtras();
   }
   var beaconTmp = new THREE.Vector3();
   function updateBeacons() { // call AFTER render() — galaxyRoot/camera matrices are fresh then
