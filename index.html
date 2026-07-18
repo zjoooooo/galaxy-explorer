@@ -741,6 +741,140 @@
     var eg = new THREE.BufferGeometry(); eg.setAttribute('position', new THREE.BufferAttribute(ep, 3));
     skyScene.add(new THREE.LineLoop(eg, new THREE.LineBasicMaterial({ color: 0xc9a86a, transparent: true, opacity: 0.22 })));
   })();
+  // ── the 12 zodiac constellations: real J2000 star positions + traditional figures ──
+  // (authored + adversarially cross-checked; raHours decimal, decDeg, visual mag)
+  var ZODIAC = [
+    { key:"aries", symbol:"♈",
+      t:{"en":"Aries","hans":"白羊座","hant":"白羊座"},
+      stars:[[2.12,23.46,2],[1.91,20.81,2.64],[1.89,19.29,3.86],[2.83,27.26,3.63],[3.19,19.73,4.35]],
+      starNames:["Hamal","Sheratan","Mesarthim","Bharani (41 Ari)","Botein"],
+      lines:[[2,1],[1,0],[0,3],[3,4]],
+      info:{
+        en:{"dates":"Mar 21 – Apr 19","brightest":"Hamal","desc":"Aries represents the golden-fleeced ram of Greek myth that rescued Phrixus and carried him across the sea; its fleece became the Golden Fleece sought by Jason and the Argonauts. Around 2,000 years ago the Sun crossed the vernal equinox here, which is why that point is still called the First Point of Aries. Its brightest star, Hamal, is an orange giant about 66 light-years away."},
+        hans:{"dates":"3月21日 – 4月19日","brightest":"娄宿三","desc":"白羊座源自希腊神话中背负王子佛里克索斯渡海逃生的金毛公羊，它的羊毛就是伊阿宋与阿尔戈英雄们苦苦追寻的金羊毛。约两千年前春分点位于此座，因此春分点至今仍被称为“白羊宫第一点”。座内最亮星娄宿三是一颗距离地球约66光年的橙色巨星。"},
+        hant:{"dates":"3月21日 – 4月19日","brightest":"婁宿三","desc":"白羊座源自希臘神話中背負王子佛里克索斯渡海脫險的金毛公羊，其羊毛正是伊阿宋與阿爾戈英雄們追尋的金羊毛。約兩千年前春分點位於此座，故春分點至今仍稱為「白羊宮第一點」。座內最亮星婁宿三是一顆距離地球約66光年的橙色巨星。"} } },
+    { key:"taurus", symbol:"♉",
+      t:{"en":"Taurus","hans":"金牛座","hant":"金牛座"},
+      stars:[[4.599,16.51,0.85],[5.438,28.61,1.65],[5.627,21.14,2.97],[4.477,19.18,3.53],[4.382,17.54,3.77],[4.33,15.63,3.65],[4.478,15.87,3.4],[4.011,12.49,3.47],[3.453,9.73,3.74]],
+      starNames:["Aldebaran","Elnath","Tianguan (ζ Tau)","Ain (ε Tau)","δ Tauri","γ Tauri","Chamukuy (θ² Tau)","λ Tauri","ξ Tauri"],
+      lines:[[0,2],[3,1],[3,4],[4,5],[5,6],[6,0],[5,7],[7,8]],
+      info:{
+        en:{"dates":"Apr 20 – May 20","brightest":"Aldebaran","desc":"Taurus represents the bull whose form Zeus took to carry the princess Europa across the sea. Its fiery orange eye is Aldebaran, a red giant star, set within the V-shaped Hyades cluster that outlines the bull's face, while the horns stretch to Elnath and Zeta Tauri. The constellation also hosts the famous Pleiades cluster and the Crab Nebula, remnant of a supernova seen in 1054 AD."},
+        hans:{"dates":"4月20日 – 5月20日","brightest":"毕宿五","desc":"金牛座源自希腊神话:宙斯化身为一头雪白的公牛,驮着腓尼基公主欧罗巴渡海而去。橙红色的红巨星毕宿五是\"公牛之眼\",镶嵌在勾勒牛脸的V字形毕星团中,双角则伸向五车五和天关。座内还有著名的昴星团(七姐妹星团)以及公元1054年超新星遗迹——蟹状星云。"},
+        hant:{"dates":"4月20日 – 5月20日","brightest":"畢宿五","desc":"金牛座源自希臘神話:宙斯化身為一頭雪白的公牛,馱著腓尼基公主歐羅巴渡海而去。橙紅色的紅巨星畢宿五是「公牛之眼」,鑲嵌在勾勒牛臉的V字形畢星團中,雙角則伸向五車五與天關。座內還有著名的昴星團(七姊妹星團)以及公元1054年超新星遺跡——蟹狀星雲。"} } },
+    { key:"gemini", symbol:"♊",
+      t:{"en":"Gemini","hans":"双子座","hant":"雙子座"},
+      stars:[[7.577,31.89,1.58],[7.755,28.03,1.14],[6.629,16.4,1.92],[7.335,21.98,3.53],[6.732,25.13,3.06],[6.383,22.51,2.87],[6.248,22.51,3.31],[7.068,20.57,3.93],[6.755,12.9,3.35],[7.741,24.4,3.57]],
+      starNames:["Castor","Pollux","Alhena","Wasat","Mebsuta","Tejat","Propus","Mekbuda","Alzirr","Kappa Gem"],
+      lines:[[0,1],[0,4],[4,5],[5,6],[1,9],[1,3],[3,7],[7,2],[3,8]],
+      info:{
+        en:{"dates":"May 21 – Jun 21","brightest":"Pollux","desc":"Gemini represents the twin brothers Castor and Pollux of Greek myth, inseparable heroes whom Zeus placed together in the sky. Its brightest star, Pollux, is an orange giant only 34 light-years away that hosts a confirmed exoplanet, while Castor is actually a remarkable system of six stars bound together."},
+        hans:{"dates":"5月21日 – 6月21日","brightest":"北河三","desc":"双子座代表希腊神话中的孪生兄弟卡斯托耳与波吕丢刻斯，宙斯将这对形影不离的英雄一同升上夜空。最亮星北河三是一颗距离地球约34光年的橙色巨星，拥有一颗已确认的系外行星；而北河二实际上是由六颗恒星组成的罕见聚星系统。"},
+        hant:{"dates":"5月21日 – 6月21日","brightest":"北河三","desc":"雙子座代表希臘神話中的孿生兄弟卡斯托耳與波呂丟刻斯，宙斯將這對形影不離的英雄一同升上夜空。最亮星北河三是一顆距離地球約34光年的橙色巨星，擁有一顆已確認的系外行星；而北河二實際上是由六顆恆星組成的罕見聚星系統。"} } },
+    { key:"cancer", symbol:"♋",
+      t:{"en":"Cancer","hans":"巨蟹座","hant":"巨蟹座"},
+      stars:[[8.28,9.19,3.52],[8.74,18.15,3.94],[8.72,21.47,4.66],[8.97,11.86,4.25],[8.78,28.76,4.02]],
+      starNames:["Tarf","Asellus Australis","Asellus Borealis","Acubens","Iota Cnc"],
+      lines:[[4,2],[2,1],[1,3],[1,0]],
+      info:{
+        en:{"dates":"Jun 21 – Jul 22","brightest":"Tarf (β Cancri)","desc":"In Greek myth, Cancer is the crab sent by Hera to hinder Heracles during his battle with the Hydra; crushed underfoot, it was honored with a place among the stars. Though its stars are faint, the constellation contains the famous Beehive Cluster (M44, Praesepe), a naked-eye swarm of hundreds of stars lying between the two \"donkey\" stars, Asellus Borealis and Asellus Australis."},
+        hans:{"dates":"6月21日 – 7月22日","brightest":"柳宿增十（Tarf）","desc":"在希腊神话中，巨蟹是天后赫拉派去妨碍赫拉克勒斯斩杀九头蛇许德拉的螃蟹，被英雄踩碎后获赫拉升上天空，化为星座。巨蟹座的恒星虽然黯淡，却拥有著名的鬼星团（蜂巢星团，M44），它位于“南北二驴”鬼宿三与鬼宿四之间，晴夜肉眼即可望见。"},
+        hant:{"dates":"6月21日 – 7月22日","brightest":"柳宿增十（Tarf）","desc":"希臘神話中，巨蟹是天后赫拉派去妨礙海克力士斬殺九頭蛇的螃蟹，遭英雄踩碎後被赫拉升上天空，化作星座。巨蟹座的恆星雖然黯淡，卻擁有著名的鬼宿星團（蜂巢星團，M44），位於「南北二驢」鬼宿三與鬼宿四之間，晴朗夜晚肉眼即可見。"} } },
+    { key:"leo", symbol:"♌",
+      t:{"en":"Leo","hans":"狮子座","hant":"獅子座"},
+      stars:[[10.139,11.97,1.36],[11.818,14.57,2.14],[10.333,19.84,2.01],[11.235,20.52,2.56],[11.237,15.43,3.34],[10.278,23.42,3.43],[9.764,23.77,2.98],[9.879,26.01,3.88],[10.122,16.76,3.49]],
+      starNames:["Regulus","Denebola","Algieba","Zosma","Chertan","Adhafera","Ras Elased Australis","Rasalas","Eta Leonis"],
+      lines:[[0,8],[8,2],[2,5],[5,7],[7,6],[2,3],[3,1],[1,4],[4,3],[4,0]],
+      info:{
+        en:{"dates":"Jul 23 – Aug 22","brightest":"Regulus","desc":"Leo depicts the Nemean Lion, the invulnerable beast Heracles strangled as the first of his twelve labors. Its brightest star, Regulus — \"the little king\" — sits almost exactly on the ecliptic and is regularly occulted by the Moon. The famous Sickle asterism, a backwards question mark of six stars, traces the lion's head and mane."},
+        hans:{"dates":"7月23日 – 8月22日","brightest":"轩辕十四","desc":"狮子座代表希腊神话中的涅墨亚猛狮，赫拉克勒斯在十二项功绩的第一项中将其扼杀。其最亮星轩辕十四（Regulus）意为\"小王\"，几乎正好位于黄道上，因此常被月球掩食。由六颗星组成的\"镰刀\"星群形似反写的问号，勾勒出狮子的头部和鬃毛。"},
+        hant:{"dates":"7月23日 – 8月22日","brightest":"軒轅十四","desc":"獅子座代表希臘神話中的涅墨亞巨獅，海克力斯在十二項偉業的第一項中將牠扼殺。其最亮星軒轅十四（Regulus）意為「小王」，幾乎恰好位於黃道上，因此經常被月球掩蔽。由六顆星組成的「鐮刀」星群形似反寫的問號，描繪出獅子的頭部與鬃毛。"} } },
+    { key:"virgo", symbol:"♍",
+      t:{"en":"Virgo","hans":"室女座","hant":"室女座"},
+      stars:[[13.42,-11.16,0.98],[11.84,1.76,3.61],[12.69,-1.45,2.74],[12.93,3.4,3.38],[13.04,10.96,2.83],[13.58,-0.6,3.37],[12.33,-0.67,3.89],[13.17,-5.54,4.38],[14.27,-6,4.08],[14.72,-5.66,3.88]],
+      starNames:["Spica","Zavijava","Porrima","Auva","Vindemiatrix","Heze","Zaniah","Theta Virginis","Syrma","Rijl al Awwa"],
+      lines:[[1,6],[6,2],[2,3],[3,4],[2,7],[7,0],[3,5],[0,5],[5,8],[8,9]],
+      info:{
+        en:{"dates":"Aug 23 – Sep 22","brightest":"Spica","desc":"Virgo depicts a maiden holding an ear of wheat, identified in Greek myth with the harvest goddess Demeter or with Astraea, goddess of justice. Its brightest star Spica is a hot blue-white binary about 250 light-years away, and the constellation also hosts the Virgo Cluster, a swarm of some 2,000 galaxies at the heart of our local supercluster."},
+        hans:{"dates":"8月23日 – 9月22日","brightest":"角宿一","desc":"室女座常被描绘为手持麦穗的少女，在希腊神话中与丰收女神得墨忒耳或正义女神阿斯特赖亚相联系。其最亮星角宿一是一对距离约250光年的蓝白色双星；座内还坐落着拥有约两千个成员星系的室女座星系团，是本超星系团的中心所在。"},
+        hant:{"dates":"8月23日 – 9月22日","brightest":"角宿一","desc":"室女座常被描繪為手持麥穗的少女，在希臘神話中與豐收女神狄蜜特或正義女神阿斯特莉亞相聯繫。其最亮星角宿一是一對距離約250光年的藍白色雙星；座內還坐落著擁有約兩千個成員星系的室女座星系團，是本超星系團的中心所在。"} } },
+    { key:"libra", symbol:"♎",
+      t:{"en":"Libra","hans":"天秤座","hant":"天秤座"},
+      stars:[[15.283,-9.38,2.61],[14.848,-16.04,2.75],[15.592,-14.79,3.91],[15.068,-25.28,3.29],[15.617,-28.13,3.58],[15.644,-29.78,3.66]],
+      starNames:["Zubeneschamali","Zubenelgenubi","Zubenelhakrabi","Brachium","Upsilon Librae","Tau Librae"],
+      lines:[[0,1],[0,2],[1,2],[1,3],[2,4],[4,5]],
+      info:{
+        en:{"dates":"Sep 23 – Oct 22","brightest":"Zubeneschamali","desc":"Libra depicts the scales of justice held by the goddess Astraea, making it the only zodiac constellation representing an inanimate object. Its two brightest stars, Zubenelgenubi and Zubeneschamali, bear Arabic names meaning the southern and northern claws, recalling an era when they marked the claws of neighboring Scorpius. Zubeneschamali is famously reported by some observers to glint faintly green, a rarity among naked-eye stars."},
+        hans:{"dates":"9月23日 – 10月22日","brightest":"氐宿四","desc":"天秤座象征正义女神阿斯特赖亚手中衡量善恶的天平，是黄道十二星座中唯一以非生命物体为形象的星座。座内两颗主星氐宿一与氐宿四的阿拉伯名分别意为“南爪”和“北爪”，源于古代它们曾被视为天蝎座的巨螯。最亮星氐宿四常被观测者形容为带有罕见的淡绿色光芒。"},
+        hant:{"dates":"9月23日 – 10月22日","brightest":"氐宿四","desc":"天秤座象徵正義女神阿斯特賴亞手中衡量善惡的天平，是黃道十二星座中唯一以無生命物體為形象的星座。座內兩顆主星氐宿一與氐宿四的阿拉伯名分別意為「南爪」和「北爪」，源自古代它們曾被視為天蠍座的巨螯。最亮星氐宿四常被觀測者形容為帶有罕見的淡綠色光芒。"} } },
+    { key:"scorpius", symbol:"♏",
+      t:{"en":"Scorpius","hans":"天蝎座","hant":"天蠍座"},
+      stars:[[16.09,-19.8,2.62],[16.01,-22.6,2.29],[15.98,-26.1,2.89],[16.35,-25.6,2.88],[16.49,-26.4,0.96],[16.6,-28.2,2.82],[16.84,-34.3,2.29],[16.91,-42.4,3.59],[17.2,-43.2,3.33],[17.62,-43,1.86],[17.71,-39,2.39],[17.56,-37.1,1.62]],
+      starNames:["Acrab","Dschubba","Fang","Alniyat","Antares","Paikauhale","Larawag","ζ Sco","η Sco","Sargas","κ Sco","Shaula"],
+      lines:[[0,1],[2,1],[1,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11]],
+      info:{
+        en:{"dates":"Oct 23 – Nov 21","brightest":"Antares","desc":"In Greek myth, Scorpius is the scorpion sent by Gaia to slay the boastful hunter Orion; the gods placed the two on opposite sides of the sky so they are never seen together. Its heart is marked by Antares, a red supergiant roughly 700 times the Sun's diameter, whose ruddy glow earned it the name 'rival of Mars.' The long curved tail, tipped by the bright sting star Shaula, makes it one of the most recognizable figures of the summer sky."},
+        hans:{"dates":"10月23日 – 11月21日","brightest":"心宿二","desc":"天蝎座源自希腊神话:大地女神盖亚派出毒蝎蜇死了狂妄的猎人俄里翁,众神将两者置于天空两端,使它们永不相见。其最亮星心宿二是一颗红超巨星,直径约为太阳的700倍,火红的色泽令古人称它为“火星的对手”。蝎尾末端的亮星尾宿八勾勒出经典的蝎钩,是夏夜星空中最易辨认的形象之一。"},
+        hant:{"dates":"10月23日 – 11月21日","brightest":"心宿二","desc":"天蠍座源自希臘神話:大地女神蓋亞派出毒蠍螫死了狂妄的獵人俄里翁,眾神將兩者置於天空兩端,使它們永不相見。其最亮星心宿二是一顆紅超巨星,直徑約為太陽的700倍,火紅的色澤令古人稱它為「火星的對手」。蠍尾末端的亮星尾宿八勾勒出經典的蠍鉤,是夏夜星空中最易辨認的形象之一。"} } },
+    { key:"sagittarius", symbol:"♐",
+      t:{"en":"Sagittarius","hans":"人马座","hant":"人馬座"},
+      stars:[[18.4,-34.38,1.85],[18.35,-29.83,2.7],[18.1,-30.42,2.98],[18.47,-25.42,2.81],[18.76,-27,3.17],[18.92,-26.3,2.05],[19.12,-27.67,3.32],[19.04,-29.88,2.6]],
+      starNames:["Kaus Australis","Kaus Media","Alnasl","Kaus Borealis","Phi Sgr","Nunki","Tau Sgr","Ascella"],
+      lines:[[2,1],[2,0],[1,0],[1,3],[3,4],[1,4],[4,7],[0,7],[7,6],[6,5],[5,4]],
+      info:{
+        en:{"dates":"Nov 22 – Dec 21","brightest":"Kaus Australis","desc":"Sagittarius is the Archer, a centaur drawing his bow toward the heart of neighboring Scorpius, often identified with Crotus or the wise Chiron. The constellation lies toward the center of the Milky Way, home of the supermassive black hole Sagittarius A*, and eight of its bright stars form the famous Teapot asterism."},
+        hans:{"dates":"11月22日 – 12月21日","brightest":"箕宿三","desc":"人马座是希腊神话中弯弓搭箭的半人马射手,常被认为是克罗托斯或智者喀戎,箭尖直指邻近天蝎座的心脏。银河系中心的超大质量黑洞人马座A*就位于这一方向,其中八颗亮星组成著名的\"茶壶\"星群,是夏季南天最易辨认的标志之一。"},
+        hant:{"dates":"11月22日 – 12月21日","brightest":"箕宿三","desc":"人馬座是希臘神話中彎弓搭箭的半人馬射手,常被認為是克羅托斯或智者凱隆,箭尖直指鄰近天蠍座的心臟。銀河系中心的超大質量黑洞人馬座A*就位於這一方向,其中八顆亮星組成著名的「茶壺」星群,是夏季南天最易辨認的標誌之一。"} } },
+    { key:"capricornus", symbol:"♑",
+      t:{"en":"Capricornus","hans":"摩羯座","hant":"摩羯座"},
+      stars:[[20.3,-12.54,3.57],[20.35,-14.78,3.08],[20.77,-25.27,4.14],[20.86,-26.92,4.11],[21.44,-22.41,3.74],[21.62,-19.47,4.51],[21.78,-16.13,2.85],[21.67,-16.66,3.67],[21.37,-16.83,4.28],[21.1,-17.23,4.07]],
+      starNames:["Algedi (α²)","Dabih (β)","Psi Cap (ψ)","Omega Cap (ω)","Zeta Cap (ζ)","Castra (ε)","Deneb Algedi (δ)","Nashira (γ)","Iota Cap (ι)","Dorsum (θ)"],
+      lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,0]],
+      info:{
+        en:{"dates":"Dec 22 – Jan 19","brightest":"Deneb Algedi","desc":"Capricornus, the Sea Goat, depicts the god Pan, who grew a fish's tail to escape the monster Typhon by diving into the Nile. Its brightest star, Deneb Algedi, marks the goat's tail, and the constellation's arrowhead outline is drawn from two horn stars, Algedi and Dabih, down to the tail. Neptune was discovered within Capricornus in 1846."},
+        hans:{"dates":"12月22日 – 1月19日","brightest":"垒壁阵四","desc":"摩羯座又称海山羊，源自希腊神话：牧神潘为躲避怪物提丰跃入尼罗河，下半身化作鱼尾。其最亮星垒壁阵四位于羊尾处，整个星座呈倒三角形，从羊角的牛宿二（Algedi）与牛宿一（Dabih）延伸至鱼尾。1846年，海王星正是在摩羯座天区被发现的。"},
+        hant:{"dates":"12月22日 – 1月19日","brightest":"壘壁陣四","desc":"摩羯座又稱海山羊，源自希臘神話：牧神潘為躲避怪物提豐躍入尼羅河，下半身化作魚尾。其最亮星壘壁陣四位於羊尾處，整個星座呈倒三角形，從羊角的牛宿二（Algedi）與牛宿一（Dabih）延伸至魚尾。1846年，海王星正是在摩羯座天區被發現的。"} } },
+    { key:"aquarius", symbol:"♒",
+      t:{"en":"Aquarius","hans":"宝瓶座","hant":"寶瓶座"},
+      stars:[[21.526,-5.57,2.87],[22.096,-0.32,2.94],[22.911,-15.82,3.27],[20.795,-9.5,3.77],[22.361,-1.39,3.85],[22.481,-0.02,3.65],[22.589,-0.12,4.04],[22.421,1.38,4.66],[22.281,-7.78,4.16],[22.877,-7.58,3.73]],
+      starNames:["Sadalsuud","Sadalmelik","Skat","Albali","Sadachbia","Zeta Aquarii","Eta Aquarii","Pi Aquarii","Ancha","Hydor"],
+      lines:[[3,0],[0,1],[1,4],[4,5],[5,6],[5,7],[1,8],[8,9],[9,2]],
+      info:{
+        en:{"dates":"Jan 20 – Feb 18","brightest":"Sadalsuud","desc":"Aquarius, the Water Bearer, represents Ganymede, the beautiful youth whom Zeus carried to Olympus to serve as cupbearer to the gods, forever pouring water from his jar. Its brightest star, Sadalsuud, is a rare yellow supergiant, and the constellation also hosts the Helix Nebula, one of the closest planetary nebulae to Earth."},
+        hans:{"dates":"1月20日 – 2月18日","brightest":"虚宿一","desc":"宝瓶座又称水瓶座，象征希腊神话中被宙斯带上奥林匹斯山、为众神斟酒的美少年伽倪墨得斯，他手中的水瓶不断倾泻清泉。座内最亮星虚宿一是一颗罕见的黄超巨星；著名的螺旋星云也位于此，是距离地球最近的行星状星云之一。"},
+        hant:{"dates":"1月20日 – 2月18日","brightest":"虛宿一","desc":"寶瓶座又稱水瓶座，象徵希臘神話中被宙斯帶上奧林帕斯山、為眾神斟酒的美少年伽倪墨得斯，他手中的水瓶不斷傾瀉清泉。座內最亮星虛宿一是一顆罕見的黃超巨星；著名的螺旋星雲也位於此，是距離地球最近的行星狀星雲之一。"} } },
+    { key:"pisces", symbol:"♓",
+      t:{"en":"Pisces","hans":"双鱼座","hant":"雙魚座"},
+      stars:[[23.286,3.28,3.7],[23.466,6.38,4.28],[23.666,5.63,4.13],[23.701,1.78,4.5],[23.449,1.26,4.94],[23.989,6.86,4.01],[0.811,7.59,4.43],[1.049,7.89,4.27],[1.69,5.49,4.44],[2.034,2.76,3.82],[1.757,9.16,4.26],[1.525,15.35,3.62]],
+      starNames:["Gamma Psc","Theta Psc","Iota Psc","Lambda Psc","Kappa Psc","Omega Psc","Delta Psc","Epsilon Psc","Nu Psc","Alrescha","Omicron Psc","Alpherg"],
+      lines:[[0,1],[1,2],[2,3],[3,4],[4,0],[2,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11]],
+      info:{
+        en:{"dates":"Feb 19 – Mar 20","brightest":"Alpherg (Eta Piscium)","desc":"In Greek myth, Pisces depicts Aphrodite and her son Eros, who turned into two fish tied together by a cord to escape the monster Typhon. The western fish is marked by the Circlet asterism, and the cords meet at the star Alrescha, \"the knot\". The constellation also contains the vernal equinox point, where the Sun crosses the celestial equator each March."},
+        hans:{"dates":"2月19日 – 3月20日","brightest":"右更二（双鱼座η）","desc":"双鱼座源自希腊神话：爱与美之神阿佛洛狄忒与其子厄洛斯为躲避怪物提丰而化身为鱼，并用丝带系住彼此的尾巴。两条丝带在“天绳之结”外屏七（Alrescha）处相连。如今的春分点正位于双鱼座内，是太阳每年三月穿越天赤道的地方。"},
+        hant:{"dates":"2月19日 – 3月20日","brightest":"右更二（雙魚座η）","desc":"雙魚座源自希臘神話：愛與美之神阿芙蘿黛蒂與其子厄洛斯為躲避怪物提豐而化身為魚，並以絲帶繫住彼此的尾巴。兩條絲帶在「天繩之結」外屏七（Alrescha）處相連。如今的春分點正位於雙魚座內，是太陽每年三月穿越天赤道之處。"} } }
+  ];
+  function assertZodiacData() {
+    if (ZODIAC.length !== 12) throw new Error('need 12 zodiac entries, got ' + ZODIAC.length);
+    var langs = ['en', 'hans', 'hant'];
+    ZODIAC.forEach(function (z, zi) {
+      if (!z.key || !z.symbol) throw new Error('zodiac ' + zi + ' missing key/symbol');
+      langs.forEach(function (L) {
+        if (!z.t[L]) throw new Error(z.key + ' missing name ' + L);
+        var o = z.info[L];
+        if (!o || !o.dates || !o.brightest || !o.desc) throw new Error(z.key + ' missing info.' + L);
+      });
+      if (z.stars.length < 4) throw new Error(z.key + ' needs >=4 stars');
+      if (z.starNames.length !== z.stars.length) throw new Error(z.key + ' starNames length mismatch');
+      z.stars.forEach(function (s, si) {
+        if (s[0] < 0 || s[0] >= 24) throw new Error(z.key + ' star ' + si + ' RA out of range');
+        if (s[1] < -90 || s[1] > 90) throw new Error(z.key + ' star ' + si + ' Dec out of range');
+      });
+      z.lines.forEach(function (l) {
+        if (l[0] >= z.stars.length || l[1] >= z.stars.length || l[0] < 0 || l[1] < 0) throw new Error(z.key + ' line index out of range');
+      });
+    });
+    return true;
+  }
   var skybackEl = document.getElementById('skyback');
   function enterSky() {
     if (viewMode === 'sky') return;
