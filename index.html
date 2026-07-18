@@ -83,6 +83,13 @@
   #bp-desc { font-size: 13px; line-height: 1.55; color: #cbd5e1; margin-top: 10px; }
   #bp-cat { font-size: 10.5px; color: #6b7280; margin-top: 10px; }
   body.gx-cinema #beacon-panel { display: none !important; }
+  /* mobile: panel becomes a bottom drawer */
+  @media (max-width: 640px) {
+    #beacon-panel { top: auto; bottom: 0; right: 0; left: 0; width: auto; max-height: 52vh;
+      border-radius: 14px 14px 0 0; padding: 14px 16px 18px; }
+    #beacon-panel.open { animation: bpUp .2s ease; }
+    @keyframes bpUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  }
 
   /* background-music control: speaker button + a hover popup listing tracks by name */
   #audio { right: 16px; bottom: 14px; z-index: 6; text-align: right; }
