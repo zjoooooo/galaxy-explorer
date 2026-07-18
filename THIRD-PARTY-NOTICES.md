@@ -107,6 +107,12 @@ Eckhard Slawik / NOIRLab series as the zodiac cards (Wikimedia Commons).
 - `images/cons-ursa-minor.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Ursa_Minor_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(ursa-minor).jpg)
 - `images/cons-canis-major.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Canis_Major_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(canis-major).jpg)
 
-### External galaxy image
+### External galaxy images
 
 - `images/andromeda.jpg` — Adam Evans · CC BY 2.0 · [source](https://commons.wikimedia.org/wiki/File%3AAndromeda_Galaxy_%28with_h-alpha%29.jpg)
+- `images/m33.jpg` — Local Group Survey Team and T. A. Rector (U. Alaska Anchorage), NOAO/AURA/NSF · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Panorama_of_Spiral_Galaxy%2C_M33_%28noao-m33lgs_ubvIha%29.jpg)
+- `images/m104.jpg` — NASA/ESA and The Hubble Heritage Team (STScI/AURA) · Public domain · [source](https://commons.wikimedia.org/wiki/File:M104_ngc4594_sombrero_galaxy_hi-res.jpg)
+- `images/m87.jpg` — Event Horizon Telescope Collaboration · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Black_hole_-_Messier_87.jpg)
+- `images/cen-a.jpg` — ESO · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Centaurus_A_%28NGC_5128%29_%28eso0315a%29.jpg)
+- `images/lmc.jpg` — CTIO/NOIRLab/NSF/AURA/SMASH/D. Nidever (Montana State University) · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Deepest%2C_widest_view_of_the_Large_Magellanic_Cloud_from_SMASH.jpg)
+- `images/smc.jpg` — ESA/Hubble and Digitized Sky Survey 2 · Public domain · [source](https://commons.wikimedia.org/wiki/File:Small_Magellanic_Cloud_%28ground-based_image%29_%28heic0603d%29.jpg)
