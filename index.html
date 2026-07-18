@@ -539,7 +539,31 @@
         info: {
           en:   { type:'Supernova remnant', distance:'~2,400 light-years', constellation:'Cygnus', facts:[['Age','~10,000 yr'],['Form','Filamentary shell']], desc:'The delicate, lacework filaments of a supernova that detonated about 10,000 years ago.', catalog:'NGC 6960' },
           hans: { type:'超新星遗迹', distance:'约 2,400 光年', constellation:'天鹅座', facts:[['年龄','约 1 万年'],['形态','丝缕状壳层']], desc:'约 1 万年前爆发的超新星,留下如蕾丝般纤细的气体丝缕。', catalog:'NGC 6960' },
-          hant: { type:'超新星遺跡', distance:'約 2,400 光年', constellation:'天鵝座', facts:[['年齡','約 1 萬年'],['形態','絲縷狀殼層']], desc:'約 1 萬年前爆發的超新星,留下如蕾絲般纖細的氣體絲縷。', catalog:'NGC 6960' } } }
+          hant: { type:'超新星遺跡', distance:'約 2,400 光年', constellation:'天鵝座', facts:[['年齡','約 1 萬年'],['形態','絲縷狀殼層']], desc:'約 1 萬年前爆發的超新星,留下如蕾絲般纖細的氣體絲縷。', catalog:'NGC 6960' } } },
+      { p: near(215, -55, -30),
+        t: { en: ['Lagoon Nebula'], hans: ['礁湖星云'], hant: ['礁湖星雲'] },
+        info: {
+          en:   { type:'Emission nebula', distance:'~4,100 light-years', constellation:'Sagittarius', facts:[['Type','Star-forming region'],['Catalog','M8']], desc:'A vast, bright stellar nursery toward the galactic centre.', catalog:'M8' },
+          hans: { type:'发射星云', distance:'约 4,100 光年', constellation:'人马座', facts:[['类型','恒星形成区'],['星表','M8']], desc:'朝银心方向的一片巨大明亮的恒星摇篮。', catalog:'M8' },
+          hant: { type:'發射星雲', distance:'約 4,100 光年', constellation:'人馬座', facts:[['類型','恆星形成區'],['星表','M8']], desc:'朝銀心方向的一片巨大明亮的恆星搖籃。', catalog:'M8' } } },
+      { p: near(180, 70, -40),
+        t: { en: ['Hercules Cluster'], hans: ['武仙座大星团'], hant: ['武仙座大星團'] },
+        info: {
+          en:   { type:'Globular cluster', distance:'~22,000 light-years', constellation:'Hercules', facts:[['Stars','~300,000'],['Age','~11.6 billion yr']], desc:'A brilliant northern globular of several hundred thousand ancient stars.', catalog:'M13' },
+          hans: { type:'球状星团', distance:'约 22,000 光年', constellation:'武仙座', facts:[['恒星','约 30 万颗'],['年龄','约 116 亿年']], desc:'北天一个由数十万颗古老恒星组成的明亮球状星团。', catalog:'M13' },
+          hant: { type:'球狀星團', distance:'約 22,000 光年', constellation:'武仙座', facts:[['恆星','約 30 萬顆'],['年齡','約 116 億年']], desc:'北天一個由數十萬顆古老恆星組成的明亮球狀星團。', catalog:'M13' } } },
+      { p: near(230, -80, -25),
+        t: { en: ['Sirius'], hans: ['天狼星'], hant: ['天狼星'] },
+        info: {
+          en:   { type:'Binary star', distance:'~8.6 light-years', constellation:'Canis Major', facts:[['Brightness','Brightest in the sky'],['System','Sirius A + B']], desc:"The brightest star in Earth's night sky, a close stellar neighbour.", catalog:'α CMa' },
+          hans: { type:'双星', distance:'约 8.6 光年', constellation:'大犬座', facts:[['亮度','全天最亮'],['系统','天狼 A + B']], desc:'地球夜空中最亮的恒星,是离我们很近的邻居。', catalog:'α CMa' },
+          hant: { type:'雙星', distance:'約 8.6 光年', constellation:'大犬座', facts:[['亮度','全天最亮'],['系統','天狼 A + B']], desc:'地球夜空中最亮的恆星,是離我們很近的鄰居。', catalog:'α CMa' } } },
+      { p: near(200, 20, -32),
+        t: { en: ['Antares'], hans: ['心宿二'], hant: ['心宿二'] },
+        info: {
+          en:   { type:'Red supergiant', distance:'~550 light-years', constellation:'Scorpius', facts:[['Diameter','~700× Sun'],['Note','Heart of the Scorpion']], desc:'A blazing red supergiant marking the heart of Scorpius.', catalog:'α Sco' },
+          hans: { type:'红超巨星', distance:'约 550 光年', constellation:'天蝎座', facts:[['直径','约太阳的 700 倍'],['别称','天蝎之心']], desc:'标记天蝎座心脏的炽红超巨星。', catalog:'α Sco' },
+          hant: { type:'紅超巨星', distance:'約 550 光年', constellation:'天蠍座', facts:[['直徑','約太陽的 700 倍'],['別稱','天蠍之心']], desc:'標記天蠍座心臟的熾紅超巨星。', catalog:'α Sco' } } }
     ];
     var host = document.createElement('div'); host.id = 'beacons'; document.body.appendChild(host);
     for (var i = 0; i < DEFS.length; i++) {
