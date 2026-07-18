@@ -1,3 +1,5 @@
+**English** | [简体中文](README.zh-CN.md)
+
 # Galaxy Explorer 🌌
 Demo Page
 https://zjoooooo.github.io/galaxy-explorer/
@@ -97,17 +99,21 @@ var GALAXY_SPIN = 0.013; // rotation speed (radians/sec)
 - `BLOOM.strength` — overall glow (0 = off).
 - `GALAXY_SPIN` — how fast the whole galaxy rotates.
 
-## 🎵 Background music (optional)
+## 🎵 Background music
 
-The speaker button (bottom-right) is hidden until you add music. To enable it:
+Three ambient tracks ship in `audio/` and **autoplay on load** (with a
+first-gesture fallback for browsers that block autoplay). Use the speaker button
+(bottom-right) or press `M` to mute / unmute; hover it to pick a track by name.
+Tracks loop.
 
-1. Put one or more `.mp3` files in the `audio/` folder.
-2. List their file names in `MUSIC_TRACKS` inside `index.html`:
-   ```js
-   var MUSIC_TRACKS = ['ambient 1.mp3', 'ambient 2.mp3'];
-   ```
+To change the music, drop your own `.mp3` files in `audio/` and list their file
+names in `MUSIC_TRACKS` inside `index.html`:
 
-Tracks loop and are listed by file name in a hover popup.
+```js
+var MUSIC_TRACKS = ['ambient 1.mp3', 'ambient 2.mp3'];
+```
+
+Leave `MUSIC_TRACKS` empty to hide the speaker button entirely.
 **Please don't commit copyrighted audio you don't have the rights to share.**
 
 ## 🛠️ How it works (in brief)
