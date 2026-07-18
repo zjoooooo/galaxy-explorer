@@ -79,3 +79,16 @@ sourced from Wikimedia Commons.
 - `images/zodiac-capricornus.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Capricornus_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(capricornus).jpg)
 - `images/zodiac-aquarius.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Aquarius_produced_by_NOIRLab,_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(aquarius).jpg)
 - `images/zodiac-pisces.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Pisces_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(pisces).jpg)
+
+### More beacon images (teaching expansion)
+
+- `images/ring-nebula.jpg` — NASA, ESA, and C. Robert O'Dell (Vanderbilt University) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Hubble_image_of_the_Ring_Nebula_(Messier_57).jpg)
+- `images/helix-nebula.jpg` — NASA, ESA, and C.R. O'Dell (Vanderbilt University); CTIO data by C.R. O'Dell and L.M. Frattare · Public domain · [source](https://commons.wikimedia.org/wiki/File:NGC7293_(2004).jpg)
+- `images/horsehead-nebula.jpg` — NASA/ESA/Hubble Heritage Team · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Hubble_Sees_a_Horsehead_of_a_Different_Color.jpg)
+- `images/m15.jpg` — ESA/Hubble & NASA · Public domain · [source](https://commons.wikimedia.org/wiki/File:Messier_15_HST.jpg)
+- `images/m5.jpg` — ESA/Hubble & NASA · Public domain · [source](https://commons.wikimedia.org/wiki/File:Messier_5_-_HST.jpg)
+- `images/m22.jpg` — ESA/Hubble & NASA · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:The_crammed_centre_of_Messier_22.jpg)
+- `images/polaris.jpg` — Benedikt Markus · CC BY-SA 4.0 · [source](https://commons.wikimedia.org/wiki/File:Circumpolar_star_trails_and_ISS_transit_over_the_Teide_volcano,_Tenerife,_Spain.jpg)
+- `images/proxima.jpg` — ESA/Hubble & NASA · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:New_shot_of_Proxima_Centauri,_our_nearest_neighbour.jpg)
+- `images/uy-scuti.jpg` — ESO/Digitized Sky Survey 2 · CC BY-SA 3.0 · [source](https://commons.wikimedia.org/wiki/File:UY_Scuti_zoomed_in,_DSS2_survey,_2003.png)
+- `images/trappist1.jpg` — Artist’s impression: NASA, ESA, and G. Bacon (STScI) · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Artist%27s_view_of_planets_transiting_red_dwarf_star_in_TRAPPIST-1_system.jpg)
