@@ -481,6 +481,8 @@
       BEACONS[i].el.querySelector('.b-label').innerHTML = t[0] + (t[1] ? '<small>' + t[1] + '</small>' : '');
     }
     if (typeof selectedBeacon !== 'undefined' && selectedBeacon !== null && typeof renderPanel === 'function') renderPanel(selectedBeacon, lang);
+    if (typeof paintSkyLabels === 'function' && typeof SKY_CONS !== 'undefined' && SKY_CONS.length) paintSkyLabels(lang);
+    if (typeof skySelected !== 'undefined' && skySelected !== null && typeof renderConstellationPanel === 'function') renderConstellationPanel(skySelected, lang);
   }
   (function buildBeacons() {
     var TAU = Math.PI * 2;
@@ -653,7 +655,7 @@
     beaconRing.visible = true; beaconRing.material.opacity = 0.9;
   };
   window.closeBeaconExtras = function () { bpEl.classList.remove('open'); beaconRing.visible = false; beaconRing.material.opacity = 0; };
-  document.getElementById('bp-close').addEventListener('click', function (e) { e.stopPropagation(); clearSelection(); });
+  document.getElementById('bp-close').addEventListener('click', function (e) { e.stopPropagation(); if (viewMode === 'sky') clearSkySelection(); else clearSelection(); });
   window.addEventListener('click', function () { if (selectedBeacon !== null) clearSelection(); }); // outside click closes
   bpEl.addEventListener('click', function (e) { e.stopPropagation(); }); // clicks inside the panel don't close it
   bpBody.addEventListener('click', function (e) {
@@ -926,6 +928,7 @@
       skyScene.add(new THREE.LineSegments(lg, lm));
       var el = document.createElement('div'); el.className = 'skylabel';
       host.appendChild(el);
+      (function (idx) { el.addEventListener('click', function (e) { e.stopPropagation(); selectSky(idx); }); })(zi);
       SKY_CONS.push({ z: z, el: el, dir: centroid, lineMat: lm, starMat: sm, shown: true });
     });
     paintSkyLabels(beaconLang);
@@ -949,6 +952,48 @@
       }
     }
   };
+  window.skySelected = null;
+  function renderConstellationPanel(i, lang) {
+    var z = SKY_CONS[i].z, o = z.info[lang] || z.info.en, name = z.t[lang] || z.t.en;
+    var K = { en: ['Zodiac constellation', 'Dates', 'Brightest star', 'Main stars'], hans: ['黄道星座', '日期', '最亮星', '主要亮星'], hant: ['黃道星座', '日期', '最亮星', '主要亮星'] };
+    var k = K[lang] || K.en;
+    bpBody.innerHTML =
+      '<div id="bp-name" style="color:#9cc0ff">' + esc(name) + ' ' + z.symbol + '</div>' +
+      '<span id="bp-type">' + esc(k[0]) + '</span>' +
+      '<div class="bp-row"><span class="k">' + esc(k[1]) + '</span><span class="v">' + esc(o.dates) + '</span></div>' +
+      '<div class="bp-row"><span class="k">' + esc(k[2]) + '</span><span class="v">' + esc(o.brightest) + '</span></div>' +
+      '<div class="bp-row"><span class="k">' + esc(k[3]) + '</span><span class="v">' + z.stars.length + '</span></div>' +
+      '<div id="bp-desc">' + esc(o.desc) + '</div>' +
+      '<div id="bp-cat">' + z.symbol + ' · ' + esc(z.t.en) + '</div>';
+  }
+  function selectSky(i) {
+    if (i === skySelected) { clearSkySelection(); return; }
+    window.skySelected = i;
+    SKY_CONS.forEach(function (c, ci) {
+      c.el.classList.toggle('sel', ci === i);
+      c.el.classList.toggle('dim', ci !== i);
+      c.lineMat.opacity = ci === i ? 0.9 : 0.12;
+      c.starMat.uniforms.uMul.value = ci === i ? 1.5 : 0.4;
+    });
+    renderConstellationPanel(i, beaconLang);
+    bpEl.classList.add('open');
+  }
+  window.clearSkySelection = function () {
+    window.skySelected = null;
+    SKY_CONS.forEach(function (c) {
+      c.el.classList.remove('sel', 'dim');
+      c.lineMat.opacity = 0.45;
+      c.starMat.uniforms.uMul.value = 1;
+    });
+    bpEl.classList.remove('open');
+  };
+  window.addEventListener('keydown', function (e) {
+    if ((e.key || '').toLowerCase() === 'escape' && viewMode === 'sky' && skySelected != null) {
+      clearSkySelection();
+      e.stopImmediatePropagation(); // consume: the NEXT Esc exits the sky view, not this one
+    }
+  });
+  window.addEventListener('click', function () { if (viewMode === 'sky' && skySelected != null) clearSkySelection(); });
   var skybackEl = document.getElementById('skyback');
   function enterSky() {
     if (viewMode === 'sky') return;
