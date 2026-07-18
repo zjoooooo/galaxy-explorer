@@ -65,6 +65,24 @@
     .b-label { font-size: 10px; letter-spacing: .02em; }
     .b-label small { display: none; }
   }
+  /* beacon info panel — desktop: fixed right side */
+  #beacon-panel { top: 74px; right: 14px; width: 300px; max-height: calc(100vh - 96px); overflow-y: auto;
+    z-index: 7; background: rgba(10,14,24,.92); border-radius: 12px; padding: 16px 18px 18px;
+    color: #e5e7eb; box-shadow: 0 8px 30px rgba(0,0,0,.5); display: none; }
+  #beacon-panel.open { display: block; animation: bpIn .18s ease; }
+  @keyframes bpIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  #bp-close { position: absolute; top: 8px; right: 10px; background: transparent; border: 0; color: #9ca3af;
+    font-size: 20px; line-height: 1; cursor: pointer; padding: 2px 6px; }
+  #bp-close:hover { color: #fff; }
+  #bp-name { font-size: 18px; font-weight: 600; margin: 0 20px 6px 0; }
+  #bp-type { display: inline-block; font-size: 11px; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px;
+    background: rgba(255,255,255,.08); color: #cbd5e1; margin-bottom: 10px; }
+  .bp-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; padding: 4px 0;
+    border-top: 1px solid rgba(255,255,255,.07); }
+  .bp-row .k { color: #93a5c4; } .bp-row .v { color: #e5e7eb; text-align: right; }
+  #bp-desc { font-size: 13px; line-height: 1.55; color: #cbd5e1; margin-top: 10px; }
+  #bp-cat { font-size: 10.5px; color: #6b7280; margin-top: 10px; }
+  body.gx-cinema #beacon-panel { display: none !important; }
 
   /* background-music control: speaker button + a hover popup listing tracks by name */
   #audio { right: 16px; bottom: 14px; z-index: 6; text-align: right; }
@@ -92,6 +110,11 @@
 </select>
 
 <div id="msg" class="overlay"></div>
+
+<div id="beacon-panel" class="overlay" aria-live="polite">
+  <button id="bp-close" title="Close" aria-label="Close">×</button>
+  <div id="bp-body"></div>
+</div>
 
 <div id="audio" class="overlay">
   <div id="audiolist"></div>
@@ -432,6 +455,7 @@
       var t = BEACONS[i].t[lang] || BEACONS[i].t.en;
       BEACONS[i].el.querySelector('.b-label').innerHTML = t[0] + (t[1] ? '<small>' + t[1] + '</small>' : '');
     }
+    if (typeof selectedBeacon !== 'undefined' && selectedBeacon !== null && typeof renderPanel === 'function') renderPanel(selectedBeacon, lang);
   }
   (function buildBeacons() {
     var TAU = Math.PI * 2;
@@ -552,6 +576,28 @@
     for (var k = 0; k < BEACONS.length; k++) { BEACONS[k].el.classList.remove('sel', 'dim'); }
     if (window.closeBeaconExtras) window.closeBeaconExtras();
   }
+  var bpEl = document.getElementById('beacon-panel'), bpBody = document.getElementById('bp-body');
+  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  function renderPanel(i, lang) {
+    var b = BEACONS[i], o = b.info[lang] || b.info.en, name = (b.t[lang] || b.t.en)[0], ac = getComputedStyle(b.el).getPropertyValue('--bc').trim() || '#8fc2ff';
+    var rows = [[lang === 'en' ? 'Distance' : '距离', o.distance],
+                [lang === 'en' ? 'Constellation' : '星座', o.constellation]]
+      .filter(function (r) { return r[1]; })
+      .map(function (r) { return '<div class="bp-row"><span class="k">' + esc(r[0]) + '</span><span class="v">' + esc(r[1]) + '</span></div>'; });
+    o.facts.forEach(function (f) { rows.push('<div class="bp-row"><span class="k">' + esc(f[0]) + '</span><span class="v">' + esc(f[1]) + '</span></div>'); });
+    bpBody.innerHTML =
+      '<div id="bp-name" style="color:' + ac + '">' + esc(name) + '</div>' +
+      '<span id="bp-type">' + esc(o.type) + '</span>' +
+      rows.join('') +
+      '<div id="bp-desc">' + esc(o.desc) + '</div>' +
+      (o.catalog ? '<div id="bp-cat">' + esc(o.catalog) + '</div>' : '');
+  }
+  window.openBeaconExtras = function (i) { renderPanel(i, beaconLang); bpEl.classList.add('open'); };
+  window.closeBeaconExtras = function () { bpEl.classList.remove('open'); };
+  document.getElementById('bp-close').addEventListener('click', function (e) { e.stopPropagation(); clearSelection(); });
+  window.addEventListener('click', function () { if (selectedBeacon !== null) clearSelection(); }); // outside click closes
+  bpEl.addEventListener('click', function (e) { e.stopPropagation(); }); // clicks inside the panel don't close it
+  window.addEventListener('keydown', function (e) { if ((e.key || '').toLowerCase() === 'escape' && selectedBeacon !== null) clearSelection(); });
   var beaconTmp = new THREE.Vector3();
   function updateBeacons() { // call AFTER render() — galaxyRoot/camera matrices are fresh then
     for (var i = 0; i < BEACONS.length; i++) {
