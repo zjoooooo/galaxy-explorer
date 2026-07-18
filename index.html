@@ -74,7 +74,10 @@
   .beacon.sel .b-label { color: #fff; }
   /* label declutter: crowded labels hide (dot + rings stay clickable); they return on zoom-in */
   .beacon .b-label { transition: opacity .25s ease; }
-  .beacon.ld .b-label { opacity: 0; pointer-events: none; }
+  .beacon.ld .b-label { opacity: 0; }
+  /* decluttered beacons don't intercept clicks — the kept "winner" of each crowded
+     cluster (the Solar System is always kept) takes the click; zoom in to reach the rest */
+  .beacon.ld .b-mark, .beacon.ld .b-label { pointer-events: none; }
   /* narrow / touch screens: shrink beacons and drop the English subtitle so the
      crowded solar neighbourhood doesn't pile up. ponytail: eases overlap, not a
      full collision solver (that'd need label de-clustering — see task 6). */
@@ -717,6 +720,7 @@
         }
       }
       b2.el.classList.toggle('ld', clash);
+      b2.el.style.zIndex = sel ? 60 : (40 - i); // important beacons (low index) paint on top; selected above all
       if (!clash) kept.push([b2.sx, b2.sy]);
     }
   }
