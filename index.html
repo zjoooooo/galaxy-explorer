@@ -422,8 +422,10 @@
       uniforms: { uTime: { value: 0 }, uSize: { value: 3.4 * renderer.getPixelRatio() } },
       vertexShader: 'uniform float uTime; uniform float uSize; attribute vec3 aColor; attribute float aPhase; attribute float aSpd; varying vec3 vColor;' +
         'void main(){ vec4 vp = modelViewMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp;' +
-        ' float tw = 0.72 + 0.28 * sin(uTime * aSpd + aPhase);' +
-        ' gl_PointSize = uSize * (0.8 + 0.4 * tw) * (300.0 / -vp.z); vColor = aColor * tw; }',
+        ' float tw = 0.6 + 0.4 * sin(uTime * aSpd + aPhase);' +
+        ' float flare = pow(max(0.0, sin(uTime * (0.25 + aSpd * 0.2) + aPhase * 2.3)), 24.0);' + // rare brief scintillation flash
+        ' float br = tw + flare;' +
+        ' gl_PointSize = uSize * (0.8 + 0.5 * br) * (300.0 / -vp.z); vColor = aColor * br; }',
       fragmentShader: 'varying vec3 vColor; void main(){ float d = distance(gl_PointCoord, vec2(0.5)); if (d > 0.5) discard; float s = pow(max(0.0, 1.0 - d * 2.0), 1.4); gl_FragColor = vec4(vColor, s); }',
       transparent: true, depthWrite: false
     });
