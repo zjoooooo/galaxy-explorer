@@ -1,4 +1,4 @@
-**English** | [简体中文](README.zh-CN.md)
+**English** | [简体中文](README.zh-CN.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
 # Galaxy Explorer 🌌
 Demo Page
@@ -30,6 +30,14 @@ and supernovae are all math.
 - **Physically-modelled ambient events** — occasional shooting stars, meteor
   showers, and supernovae that follow a real light curve (t².³ rise → rounded
   peak → two-slope fade) with a four-pointed diffraction-spike flash.
+- **Interactive beacons** — 15 clickable markers (the Solar System, Sagittarius
+  A*, famous nebulae, clusters, stars and black holes) open detailed info cards
+  with a glowing 3D ring on the selected object.
+- **Zodiac sky view** — open the Solar System card and "view the sky": an
+  Earth-centred rotatable star dome with the 12 zodiac constellations drawn
+  from 106 real stars (J2000 positions), each with its own card.
+- **Three languages** — beacon labels and cards switch between English,
+  Simplified and Traditional Chinese (top-right selector; choice remembered).
 - **Cinematic look** — selective bloom + ACES tone-mapping.
 - **Performance-aware** — an FPS watchdog automatically reduces dust density on
   weak GPUs so it stays smooth on laptops, TVs and kiosks.
@@ -74,6 +82,7 @@ nginx, or any web host. Just upload the folder — there is nothing to build.
 |---|---|
 | **drag** | orbit the camera |
 | **scroll** | zoom in / out |
+| **click a beacon** | open that object's info card |
 | **`F`** | cinema mode — hide all UI |
 | **`M`** | background music on / mute (optional, see below) |
 
