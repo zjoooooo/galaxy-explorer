@@ -49,6 +49,14 @@
   .beacon.sun .b-dot { inset: 1px; }
   .beacon.sun .b-label { color: #ffe9c2; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 12px rgba(255,200,110,.6); }
   .beacon.sun .b-label small { color: #c8ab7d; }
+  /* narrow / touch screens: shrink beacons and drop the English subtitle so the
+     crowded solar neighbourhood doesn't pile up. ponytail: eases overlap, not a
+     full collision solver (that'd need label de-clustering — see task 6). */
+  @media (max-width: 640px) {
+    .b-mark { width: 11px; height: 11px; }
+    .b-label { font-size: 10px; letter-spacing: .02em; }
+    .b-label small { display: none; }
+  }
 
   /* background-music control: speaker button + a hover popup listing tracks by name */
   #audio { right: 16px; bottom: 14px; z-index: 6; text-align: right; }
@@ -407,9 +415,11 @@
   // Positions live in galaxyRoot space (they ride the rotation, staying on their
   // arm). Each frame the 3D point is projected to the screen and a borderless
   // HTML beacon (glow dot + pulse rings + label) is moved onto it.
-  var BEACONS = [], beaconLang = 'en'; // default: English
+  var BEACONS = [];
+  var beaconLang = 'en'; try { beaconLang = localStorage.getItem('gx-lang') || 'en'; } catch (e) {} // default English; remembers last choice
   function setBeaconLang(lang) {
     beaconLang = lang;
+    try { localStorage.setItem('gx-lang', lang); } catch (e) {}
     for (var i = 0; i < BEACONS.length; i++) {
       var t = BEACONS[i].t[lang] || BEACONS[i].t.en;
       BEACONS[i].el.querySelector('.b-label').innerHTML = t[0] + (t[1] ? '<small>' + t[1] + '</small>' : '');
@@ -443,7 +453,7 @@
     }
     setBeaconLang(beaconLang);
     var langSel = document.getElementById('lang');
-    if (langSel) langSel.addEventListener('change', function () { setBeaconLang(langSel.value); });
+    if (langSel) { langSel.value = beaconLang; langSel.addEventListener('change', function () { setBeaconLang(langSel.value); }); }
   })();
   var beaconTmp = new THREE.Vector3();
   function updateBeacons() { // call AFTER render() — galaxyRoot/camera matrices are fresh then
@@ -1005,20 +1015,22 @@
     if (!musicEl) { musicEl = new Audio(); musicEl.loop = true; musicEl.volume = 0.35; }
     if (musicTrack !== i) { musicTrack = i; musicEl.src = 'audio/' + encodeURIComponent(MUSIC_TRACKS[i]); }
     musicEl.muted = false; musicOn = true;
-    musicEl.play().then(musicPaint).catch(function () { musicOn = false; musicPaint(); });
+    musicEl.play().then(function () { musicRemember('on'); musicPaint(); }).catch(function () { musicOn = false; musicPaint(); });
     musicPaint();
   }
+  function musicRemember(state) { try { localStorage.setItem('gx-music', state); } catch (e) {} } // only user-driven states persist (not autoplay blocks)
   function musicToggle() {
     if (!musicEl || musicTrack < 0) { musicPlay(0); return; } // first toggle starts track 1
-    if (musicOn) { musicEl.muted = true; musicOn = false; }
-    else { musicEl.muted = false; musicOn = true; musicEl.play().catch(function () {}); }
+    if (musicOn) { musicEl.muted = true; musicOn = false; musicRemember('off'); }
+    else { musicEl.muted = false; musicOn = true; musicRemember('on'); musicEl.play().catch(function () {}); }
     musicPaint();
   }
   audioBtn.addEventListener('click', musicToggle);
 
   // autoplay on load; browsers block sound before a user gesture, so if the initial
   // play() is refused, fall back to starting on the first click/key/touch.
-  if (MUSIC_TRACKS.length) {
+  var musicPref = 'on'; try { musicPref = localStorage.getItem('gx-music') || 'on'; } catch (e) {}
+  if (MUSIC_TRACKS.length && musicPref !== 'off') { // skip autoplay if the user muted last visit
     musicPlay(0);
     var kickMusic = function () {
       if (musicEl && musicEl.paused) musicPlay(0);
