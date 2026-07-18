@@ -106,3 +106,7 @@ Eckhard Slawik / NOIRLab series as the zodiac cards (Wikimedia Commons).
 - `images/cons-lyra.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Lyra_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(lyra).jpg)
 - `images/cons-ursa-minor.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Ursa_Minor_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(ursa-minor).jpg)
 - `images/cons-canis-major.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Canis_Major_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(canis-major).jpg)
+
+### External galaxy image
+
+- `images/andromeda.jpg` — Adam Evans · CC BY 2.0 · [source](https://commons.wikimedia.org/wiki/File%3AAndromeda_Galaxy_%28with_h-alpha%29.jpg)
