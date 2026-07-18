@@ -592,8 +592,14 @@
       '<div id="bp-desc">' + esc(o.desc) + '</div>' +
       (o.catalog ? '<div id="bp-cat">' + esc(o.catalog) + '</div>' : '');
   }
-  window.openBeaconExtras = function (i) { renderPanel(i, beaconLang); bpEl.classList.add('open'); };
-  window.closeBeaconExtras = function () { bpEl.classList.remove('open'); };
+  window.openBeaconExtras = function (i) {
+    renderPanel(i, beaconLang); bpEl.classList.add('open');
+    var ac = getComputedStyle(BEACONS[i].el).getPropertyValue('--bc').trim() || '#8fc2ff';
+    beaconRing.material.color.set(ac);
+    beaconRing.position.copy(BEACONS[i].p);
+    beaconRing.visible = true; beaconRing.material.opacity = 0.9;
+  };
+  window.closeBeaconExtras = function () { bpEl.classList.remove('open'); beaconRing.visible = false; beaconRing.material.opacity = 0; };
   document.getElementById('bp-close').addEventListener('click', function (e) { e.stopPropagation(); clearSelection(); });
   window.addEventListener('click', function () { if (selectedBeacon !== null) clearSelection(); }); // outside click closes
   bpEl.addEventListener('click', function (e) { e.stopPropagation(); }); // clicks inside the panel don't close it
@@ -611,6 +617,19 @@
       }
     }
   }
+
+  // reusable 3D highlight ring — a soft annulus sprite that rides galaxyRoot
+  function ringTexture() {
+    var s = 128, c = document.createElement('canvas'); c.width = c.height = s;
+    var x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 30, 64, 64, 62);
+    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.72, 'rgba(255,255,255,0)');
+    g.addColorStop(0.86, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.beginPath(); x.arc(64, 64, 62, 0, 6.2832); x.fill();
+    return new THREE.CanvasTexture(c);
+  }
+  var beaconRing = new THREE.Sprite(new THREE.SpriteMaterial({ map: ringTexture(), color: 0x8fc2ff,
+    transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  beaconRing.scale.set(46, 46, 1); beaconRing.visible = false; galaxyRoot.add(beaconRing);
 
   // ── render loop (continuous while visible; drives spin + twinkle + breathe + fx) ──
   var t0 = performance.now(), rafId = null;
@@ -632,6 +651,7 @@
       cb.sp.scale.set(cbs, cbs, 1);
       cb.sp.material.opacity = cb.o * (1 + 0.16 * cbw); // halo brightness swings with the size
     }
+    if (beaconRing.visible) { var rp = 1 + 0.08 * Math.sin(t * 2.2); beaconRing.scale.set(46 * rp, 46 * rp, 1); }
     updateFx(performance.now()); // meteors + supernovae scheduling (no-op when idle)
     var fnow = performance.now();
     if (perfLast) { perfEMA += (Math.min(fnow - perfLast, 500) - perfEMA) * 0.05; }
