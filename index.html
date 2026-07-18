@@ -21,12 +21,18 @@
   #msg { top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 13px; color: #9ca3af; pointer-events: none; }
 
   /* cinema mode (F): hide all UI chrome */
-  body.gx-cinema #title, body.gx-cinema #audio, body.gx-cinema #beacons, body.gx-cinema #lang { display: none !important; }
+  body.gx-cinema #title, body.gx-cinema #audio, body.gx-cinema #beacons, body.gx-cinema #lang,
+  body.gx-cinema #skyback, body.gx-cinema #skylabels { display: none !important; }
 
   /* language selector (native <select>, dark) */
   #lang { top: 12px; right: 14px; z-index: 6; font: inherit; font-size: 12px; color: #cbd5e1;
     background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 5px 8px; cursor: pointer; }
   #lang:hover { border-color: #6366f1; }
+
+  /* sky view: back-to-galaxy button */
+  #skyback { top: 64px; left: 18px; z-index: 6; display: none; cursor: pointer; font-size: 13px;
+    color: #cbd5e1; background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 6px 12px; }
+  #skyback:hover { border-color: #6366f1; color: #fff; }
 
   /* location beacons: borderless glow-dot + pulse rings + floating label (no boxes, no borders) */
   #beacons { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
@@ -115,6 +121,8 @@
   <option value="hans">简体中文</option>
   <option value="hant">繁體中文</option>
 </select>
+
+<div id="skyback" class="overlay">← Back to Galaxy</div>
 
 <div id="msg" class="overlay"></div>
 
@@ -662,6 +670,104 @@
     transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
   beaconRing.scale.set(46, 46, 1); beaconRing.visible = false; galaxyRoot.add(beaconRing);
 
+  // ── celestial sky view: an Earth-centred rotatable star dome ────────────────
+  var viewMode = 'galaxy';
+  var SKY_R = 1000;
+  function raDecDir(raHours, decDeg) { // J2000 → unit direction on the sky sphere
+    var ra = raHours / 24 * Math.PI * 2, dec = decDeg * Math.PI / 180;
+    return new THREE.Vector3(Math.cos(dec) * Math.cos(ra), Math.sin(dec), -Math.cos(dec) * Math.sin(ra));
+  }
+  var skyScene = new THREE.Scene();
+  var skyCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
+  skyCamera.position.set(0, 0, 0.1); // tiny offset: OrbitControls needs a nonzero radius to orbit
+  var skyControls = new THREE.OrbitControls(skyCamera, renderer.domElement);
+  skyControls.enablePan = false; skyControls.enableZoom = false;
+  skyControls.enableDamping = true; skyControls.dampingFactor = 0.08;
+  skyControls.rotateSpeed = -0.35;              // inverted: drag the SKY, not the camera
+  skyControls.autoRotate = true; skyControls.autoRotateSpeed = 0.12; // slow idle drift
+  skyControls.enabled = false;                  // only active in sky view
+  var skyTwinkleMat = null;
+  (function skyBackdrop() {
+    // faint twinkling background stars
+    var N = 2500, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), phs = new Float32Array(N), spd = new Float32Array(N), c = new THREE.Color();
+    for (var i = 0; i < N; i++) {
+      var th = Math.random() * 6.28318, ph = Math.acos(2 * Math.random() - 1);
+      pos[i * 3] = SKY_R * Math.sin(ph) * Math.cos(th); pos[i * 3 + 1] = SKY_R * Math.cos(ph); pos[i * 3 + 2] = SKY_R * Math.sin(ph) * Math.sin(th);
+      var b = 0.35 + Math.random() * 0.55, tint = Math.random();
+      if (tint < 0.12) c.setRGB(b * 0.74, b * 0.85, b); else if (tint < 0.2) c.setRGB(b, b * 0.85, b * 0.65); else c.setRGB(b, b, b);
+      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+      phs[i] = Math.random() * 6.28318; spd[i] = 0.5 + Math.random() * 1.4;
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+    g.setAttribute('aPhase', new THREE.BufferAttribute(phs, 1));
+    g.setAttribute('aSpd', new THREE.BufferAttribute(spd, 1));
+    skyTwinkleMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uSize: { value: 3.0 * renderer.getPixelRatio() } },
+      vertexShader: 'uniform float uTime; uniform float uSize; attribute vec3 aColor; attribute float aPhase; attribute float aSpd; varying vec3 vColor;' +
+        'void main(){ vec4 vp = modelViewMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp;' +
+        ' float tw = 0.75 + 0.25 * sin(uTime * aSpd + aPhase);' +
+        ' gl_PointSize = uSize * (0.7 + 0.5 * tw); vColor = aColor * tw; }',
+      fragmentShader: 'varying vec3 vColor; void main(){ float d = distance(gl_PointCoord, vec2(0.5)); if (d > 0.5) discard; float s = pow(max(0.0, 1.0 - d * 2.0), 1.4); gl_FragColor = vec4(vColor, s); }',
+      transparent: true, depthWrite: false
+    });
+    skyScene.add(new THREE.Points(g, skyTwinkleMat));
+    // the Milky Way as a faint band: points scattered around the galactic equator
+    // (galactic north pole: RA 12.857h, Dec +27.13°)
+    var pole = raDecDir(12.857, 27.13);
+    var u = new THREE.Vector3(0, 1, 0).cross(pole).normalize(), v = pole.clone().cross(u);
+    var M = 1600, mp = new Float32Array(M * 3), mc = new Float32Array(M * 3);
+    function gs() { return (Math.random() + Math.random() + Math.random() - 1.5) / 1.5; } // ~gaussian −1..1
+    for (var m = 0; m < M; m++) {
+      var phi = Math.random() * 6.28318, lat = gs() * 0.12; // ±~7° gaussian band
+      var d3 = u.clone().multiplyScalar(Math.cos(phi)).addScaledVector(v, Math.sin(phi)).addScaledVector(pole, lat).normalize();
+      mp[m * 3] = d3.x * SKY_R; mp[m * 3 + 1] = d3.y * SKY_R; mp[m * 3 + 2] = d3.z * SKY_R;
+      var mb = 0.10 + Math.random() * 0.22;
+      mc[m * 3] = mb; mc[m * 3 + 1] = mb; mc[m * 3 + 2] = mb * 1.12;
+    }
+    var mg = new THREE.BufferGeometry();
+    mg.setAttribute('position', new THREE.BufferAttribute(mp, 3));
+    mg.setAttribute('color', new THREE.BufferAttribute(mc, 3));
+    skyScene.add(new THREE.Points(mg, new THREE.PointsMaterial({ size: 7, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true })));
+    // faint ecliptic circle (obliquity 23.44°) — the zodiac's spine
+    var E = 128, ep = new Float32Array(E * 3), eps = 23.439 * Math.PI / 180;
+    for (var e = 0; e < E; e++) {
+      var lam = e / E * 6.28318;
+      var raE = Math.atan2(Math.sin(lam) * Math.cos(eps), Math.cos(lam)), decE = Math.asin(Math.sin(eps) * Math.sin(lam));
+      var ed = new THREE.Vector3(Math.cos(decE) * Math.cos(raE), Math.sin(decE), -Math.cos(decE) * Math.sin(raE));
+      ep[e * 3] = ed.x * SKY_R; ep[e * 3 + 1] = ed.y * SKY_R; ep[e * 3 + 2] = ed.z * SKY_R;
+    }
+    var eg = new THREE.BufferGeometry(); eg.setAttribute('position', new THREE.BufferAttribute(ep, 3));
+    skyScene.add(new THREE.LineLoop(eg, new THREE.LineBasicMaterial({ color: 0xc9a86a, transparent: true, opacity: 0.22 })));
+  })();
+  var skybackEl = document.getElementById('skyback');
+  function enterSky() {
+    if (viewMode === 'sky') return;
+    clearSelection();                          // close the beacon panel + ring
+    viewMode = 'sky';
+    controls.enabled = false; skyControls.enabled = true;
+    document.getElementById('beacons').style.display = 'none';
+    var sl = document.getElementById('skylabels'); if (sl) sl.style.display = '';
+    skybackEl.style.display = 'block';
+  }
+  function exitSky() {
+    if (viewMode === 'galaxy') return;
+    if (window.clearSkySelection) clearSkySelection(); // close a sky card if open
+    viewMode = 'galaxy';
+    skyControls.enabled = false; controls.enabled = true;
+    document.getElementById('beacons').style.display = '';
+    var sl = document.getElementById('skylabels'); if (sl) sl.style.display = 'none';
+    skybackEl.style.display = 'none';
+    perfLast = 0;                              // don't feed the sky stint into the FPS watchdog
+  }
+  skybackEl.addEventListener('click', exitSky);
+  window.addEventListener('keydown', function (e) {
+    if ((e.key || '').toLowerCase() !== 'escape' || viewMode !== 'sky') return;
+    if (window.skySelected != null) return;    // the sky-card handler closes the card first
+    exitSky();
+  });
+
   // ── render loop (continuous while visible; drives spin + twinkle + breathe + fx) ──
   var t0 = performance.now(), rafId = null;
   // FPS watchdog: weak GPUs choke on 85k dust points. Keep an EMA of frame time
@@ -674,6 +780,14 @@
     rafId = null;
     if (document.hidden) return;
     var t = (performance.now() - t0) / 1000;
+    if (viewMode === 'sky') {
+      if (skyTwinkleMat) skyTwinkleMat.uniforms.uTime.value = t;
+      skyControls.update();
+      renderer.render(skyScene, skyCamera);
+      if (window.updateSkyLabels) updateSkyLabels();
+      rafId = requestAnimationFrame(frame);
+      return;
+    }
     galaxyRoot.rotation.y = t * GALAXY_SPIN; // the whole galaxy slowly rotates
     if (bgTwinkleMat) bgTwinkleMat.uniforms.uTime.value = t; // background-star twinkle
     var cbw = Math.sin(t * 0.32), cbr = 1 + 0.07 * cbw; // ~20s galactic-core breathe
@@ -705,6 +819,7 @@
   document.addEventListener('visibilitychange', function () { perfLast = 0; startLoop(); }); // perfLast reset: the resume gap must not enter the FPS EMA
   window.addEventListener('resize', function () {
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+    skyCamera.aspect = window.innerWidth / window.innerHeight; skyCamera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     if (composer) composer.setSize(window.innerWidth, window.innerHeight);
   });
