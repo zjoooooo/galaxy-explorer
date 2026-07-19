@@ -123,3 +123,8 @@ Eckhard Slawik / NOIRLab series as the zodiac cards (Wikimedia Commons).
 - `images/g1.jpg` — Judy Schmidt (reprocessed Hubble/WFPC2 data) · CC BY 2.0 · [source](https://commons.wikimedia.org/wiki/File:Mayall_II_%28HST-Judy_Schmidt-JPG%29.jpg)
 - `images/cena-jet.jpg` — X-ray: NASA/CXC/CfA/R. Kraft et al.; Submillimetre: MPIfR/ESO/APEX/A. Weiss et al.; Optical: ESO/WFI · Public domain · [source](https://commons.wikimedia.org/wiki/File:Centaurus_A-_Black_Hole_Outflows_From_Centaurus_A_%282009-cena_-_cena_lg%29.jpg)
 - `images/cena-sfr.jpg` — NASA/ESA Hubble (Caldwell 77) · CC BY 2.0 · [source](https://commons.wikimedia.org/wiki/File:Caldwell_77.jpg)
+- `images/ngc604.jpg` — NASA and The Hubble Heritage Team (AURA/STScI) · Public domain · [source](https://commons.wikimedia.org/wiki/File:NGC_604_in_Messier_33_%28full_mosaic,_captured_by_the_Hubble_Space_Telescope%29.jpg)
+- `images/m87-jet.jpg` — NASA and The Hubble Heritage Team (STScI/AURA) · Public domain · [source](https://commons.wikimedia.org/wiki/File:M87_jet.jpg)
+- `images/tarantula.jpg` — ESA/Hubble & NASA, C. Murray, E. Sabbi · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Tarantula_Nebula_Hubble_combi.jpg)
+- `images/sn1987a.jpg` — ESA/Hubble & NASA · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:SN_1987A_HST.jpg)
+- `images/ngc346.jpg` — NASA, ESA and A. Nota (STScI/ESA) · Public domain · [source](https://commons.wikimedia.org/wiki/File:NGC_346_in_Small_magellanic_cloud.jpg)

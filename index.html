@@ -733,7 +733,57 @@
           ja: { type: '星形成領域 · ケンタウルス座A', facts: [['含む', '若い青色星団'], ['引き金', '銀河の合体']], desc: '銀河のゆがんだ暗いダストレーンに沿って、ピンクに輝く水素ガスと高温の青い星団が連なっています。これは、ケンタウルス座Aが小さな渦巻銀河を飲み込んだ際に引き起こされた、新たな星形成の爆発です。', catalog: 'Cen A HII' },
           ko: { type: '별 형성 영역 · 센타우루스자리 A', facts: [['포함', '젊은 파란색 성단'], ['촉발', '은하 병합']], desc: '은하의 뒤틀린 어두운 먼지 띠를 따라 분홍빛으로 빛나는 수소 가스와 뜨거운 파란색 성단이 늘어서 있습니다. 센타우루스자리 A가 더 작은 나선 은하를 집어삼키면서 촉발된 새로운 별 탄생의 폭발입니다.', catalog: 'Cen A HII' }
         },
-        img: 'images/cena-sfr.jpg', credit: 'NASA/ESA Hubble' }
+        img: 'images/cena-sfr.jpg', credit: 'NASA/ESA Hubble' },
+      { parent: 'M33', lp: new THREE.Vector3(58, 4, 30), feat: { kind: 'nebula', size: 1.15, color: 0xff77b0, stars: 34 },
+        t: { en: ['NGC 604', 'giant nebula'], hans: ['NGC 604', '巨型星云'], hant: ['NGC 604', '巨型星雲'], ja: ['NGC 604', '巨大星雲'], ko: ['NGC 604', '거대 성운'] },
+        info: {
+          en: { type: 'Giant nebula · inside M33', facts: [['Type', 'Giant HII region'], ['Span', '~1,300 ly']], desc: 'One of the largest star-forming nebulae in the Local Group — a cavern of glowing hydrogen nearly 100 times the size of the Orion Nebula, lit by more than 200 massive newborn stars in the Triangulum Galaxy’s northern spiral arm.', catalog: 'NGC 604' },
+          hans: { type: '巨型星云 · M33 内', facts: [['类型', '巨型电离氢区'], ['跨度', '约 1,300 光年']], desc: '本星系群中最大的恒星形成星云之一——一个由发光氢气构成的巨大洞窟，规模接近猎户座大星云的 100 倍，被三角座星系北侧旋臂中 200 多颗大质量新生恒星照亮。', catalog: 'NGC 604' },
+          hant: { type: '巨型星雲 · M33 內', facts: [['類型', '巨型電離氫區'], ['跨度', '約 1,300 光年']], desc: '本星系群中最大的恆星形成星雲之一——一個由發光氫氣構成的巨大洞窟，規模接近獵戶座大星雲的 100 倍，被三角座星系北側旋臂中 200 多顆大質量新生恆星照亮。', catalog: 'NGC 604' },
+          ja: { type: '巨大星雲 · M33 の内部', facts: [['種類', '巨大HII領域'], ['広がり', '約1,300光年']], desc: '局部銀河群で最大級の星形成星雲の一つで、輝く水素ガスが広がる巨大な空洞です。その大きさはオリオン大星雲のほぼ100倍におよび、さんかく座銀河の北側の渦状腕で200個を超える大質量の生まれたての星々に照らされています。', catalog: 'NGC 604' },
+          ko: { type: '거대 성운 · M33 내부', facts: [['유형', '거대 HII 영역'], ['크기', '약 1,300광년']], desc: '국부 은하군에서 가장 큰 별 형성 성운 중 하나로, 빛나는 수소 가스로 이루어진 거대한 동굴입니다. 크기는 오리온 성운의 거의 100배에 달하며, 삼각형자리 은하의 북쪽 나선팔에서 200개가 넘는 갓 태어난 무거운 별들이 이 성운을 밝히고 있습니다.', catalog: 'NGC 604' }
+        },
+        img: 'images/ngc604.jpg', credit: 'NASA/Hubble Heritage (AURA/STScI)' },
+      { parent: 'M87', lp: new THREE.Vector3(68, 55, 36), feat: { kind: 'jet', dir: new THREE.Vector3(0.72, 0.58, 0.38).normalize(), len: 210, oneSided: true, lobe: 0xaac8f4, lobeTip: 0x7c9ede, lobeOp: 0.32, flare: 0.13, curve: 0.08, streamFrom: 0xffffff, streamTo: 0xbcd6ff, streamLen: 0.7, streamN: 1400, streamGain: 0.7 },
+        t: { en: ['Relativistic jet', 'from M87*'], hans: ['相对论喷流', '来自 M87*'], hant: ['相對論噴流', '來自 M87*'], ja: ['相対論的ジェット', 'M87* から'], ko: ['상대론적 제트', 'M87*에서'] },
+        info: {
+          en: { type: 'Relativistic jet · M87', facts: [['Length', '~5,000 ly'], ['Source', 'M87* black hole']], desc: 'A narrow beam of plasma fired outward at nearly the speed of light by M87’s central black hole — the same giant imaged by the Event Horizon Telescope. Spotted in 1918, it was the first jet ever discovered: a straight blue searchlight of glowing knots crossing the elliptical galaxy’s golden haze.', catalog: 'M87 jet' },
+          hans: { type: '相对论喷流 · M87', facts: [['长度', '约 5,000 光年'], ['来源', 'M87* 黑洞']], desc: '由 M87 中心黑洞以接近光速向外喷射的狭窄等离子体束——正是事件视界望远镜拍摄的那个巨型黑洞。它于 1918 年被发现，是人类发现的第一条喷流：一道由发光亮结组成的笔直蓝色探照灯光束，穿过这座椭圆星系的金色光晕。', catalog: 'M87 jet' },
+          hant: { type: '相對論噴流 · M87', facts: [['長度', '約 5,000 光年'], ['來源', 'M87* 黑洞']], desc: '由 M87 中心黑洞以接近光速向外噴射的狹窄電漿束——正是事件視界望遠鏡拍攝的那個巨型黑洞。它於 1918 年被發現，是人類發現的第一條噴流：一道由發光亮結組成的筆直藍色探照燈光束，穿過這座橢圓星系的金色光暈。', catalog: 'M87 jet' },
+          ja: { type: '相対論的ジェット · M87', facts: [['長さ', '約 5,000 光年'], ['源', 'M87* ブラックホール']], desc: 'M87 中心のブラックホールがほぼ光速で外へ噴き出す細いプラズマのビームで、イベント・ホライズン・テレスコープが撮影したあの巨大ブラックホールそのものが源です。1918 年に発見された史上初のジェットで、輝くノットが連なる真っ直ぐな青いサーチライトのように、楕円銀河の金色のもやを横切っています。', catalog: 'M87 jet' },
+          ko: { type: '상대론적 제트 · M87', facts: [['길이', '약 5,000광년'], ['원천', 'M87* 블랙홀']], desc: 'M87 중심의 블랙홀이 거의 빛의 속도로 내뿜는 좁은 플라스마 빔으로, 그 블랙홀은 사건의 지평선 망원경이 촬영한 바로 그 거대 블랙홀입니다. 1918년에 발견된 사상 최초의 제트이며, 빛나는 매듭들이 이어진 곧은 파란 탐조등 빛줄기가 타원 은하의 황금빛 안개를 가로지릅니다.', catalog: 'M87 jet' }
+        },
+        img: 'images/m87-jet.jpg', credit: 'NASA/Hubble Heritage (STScI/AURA)' },
+      { parent: 'LMC', lp: new THREE.Vector3(62, 4, 26), feat: { kind: 'nebula', size: 1.5, color: 0xff5f98, stars: 46 },
+        t: { en: ['Tarantula Nebula', 'star factory'], hans: ['蜘蛛星云', '恒星工厂'], hant: ['蜘蛛星雲', '恆星工廠'], ja: ['タランチュラ星雲', '星の工場'], ko: ['타란툴라 성운', '별 공장'] },
+        info: {
+          en: { type: 'Nebula · inside the LMC', facts: [['Type', 'Giant HII region'], ['Heart', 'R136 super cluster']], desc: 'The most furious star factory in the Local Group. At its core sits R136, a cluster packed with the most massive stars known — some 200 times the Sun’s mass. Were it as close to us as the Orion Nebula, it would cast shadows at night.', catalog: '30 Doradus' },
+          hans: { type: '星云 · 大麦哲伦云内', facts: [['类型', '巨型电离氢区'], ['核心', 'R136 超星团']], desc: '本星系群中最狂暴的恒星工厂。其核心是 R136 星团，聚集着已知质量最大的恒星——有些达太阳质量的 200 倍。若它像猎户座大星云那样靠近我们，夜晚甚至能投下影子。', catalog: '30 Doradus' },
+          hant: { type: '星雲 · 大麥哲倫雲內', facts: [['類型', '巨型電離氫區'], ['核心', 'R136 超星團']], desc: '本星系群中最狂暴的恆星工廠。其核心是 R136 星團，聚集著已知質量最大的恆星——有些達太陽質量的 200 倍。若它像獵戶座大星雲那樣靠近我們，夜晚甚至能投下影子。', catalog: '30 Doradus' },
+          ja: { type: '星雲 · 大マゼラン雲の内部', facts: [['種類', '巨大 HII 領域'], ['中心', 'R136 超星団']], desc: '局部銀河群で最も激しい星の工場です。その中心には R136 という星団があり、太陽の約 200 倍もの質量を持つ、既知で最も重い星々がひしめいています。もしオリオン大星雲ほど近くにあれば、夜に影ができるほど明るく輝くでしょう。', catalog: '30 Doradus' },
+          ko: { type: '성운 · 대마젤란은하 내부', facts: [['종류', '거대 HII 영역'], ['중심', 'R136 초성단']], desc: '국부 은하군에서 가장 격렬한 별 공장입니다. 중심에는 R136 성단이 자리하며, 태양 질량의 약 200배에 이르는, 알려진 것 중 가장 무거운 별들이 모여 있습니다. 오리온 성운만큼 가까이 있다면 밤에 그림자를 드리울 만큼 밝을 것입니다.', catalog: '30 Doradus' }
+        },
+        img: 'images/tarantula.jpg', credit: 'ESA/Hubble & NASA, C. Murray, E. Sabbi' },
+      { parent: 'LMC', lp: new THREE.Vector3(44, -2, 46), feat: { kind: 'supernova' },
+        t: { en: ['SN 1987A', 'supernova of 1987'], hans: ['SN 1987A', '1987年的超新星'], hant: ['SN 1987A', '1987年的超新星'], ja: ['SN 1987A', '1987年の超新星'], ko: ['SN 1987A', '1987년의 초신성'] },
+        info: {
+          en: { type: 'Supernova remnant · inside the LMC', facts: [['Seen', '23 Feb 1987'], ['Legacy', 'nearest modern supernova']], desc: 'The closest supernova observed since the invention of the telescope. Its light — and a burst of neutrinos — swept past Earth in February 1987, and Hubble still watches its glowing ring flare as the blast wave slams into gas shed by the dying star.', catalog: 'SN 1987A' },
+          hans: { type: '超新星遗迹 · 大麦哲伦云内', facts: [['观测', '1987年2月23日'], ['地位', '现代最近的超新星']], desc: '自望远镜发明以来观测到的最近的超新星。1987年2月，它的光——以及一阵中微子暴——掠过地球，而哈勃至今仍在注视其发光的环：每当激波撞上垂死恒星抛出的气体，光环便会骤然增亮。', catalog: 'SN 1987A' },
+          hant: { type: '超新星殘骸 · 大麥哲倫雲內', facts: [['觀測', '1987年2月23日'], ['地位', '現代最近的超新星']], desc: '自望遠鏡發明以來觀測到的最近的超新星。1987年2月，它的光——以及一陣微中子暴——掠過地球，而哈伯至今仍在注視其發光的環：每當激波撞上垂死恆星拋出的氣體，光環便會驟然增亮。', catalog: 'SN 1987A' },
+          ja: { type: '超新星残骸 · 大マゼラン雲の内部', facts: [['観測', '1987年2月23日'], ['意義', '現代で最も近い超新星']], desc: '望遠鏡の発明以来、観測された中で最も近い超新星です。1987年2月、その光はニュートリノのバーストとともに地球を駆け抜けました。ハッブルは今も、衝撃波が死にゆく星の放出したガスに衝突するたびに輝きを増す光のリングを見つめ続けています。', catalog: 'SN 1987A' },
+          ko: { type: '초신성 잔해 · 대마젤란은하 내부', facts: [['관측', '1987년 2월 23일'], ['의의', '현대의 가장 가까운 초신성']], desc: '망원경이 발명된 이후 관측된 가장 가까운 초신성입니다. 1987년 2월, 그 빛은 중성미자 폭발과 함께 지구를 스쳐 지나갔고, 허블은 지금도 충격파가 죽어가는 별이 내뿜은 가스와 충돌할 때마다 환하게 타오르는 빛의 고리를 지켜보고 있습니다.', catalog: 'SN 1987A' }
+        },
+        img: 'images/sn1987a.jpg', credit: 'ESA/Hubble & NASA' },
+      { parent: 'SMC', lp: new THREE.Vector3(32, 3, -22), feat: { kind: 'nebula', size: 0.8, color: 0xff8fc0, stars: 20 },
+        t: { en: ['NGC 346', 'stellar nursery'], hans: ['NGC 346', '恒星摇篮'], hant: ['NGC 346', '恆星搖籃'], ja: ['NGC 346', '星のゆりかご'], ko: ['NGC 346', '별의 요람'] },
+        info: {
+          en: { type: 'Star-forming region · inside the SMC', facts: [['Type', 'Young cluster + nebula'], ['Stars', '~2,500 infants']], desc: 'The brightest stellar nursery of the Small Magellanic Cloud — thousands of infant stars carving glowing arcs of gas. Its nearly primordial chemistry gives astronomers a window onto how stars formed in the early universe.', catalog: 'NGC 346' },
+          hans: { type: '恒星形成区 · 小麦哲伦云内', facts: [['类型', '年轻星团＋星云'], ['恒星', '约 2,500 颗新生恒星']], desc: '小麦哲伦云中最明亮的恒星摇篮——数千颗新生恒星正在雕刻出发光的气体弧。它近乎原初的化学组成，为天文学家打开了一扇窗，得以窥见早期宇宙中恒星如何形成。', catalog: 'NGC 346' },
+          hant: { type: '恆星形成區 · 小麥哲倫雲內', facts: [['類型', '年輕星團＋星雲'], ['恆星', '約 2,500 顆新生恆星']], desc: '小麥哲倫雲中最明亮的恆星搖籃——數千顆新生恆星正在雕刻出發光的氣體弧。它近乎原初的化學組成，為天文學家打開了一扇窗，得以窺見早期宇宙中恆星如何形成。', catalog: 'NGC 346' },
+          ja: { type: '星形成領域 · 小マゼラン雲の内部', facts: [['種類', '若い星団＋星雲'], ['星', '生まれたての星 約2,500個']], desc: '小マゼラン雲で最も明るい星のゆりかごで、数千個の生まれたての星が輝くガスの弧を刻んでいます。ほぼ原始的な化学組成をもつため、初期宇宙で星がどのように形成されたかを知る窓を天文学者に与えてくれます。', catalog: 'NGC 346' },
+          ko: { type: '별 형성 영역 · 소마젤란은하 내부', facts: [['유형', '젊은 성단＋성운'], ['별', '갓 태어난 별 약 2,500개']], desc: '소마젤란은하에서 가장 밝은 별의 요람으로, 수천 개의 갓 태어난 별들이 빛나는 가스 아치를 새기고 있습니다. 거의 원시적인 화학 조성 덕분에 천문학자들은 초기 우주에서 별이 어떻게 형성되었는지 들여다볼 수 있습니다.', catalog: 'NGC 346' }
+        },
+        img: 'images/ngc346.jpg', credit: 'NASA/ESA, A. Nota (STScI/ESA)' }
     ];
     CHILDREN.forEach(function (c) {
       var el = document.createElement('div');
@@ -871,7 +921,7 @@
   function hideChildren(cat) { galaxyChildren(cat).forEach(function (c) { c.revealed = false; if (c.feature) c.feature.group.visible = false; c.el.style.display = 'none'; c.shown = false; }); }
   function startScan(cat) {
     ensureScanEls(); hideChildren(cat);
-    scanState = { cat: cat, start: performance.now(), dur: 1800 };
+    scanState = { cat: cat, start: performance.now(), dur: 3600 }; // half-speed sweep — more sci-fi, easier to follow
     scanLine.style.display = 'block'; scanLine.style.opacity = '1';
   }
   function stepScan() { // advance the sweep + reveal crossed children
@@ -2107,6 +2157,18 @@
       }
       return SMOKE_TEXS;
     }
+    var RING_TEX = null;
+    function ringTexture() { // thin luminous annulus — SN 1987A's ring
+      if (RING_TEX) return RING_TEX;
+      var cv = document.createElement('canvas'); cv.width = cv.height = 128;
+      var ctx = cv.getContext('2d');
+      var gr = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.7, 'rgba(255,255,255,0)');
+      gr.addColorStop(0.8, 'rgba(255,255,255,1)'); gr.addColorStop(0.9, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = gr; ctx.fillRect(0, 0, 128, 128);
+      RING_TEX = new THREE.CanvasTexture(cv);
+      return RING_TEX;
+    }
     function jetLobe(dir, len, e1, e2, o) { // diffuse lobe — smoke-textured sprites strung tight on the SAME centreline as the inner jet
       var grp = new THREE.Group(), base = new THREE.Color(o.color), tipc = new THREE.Color(o.tip || o.color), parts = [], texs = smokeTextures();
       for (var i = 0; i < o.count; i++) {
@@ -2163,16 +2225,21 @@
       var up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
       var e1 = new THREE.Vector3().crossVectors(dir, up).normalize(), e2 = new THREE.Vector3().crossVectors(dir, e1).normalize();
       var back = dir.clone().negate(), grp = new THREE.Group();
-      var lobeA = jetLobe(dir, len, e1, e2, { color: 0xd08744, tip: 0xa5642e, count: 20, flare: 0.24, curve: 0.16, op: 0.5 });         // warm orange turbulent plume
-      var lobeB = jetLobe(back, len * 0.9, e1, e2, { color: 0x8fb2e8, tip: 0x6f92d4, count: 18, flare: 0.28, curve: -0.18, op: 0.4 }); // pale blue end-bubble, bent the other way
-      var streamA = jetStream(dir, len * 0.45, e1, e2, { n: 900, from: 0xfff2dc, to: 0x9fc0f0, curve: 0.07, gain: 0.6 });               // white-hot spine ON the lobe centreline (curve scaled to its shorter length)
-      var streamB = jetStream(back, len * 0.3, e1, e2, { n: 500, from: 0xf2e8da, to: 0x8aa8dd, curve: -0.06, gain: 0.38 });             // fainter counter-spine, ditto
+      // per-object style (defaults = the Cen A look; M87 overrides: oneSided, blue, narrow, long spine)
+      var flare = feat.flare != null ? feat.flare : 0.24, curve = feat.curve != null ? feat.curve : 0.16, sLen = feat.streamLen != null ? feat.streamLen : 0.45;
+      var lobeA = jetLobe(dir, len, e1, e2, { color: feat.lobe || 0xd08744, tip: feat.lobeTip || 0xa5642e, count: 20, flare: flare, curve: curve, op: feat.lobeOp != null ? feat.lobeOp : 0.5 });
+      var streamA = jetStream(dir, len * sLen, e1, e2, { n: feat.streamN || 900, from: feat.streamFrom || 0xfff2dc, to: feat.streamTo || 0x9fc0f0, curve: curve * sLen, gain: feat.streamGain != null ? feat.streamGain : 0.6 }); // spine ON the lobe centreline
+      var lobeB = null, streamB = null;
+      if (!feat.oneSided) {
+        lobeB = jetLobe(back, len * 0.9, e1, e2, { color: feat.lobeB || 0x8fb2e8, tip: feat.lobeTipB || 0x6f92d4, count: 18, flare: flare + 0.04, curve: -(curve + 0.02), op: 0.4 }); // counter-lobe, bent the other way
+        streamB = jetStream(back, len * 0.3, e1, e2, { n: 500, from: 0xf2e8da, to: 0x8aa8dd, curve: -(curve + 0.02) * 0.3, gain: 0.38 });
+      }
       var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xfff6e6, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
       core.scale.set(len * 0.12, len * 0.12, 1);
-      grp.add(lobeA); grp.add(lobeB); grp.add(streamA); grp.add(streamB); grp.add(core);
+      grp.add(lobeA); grp.add(streamA); if (lobeB) { grp.add(lobeB); grp.add(streamB); } grp.add(core);
       grp.userData.update = function (t) {
-        streamA.material.uniforms.uTime.value = t; streamB.material.uniforms.uTime.value = t;
-        var pa = lobeA.userData.parts, pb = lobeB.userData.parts, i;
+        streamA.material.uniforms.uTime.value = t; if (streamB) streamB.material.uniforms.uTime.value = t;
+        var pa = lobeA.userData.parts, pb = lobeB ? lobeB.userData.parts : [], i;
         for (i = 0; i < pa.length; i++) { pa[i].m.opacity = pa[i].op * (0.82 + 0.18 * Math.sin(t * 0.5 + pa[i].ph)); pa[i].m.rotation = pa[i].rot + 0.06 * Math.sin(t * 0.22 + pa[i].ph); }  // clouds slowly churn + swirl
         for (i = 0; i < pb.length; i++) { pb[i].m.opacity = pb[i].op * (0.82 + 0.18 * Math.sin(t * 0.45 + pb[i].ph)); pb[i].m.rotation = pb[i].rot + 0.06 * Math.sin(t * 0.2 + pb[i].ph); }
       };
@@ -2188,12 +2255,21 @@
         var scPts = starPoints(150, 16, 0xdbeaff, 1.1, 0.5); group.add(scPts);
         update = function (t) { scPts.material.uniforms.uSize.value = (2.4 + 0.9 * Math.sin(t * 3.1)) * renderer.getPixelRatio(); }; // young-star shimmer
       } else if (feat.kind === 'nebula') {
-        var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xff6aa8, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })); glow.scale.set(34, 24, 1); group.add(glow);
-        var nbPts = starPoints(26, 12, 0xcfe0ff, 1.2, 0.6); group.add(nbPts);
-        update = function (t) { var b = 0.5 + 0.5 * Math.sin(t * 0.62); glow.material.opacity = 0.4 + 0.28 * b; var s = 30 + 8 * b; glow.scale.set(s, s * 0.7, 1); nbPts.material.uniforms.uSize.value = (2.4 + 1.1 * Math.sin(t * 2.3)) * renderer.getPixelRatio(); }; // slow breathe + twinkle
+        var nsz = feat.size || 1, ncol = feat.color || 0xff6aa8, nst = feat.stars || 26; // per-object size/colour (Tarantula big+red, NGC 346 small)
+        var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: ncol, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })); glow.scale.set(34 * nsz, 24 * nsz, 1); group.add(glow);
+        var nbPts = starPoints(nst, 12 * nsz, 0xcfe0ff, 1.2, 0.6); group.add(nbPts);
+        update = function (t) { var b = 0.5 + 0.5 * Math.sin(t * 0.62); glow.material.opacity = 0.4 + 0.28 * b; var s = (30 + 8 * b) * nsz; glow.scale.set(s, s * 0.7, 1); nbPts.material.uniforms.uSize.value = (2.4 + 1.1 * Math.sin(t * 2.3)) * renderer.getPixelRatio(); }; // slow breathe + twinkle
       } else if (feat.kind === 'jet') {
         var jet = buildJet(feat); group.add(jet);
         update = jet.userData.update; // drives stream uTime + slow cloud churn
+      } else if (feat.kind === 'supernova') {
+        var snCore = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending })); snCore.scale.set(7, 7, 1); group.add(snCore);
+        var snRing = new THREE.Sprite(new THREE.SpriteMaterial({ map: ringTexture(), color: 0xffd2e8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); group.add(snRing);
+        update = function (t) {
+          snCore.material.opacity = 0.62 + 0.3 * Math.sin(t * 4.0);       // fast pulse — the flash that reached Earth in 1987
+          var k = (t * 0.12) % 1, s = 4 + k * 26;                          // slow expanding ring, fading as it grows, looping
+          snRing.scale.set(s, s, 1); snRing.material.opacity = 0.55 * (1 - k);
+        };
       }
       return { group: group, update: update };
     }
