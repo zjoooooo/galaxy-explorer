@@ -2090,8 +2090,8 @@
           if (o.bulge && Math.random() < o.bulge) { // spheroidal old-star bulge population — the Sombrero's "crown" enveloping the thin disc
             var bu = Math.random() * 2 - 1, bph = Math.random() * TAU, bs = Math.sqrt(1 - bu * bu), bt = Math.pow(Math.random(), 2.0), bR = (o.bulgeR || 0.34) * R;
             pos[i * 3] = bs * Math.cos(bph) * bt * bR; pos[i * 3 + 1] = bu * bt * bR * 0.75; pos[i * 3 + 2] = bs * Math.sin(bph) * bt * bR;
-            mix.setRGB(1.0, 0.9 - 0.05 * bt, 0.74 - 0.1 * bt).multiplyScalar(0.5 * (0.55 + 0.45 * (1 - bt)));
-            scl[i] = 0.3 + Math.random() * 0.6;
+            mix.setRGB(1.0, 0.94 - 0.04 * bt, 0.84 - 0.08 * bt).multiplyScalar(0.3 * (0.5 + 0.5 * (1 - bt))); // pale + dim + tiny: unresolved-star mist (photo look), not discrete yellow specks
+            scl[i] = 0.18 + Math.random() * 0.35;
             colA[i * 3] = mix.r; colA[i * 3 + 1] = mix.g; colA[i * 3 + 2] = mix.b;
             continue;
           }
