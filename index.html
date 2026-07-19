@@ -107,9 +107,13 @@
   #bp-img { display: block; width: 100%; height: 150px; object-fit: cover; border-radius: 8px;
     margin: 10px 0 3px; background: rgba(255,255,255,.04); }
   #bp-credit { font-size: 9px; line-height: 1.35; color: #5b6578; margin-bottom: 6px; }
-  #bp-zodiac-link { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.07);
+  #bp-zodiac-link, #bp-flyto { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.07);
     color: #9cc0ff; cursor: pointer; font-size: 13px; }
-  #bp-zodiac-link:hover { color: #cfe2ff; }
+  #bp-zodiac-link:hover, #bp-flyto:hover { color: #cfe2ff; }
+  #return-mw { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 50; display: none;
+    padding: 8px 16px; border-radius: 20px; cursor: pointer; background: rgba(20,26,40,.72);
+    border: 1px solid rgba(255,255,255,.14); color: #cfe0ff; font-size: 13px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  #return-mw:hover { background: rgba(30,40,60,.85); color: #fff; }
   body.gx-cinema #beacon-panel { display: none !important; }
   /* mobile: panel becomes a bottom drawer */
   @media (max-width: 640px) {
@@ -498,6 +502,7 @@
     }
     var sb = document.getElementById('skyback');
     if (sb) { var SB = { en: '← Back to Galaxy', hans: '← 返回银河系', hant: '← 返回銀河系', ja: '← 銀河に戻る', ko: '← 은하로 돌아가기' }; sb.textContent = SB[lang] || SB.en; }
+    if (returnBtn && returnBtn.style.display === 'block') returnBtn.textContent = RET_TXT[lang] || RET_TXT.en;
     if (typeof selectedBeacon !== 'undefined' && selectedBeacon !== null && typeof renderPanel === 'function') renderPanel(selectedBeacon, lang);
     if (typeof paintSkyLabels === 'function' && typeof SKY_CONS !== 'undefined' && SKY_CONS.length) paintSkyLabels(lang);
     if (typeof skySelected !== 'undefined' && skySelected !== null && typeof renderConstellationPanel === 'function') renderConstellationPanel(skySelected, lang);
@@ -644,25 +649,25 @@
       { p: galPos(69.5, -47.2, 0.0409),
         t: {"en":["TRAPPIST-1"],"hans":["TRAPPIST-1"],"hant":["TRAPPIST-1"],"ja":["トラピスト1"],"ko":["트라피스트-1"]},
         info: { en:{"type":"Ultracool red dwarf star","distance":"~40 light-years","constellation":"Aquarius","facts":[["Planets","7 (all Earth-size)"],["In habitable zone","3-4"]],"desc":"This dim, ultracool red dwarf is circled by seven roughly Earth-size planets — more than are known around any other single star. Three or four of them orbit within the habitable zone, where liquid water could exist. That makes TRAPPIST-1 the richest known laboratory for studying potentially habitable worlds.","catalog":"TRAPPIST-1"}, hans:{"type":"超冷红矮星","distance":"约 40 光年","constellation":"宝瓶座","facts":[["行星数量","7 颗（均为地球大小）"],["宜居带内","3–4 颗"]],"desc":"这颗昏暗的超冷红矮星拥有七颗与地球大小相近的行星，是目前已知单颗恒星周围行星数量最多的系统。其中三到四颗位于可能存在液态水的宜居带内。这使 TRAPPIST-1 成为研究潜在宜居世界最丰富的天然实验室。","catalog":"TRAPPIST-1"}, hant:{"type":"超冷紅矮星","distance":"約 40 光年","constellation":"寶瓶座","facts":[["行星數量","7 顆（均為地球大小）"],["宜居帶內","3–4 顆"]],"desc":"這顆昏暗的超冷紅矮星擁有七顆與地球大小相近的行星，是目前已知單一恆星周圍行星數量最多的系統。其中三到四顆位於可能存在液態水的宜居帶內。這使 TRAPPIST-1 成為研究潛在宜居世界最豐富的天然實驗室。","catalog":"TRAPPIST-1"}, ja:{"type":"超低温の赤色矮星","distance":"約40光年","constellation":"みずがめ座","facts":[["惑星の数","7個（すべて地球サイズ）"],["ハビタブルゾーン内","3〜4個"]],"desc":"この暗く低温の赤色矮星の周りには、地球とほぼ同じ大きさの惑星が7個も回っており、単一の恒星の周囲としては知られる中で最多です。そのうち3〜4個は液体の水が存在しうるハビタブルゾーンに位置しています。トラピスト1は、生命を宿しうる世界を研究するうえで最も恵まれた天然の実験場です。","catalog":"TRAPPIST-1"}, ko:{"type":"극저온 적색왜성","distance":"약 40광년","constellation":"물병자리","facts":[["행성 수","7개 (모두 지구 크기)"],["생명체 거주가능 영역 내","3~4개"]],"desc":"이 어둡고 극저온인 적색왜성 주위에는 지구와 비슷한 크기의 행성이 7개나 돌고 있으며, 이는 하나의 항성 주위로는 알려진 것 중 가장 많은 수입니다. 그중 3~4개는 액체 물이 존재할 수 있는 생명체 거주가능 영역에 놓여 있습니다. 이 덕분에 트라피스트-1은 잠재적 거주 가능 행성을 연구하기에 가장 풍부한 자연 실험실입니다.","catalog":"TRAPPIST-1"} } },
-      { p: galPos(121, -21.6, 202), cls: 'ext', fixed: true, gal: { mode: 'spiral', opts: { sq: 0.42, arms: 2 }, size: 330, fade: 0.7 },
+      { p: galPos(121, -21.6, 202), cls: 'ext', fixed: true, gal: { mode: 'spiral', opts: { sq: 0.42, arms: 2 }, size: 330, fade: 0.7, stars: { count: 26000, radius: 132, arms: 2, tight: 0.9, inc: 1.3, roll: 0.6 } },
         t: {"en":["Andromeda Galaxy","beyond the Milky Way"],"hans":["仙女座星系","银河系之外"],"hant":["仙女座星系","銀河系之外"],"ja":["アンドロメダ銀河","天の川銀河の外"],"ko":["안드로메다 은하","우리은하 너머"]},
         info: { en:{"type":"Spiral galaxy · external · not to scale","distance":"~2.5 million light-years","constellation":"Andromeda","facts":[["Diameter","~152,000 ly"],["Group","Local Group"]],"desc":"The nearest large galaxy to the Milky Way and the most distant object visible to the naked eye. In about 4.5 billion years it will collide and merge with our galaxy. Shown on the far sky — far beyond the Milky Way and not to scale.","catalog":"M31"}, hans:{"type":"旋涡星系 · 银河系外 · 非真实比例","distance":"约 250 万光年","constellation":"仙女座","facts":[["直径","约 15.2 万光年"],["所属","本星系群"]],"desc":"距离银河系最近的大型星系，也是肉眼可见的最远天体。约 45 亿年后它将与银河系相撞并合。这里画在远方天幕上——远在银河系之外，非真实比例。","catalog":"M31"}, hant:{"type":"螺旋星系 · 銀河系外 · 非真實比例","distance":"約 250 萬光年","constellation":"仙女座","facts":[["直徑","約 15.2 萬光年"],["所屬","本星系群"]],"desc":"距離銀河系最近的大型星系，也是肉眼可見的最遠天體。約 45 億年後它將與銀河系相撞合併。這裡畫在遠方天幕上——遠在銀河系之外，非真實比例。","catalog":"M31"}, ja:{"type":"渦巻銀河 · 天の川銀河の外 · 実スケールではない","distance":"約250万光年","constellation":"アンドロメダ座","facts":[["直径","約15.2万光年"],["所属","局部銀河群"]],"desc":"天の川銀河に最も近い大型銀河で、肉眼で見える最も遠い天体です。約45億年後には天の川銀河と衝突・合体します。ここでは遠くの天空に描いており、天の川銀河のはるか外側で実際のスケールではありません。","catalog":"M31"}, ko:{"type":"나선 은하 · 우리은하 밖 · 실제 비율 아님","distance":"약 250만 광년","constellation":"안드로메다자리","facts":[["지름","약 15.2만 광년"],["소속","국부 은하군"]],"desc":"우리은하에서 가장 가까운 대형 은하이며 맨눈으로 볼 수 있는 가장 먼 천체입니다. 약 45억 년 뒤 우리은하와 충돌·병합합니다. 여기서는 먼 하늘에 그려져 있으며 우리은하 훨씬 바깥이고 실제 비율은 아닙니다.","catalog":"M31"} } },
-      { p: galPos(133.61, -31.33, 175), cls: 'ext', fixed: true, gal: { mode: 'spiral', opts: { sq: 0.82, arms: 2, tight: 4.2, seed: 12.1 }, size: 250, fade: 0.72 },
+      { p: galPos(133.61, -31.33, 175), cls: 'ext', fixed: true, gal: { mode: 'spiral', opts: { sq: 0.82, arms: 2, tight: 4.2, seed: 12.1 }, size: 250, fade: 0.72, stars: { count: 24000, radius: 108, arms: 2, tight: 0.72, inc: 0.78, roll: 2.2 } },
         t: {"en":["Triangulum Galaxy","in the Local Group"],"hans":["三角座星系","本星系群成员"],"hant":["三角座星系","本星系群成員"],"ja":["さんかく座銀河","局部銀河群の一員"],"ko":["삼각형자리 은하","국부 은하군의 일원"]},
         info: { en:{"type":"Spiral galaxy · external · not to scale","distance":"~2.7 million light-years","constellation":"Triangulum","facts":[["Diameter","~60,000 ly"],["Group","Local Group"]],"desc":"The third-largest galaxy in the Local Group and a graceful face-on spiral. Under very dark skies it is one of the most distant objects the unaided eye can see. With the Milky Way and Andromeda it completes the Local Group’s trio of great spirals. Drawn on the far sky, not to scale.","catalog":"M33"}, hans:{"type":"旋涡星系 · 银河系外 · 非真实比例","distance":"约 270 万光年","constellation":"三角座","facts":[["直径","约 6 万光年"],["所属","本星系群"]],"desc":"本星系群中第三大的星系，是一个正面朝向我们的秀丽旋涡星系。在非常黑暗的天空下，它是肉眼可见的最远天体之一。它与银河系、仙女座星系一起，构成本星系群三大旋涡星系。这里画在远方天幕上，非真实比例。","catalog":"M33"}, hant:{"type":"螺旋星系 · 銀河系外 · 非真實比例","distance":"約 270 萬光年","constellation":"三角座","facts":[["直徑","約 6 萬光年"],["所屬","本星系群"]],"desc":"本星系群中第三大的星系，是一個正面朝向我們的秀麗螺旋星系。在非常黑暗的天空下，它是肉眼可見的最遠天體之一。它與銀河系、仙女座星系一起，構成本星系群三大螺旋星系。這裡畫在遠方天幕上，非真實比例。","catalog":"M33"}, ja:{"type":"渦巻銀河 · 天の川銀河の外 · 実スケールではない","distance":"約270万光年","constellation":"さんかく座","facts":[["直径","約6万光年"],["所属","局部銀河群"]],"desc":"局部銀河群で3番目に大きい銀河で、正面を向いた優美な渦巻銀河です。非常に暗い空の下では、肉眼で見える最も遠い天体のひとつです。天の川銀河とアンドロメダ銀河とともに、局部銀河群の三大渦巻銀河をなしています。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"M33"}, ko:{"type":"나선 은하 · 우리은하 밖 · 실제 비율 아님","distance":"약 270만 광년","constellation":"삼각형자리","facts":[["지름","약 6만 광년"],["소속","국부 은하군"]],"desc":"국부 은하군에서 세 번째로 큰 은하이며, 정면을 향한 우아한 나선 은하입니다. 매우 어두운 하늘에서는 맨눈으로 볼 수 있는 가장 먼 천체 중 하나입니다. 우리은하, 안드로메다은하와 함께 국부 은하군의 3대 나선 은하를 이룹니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"M33"} } },
-      { p: galPos(298.46, 51.15, 195), cls: 'ext', fixed: true, gal: { mode: 'sombrero', opts: { sq: 0.19, seed: 9.4 }, size: 235, fade: 0.75 },
+      { p: galPos(298.46, 51.15, 195), cls: 'ext', fixed: true, gal: { mode: 'sombrero', opts: { sq: 0.19, seed: 9.4 }, size: 235, fade: 0.75, stars: { kind: 'spiral', count: 22000, radius: 106, arms: 2, tight: 1.15, inc: 1.45, roll: 1.0, haloSize: 0.78, haloOpacity: 0.2, coreSize: 0.3, coreOpacity: 0.85 } },
         t: {"en":["Sombrero Galaxy","seen edge-on"],"hans":["草帽星系","侧向观测"],"hant":["草帽星系","側向觀測"],"ja":["ソンブレロ銀河","真横から見た姿"],"ko":["솜브레로 은하","옆에서 본 모습"]},
         info: { en:{"type":"Spiral galaxy · edge-on · not to scale","distance":"~29 million light-years","constellation":"Virgo","facts":[["Distance","~29 million ly"],["Feature","edge-on dust lane"]],"desc":"We view this bright spiral almost exactly edge-on: a glowing white bulge split by a dark lane of dust, the silhouette that earns it the name Sombrero. A black hole of about a billion suns sits at its core. Drawn on the far sky, not to scale.","catalog":"M104"}, hans:{"type":"旋涡星系 · 侧向 · 非真实比例","distance":"约 2900 万光年","constellation":"室女座","facts":[["距离","约 2900 万光年"],["特征","侧向尘埃带"]],"desc":"我们几乎正好从侧面看这个明亮的旋涡星系：发光的白色核球被一条暗色尘埃带分割，正是这道剪影使它得名草帽。核心坐落着一个约十亿倍太阳质量的黑洞。这里画在远方天幕上，非真实比例。","catalog":"M104"}, hant:{"type":"螺旋星系 · 側向 · 非真實比例","distance":"約 2900 萬光年","constellation":"室女座","facts":[["距離","約 2900 萬光年"],["特徵","側向塵埃帶"]],"desc":"我們幾乎正好從側面看這個明亮的螺旋星系：發光的白色核球被一條暗色塵埃帶分割，正是這道剪影使它得名草帽。核心坐落著一個約十億倍太陽質量的黑洞。這裡畫在遠方天幕上，非真實比例。","catalog":"M104"}, ja:{"type":"渦巻銀河 · 真横 · 実スケールではない","distance":"約2900万光年","constellation":"おとめ座","facts":[["距離","約2900万光年"],["特徴","真横に走る暗黒帯"]],"desc":"この明るい渦巻銀河をほぼ真横から見ています：輝く白いバルジが暗い塵の帯で分けられ、このシルエットがソンブレロの名の由来です。中心には太陽の約10億倍の質量をもつブラックホールがあります。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"M104"}, ko:{"type":"나선 은하 · 옆면 · 실제 비율 아님","distance":"약 2900만 광년","constellation":"처녀자리","facts":[["거리","약 2900만 광년"],["특징","옆면 먼지 띠"]],"desc":"이 밝은 나선 은하를 거의 정확히 옆에서 봅니다: 빛나는 흰색 팽대부가 어두운 먼지 띠로 갈라져 있으며, 바로 이 실루엣이 솜브레로라는 이름을 얻게 했습니다. 중심에는 태양 약 10억 배 질량의 블랙홀이 있습니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"M104"} } },
-      { p: galPos(283.78, 74.49, 205), cls: 'ext', fixed: true, gal: { mode: 'ell', opts: { ell: 0.82, seed: 3.1 }, size: 230, fade: 0.62 },
+      { p: galPos(283.78, 74.49, 205), cls: 'ext', fixed: true, gal: { mode: 'ell', opts: { ell: 0.82, seed: 3.1 }, size: 230, fade: 0.62, stars: { kind: 'ellipsoid', count: 28000, radius: 132, ell: 0.82, inc: 0.3, haloSize: 1.0, haloOpacity: 0.22, halo: 0xffdca0, coreSize: 0.3, coreOpacity: 0.7, core: 0xffeecb } },
         t: {"en":["M87","giant elliptical"],"hans":["室女座A（M87）","巨椭圆星系"],"hant":["室女座A（M87）","巨橢圓星系"],"ja":["M87（おとめ座A）","巨大楕円銀河"],"ko":["M87 (처녀자리 A)","거대 타원 은하"]},
         info: { en:{"type":"Giant elliptical · external · not to scale","distance":"~53 million light-years","constellation":"Virgo","facts":[["Black hole","~6.5 billion suns"],["Cluster","Virgo Cluster"]],"desc":"A giant elliptical ruling the heart of the Virgo Cluster, built from trillions of old stars. Its central black hole — some 6.5 billion times the Sun’s mass — was the first ever photographed, by the Event Horizon Telescope in 2019, the same array that later imaged our own Sagittarius A*. Drawn on the far sky, not to scale.","catalog":"M87"}, hans:{"type":"巨椭圆星系 · 银河系外 · 非真实比例","distance":"约 5300 万光年","constellation":"室女座","facts":[["黑洞","约 65 亿倍太阳质量"],["星系团","室女座星系团"]],"desc":"统治室女座星系团核心的巨椭圆星系，由数万亿颗年老恒星构成。其中心黑洞——质量约为太阳的 65 亿倍——是有史以来第一个被拍摄到的黑洞，由事件视界望远镜于 2019 年拍摄，该阵列后来还拍摄了我们自己的人马座 A*。这里画在远方天幕上，非真实比例。","catalog":"M87"}, hant:{"type":"巨橢圓星系 · 銀河系外 · 非真實比例","distance":"約 5300 萬光年","constellation":"室女座","facts":[["黑洞","約 65 億倍太陽質量"],["星系團","室女座星系團"]],"desc":"統治室女座星系團核心的巨橢圓星系，由數兆顆年老恆星構成。其中心黑洞——質量約為太陽的 65 億倍——是有史以來第一個被拍攝到的黑洞，由事件視界望遠鏡於 2019 年拍攝，該陣列後來還拍攝了我們自己的人馬座 A*。這裡畫在遠方天幕上，非真實比例。","catalog":"M87"}, ja:{"type":"巨大楕円銀河 · 天の川銀河の外 · 実スケールではない","distance":"約5300万光年","constellation":"おとめ座","facts":[["ブラックホール","太陽質量の約65億倍"],["銀河団","おとめ座銀河団"]],"desc":"おとめ座銀河団の中心に君臨する巨大楕円銀河で、数兆個もの年老いた星からなります。中心にある太陽質量の約65億倍のブラックホールは、2019年にイベント・ホライズン・テレスコープが史上初めて撮影したもので、この望遠鏡群は後に私たちのいて座A*も撮影しました。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"M87"}, ko:{"type":"거대 타원 은하 · 우리은하 밖 · 실제 비율 아님","distance":"약 5300만 광년","constellation":"처녀자리","facts":[["블랙홀","태양 질량의 약 65억 배"],["은하단","처녀자리 은하단"]],"desc":"처녀자리 은하단의 중심에 군림하는 거대 타원 은하로, 수조 개의 늙은 별로 이루어져 있습니다. 중심의 블랙홀은 태양 질량의 약 65억 배로, 2019년 사건 지평선 망원경이 사상 처음으로 촬영한 블랙홀이며, 이 망원경 배열은 나중에 우리은하의 궁수자리 A*도 촬영했습니다. 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"M87"} } },
-      { p: galPos(309.52, 19.42, 165), cls: 'ext', fixed: true, gal: { mode: 'ell', opts: { ell: 0.92, seed: 6.2, dustBand: true, tilt: 0.15 }, size: 245, fade: 0.7 },
+      { p: galPos(309.52, 19.42, 165), cls: 'ext', fixed: true, gal: { mode: 'ell', opts: { ell: 0.92, seed: 6.2, dustBand: true, tilt: 0.15 }, size: 245, fade: 0.7, stars: { kind: 'ellipsoid', count: 24000, radius: 120, ell: 0.9, dustBand: true, inc: 1.02, roll: 0.3, haloSize: 0.7, haloOpacity: 0.06, halo: 0xffd6a0, coreSize: 0.18, coreOpacity: 0.55 } },
         t: {"en":["Centaurus A","nearest active galaxy"],"hans":["半人马座A","最近的活动星系"],"hant":["半人馬座A","最近的活躍星系"],"ja":["ケンタウルス座A","最も近い活動銀河"],"ko":["센타우루스자리 A","가장 가까운 활동 은하"]},
         info: { en:{"type":"Active galaxy · external · not to scale","distance":"~13 million light-years","constellation":"Centaurus","facts":[["Distance","~13 million ly"],["Feature","radio jets"]],"desc":"The nearest active galaxy to us: a giant elliptical crossed by a warped dark dust lane, the wreckage of a spiral it swallowed. Its central black hole launches jets that blaze across the radio sky, making it one of the brightest radio sources in the heavens. Drawn on the far sky, not to scale.","catalog":"NGC 5128"}, hans:{"type":"活动星系 · 银河系外 · 非真实比例","distance":"约 1300 万光年","constellation":"半人马座","facts":[["距离","约 1300 万光年"],["特征","射电喷流"]],"desc":"距离我们最近的活动星系：一个巨大的椭圆星系，被一条扭曲的暗尘埃带横贯，那是它吞并的旋涡星系的残骸。中心黑洞喷射出的喷流横扫射电天空，使它成为全天最明亮的射电源之一。这里画在远方天幕上，非真实比例。","catalog":"NGC 5128"}, hant:{"type":"活躍星系 · 銀河系外 · 非真實比例","distance":"約 1300 萬光年","constellation":"半人馬座","facts":[["距離","約 1300 萬光年"],["特徵","電波噴流"]],"desc":"距離我們最近的活躍星系：一個巨大的橢圓星系，被一條扭曲的暗塵埃帶橫貫，那是它吞併的螺旋星系的殘骸。中心黑洞噴射出的噴流橫掃電波天空，使它成為全天最明亮的電波源之一。這裡畫在遠方天幕上，非真實比例。","catalog":"NGC 5128"}, ja:{"type":"活動銀河 · 天の川銀河の外 · 実スケールではない","distance":"約1300万光年","constellation":"ケンタウルス座","facts":[["距離","約1300万光年"],["特徴","電波ジェット"]],"desc":"私たちに最も近い活動銀河で、飲み込んだ渦巻銀河の名残であるねじれた暗い塵の帯が横切る巨大な楕円銀河です。中心のブラックホールが噴き出すジェットは電波の空を貫き、全天で最も明るい電波源の一つです。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"NGC 5128"}, ko:{"type":"활동 은하 · 우리은하 밖 · 실제 비율 아님","distance":"약 1300만 광년","constellation":"센타우루스자리","facts":[["거리","약 1300만 광년"],["특징","전파 제트"]],"desc":"우리에게 가장 가까운 활동 은하로, 집어삼킨 나선 은하의 잔해인 뒤틀린 어두운 먼지 띠가 가로지르는 거대 타원 은하입니다. 중심 블랙홀이 내뿜는 제트는 전파 하늘을 가로질러 하늘에서 가장 밝은 전파원 중 하나입니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"NGC 5128"} } },
-      { p: galPos(280.47, -32.89, 155), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 21.7 }, size: 285, fade: 0.85 },
+      { p: galPos(280.47, -32.89, 155), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 21.7 }, size: 285, fade: 0.85, stars: { kind: 'irregular', count: 18000, radius: 122, offx: 0.14, offz: -0.05, haloSize: 0.5, haloOpacity: 0.06, coreOpacity: 0 } },
         t: {"en":["Large Magellanic Cloud","Milky Way satellite"],"hans":["大麦哲伦云","银河系的卫星星系"],"hant":["大麥哲倫雲","銀河系的衛星星系"],"ja":["大マゼラン雲","天の川銀河の伴銀河"],"ko":["대마젤란은하","우리은하의 위성 은하"]},
         info: { en:{"type":"Satellite galaxy · irregular · not to scale","distance":"~160,000 light-years","constellation":"Dorado","facts":[["Distance","~160,000 ly"],["Hosts","Tarantula, SN 1987A"]],"desc":"The largest satellite galaxy of the Milky Way, a barred irregular orbiting close by. It cradles the Tarantula Nebula — the most furious star-forming region in the Local Group — and hosted SN 1987A, the nearest supernova seen in the modern era. A naked-eye sight from southern skies. Drawn on the far sky, not to scale.","catalog":"LMC"}, hans:{"type":"卫星星系 · 不规则 · 非真实比例","distance":"约 16 万光年","constellation":"剑鱼座","facts":[["距离","约 16 万光年"],["拥有","蜘蛛星云、SN 1987A"]],"desc":"银河系最大的卫星星系，是一个在近旁绕行的棒状不规则星系。它孕育着蜘蛛星云——本星系群中恒星形成最剧烈的区域——并曾出现 SN 1987A，即现代观测到的最近的超新星。在南半球天空可用肉眼看到。这里画在远方天幕上，非真实比例。","catalog":"LMC"}, hant:{"type":"衛星星系 · 不規則 · 非真實比例","distance":"約 16 萬光年","constellation":"劍魚座","facts":[["距離","約 16 萬光年"],["擁有","蜘蛛星雲、SN 1987A"]],"desc":"銀河系最大的衛星星系，是一個在近旁繞行的棒狀不規則星系。它孕育著蜘蛛星雲——本星系群中恆星形成最劇烈的區域——並曾出現 SN 1987A，即現代觀測到的最近的超新星。在南半球天空可用肉眼看到。這裡畫在遠方天幕上，非真實比例。","catalog":"LMC"}, ja:{"type":"伴銀河 · 不規則 · 実スケールではない","distance":"約16万光年","constellation":"かじき座","facts":[["距離","約16万光年"],["擁する","タランチュラ星雲・SN 1987A"]],"desc":"天の川銀河で最大の伴銀河で、すぐ近くを周回する棒状不規則銀河です。局部銀河群で最も激しい星形成領域であるタランチュラ星雲を抱え、現代で観測された最も近い超新星 SN 1987A が現れました。南半球の空では肉眼で見えます。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"LMC"}, ko:{"type":"위성 은하 · 불규칙 · 실제 비율 아님","distance":"약 16만 광년","constellation":"황새치자리","facts":[["거리","약 16만 광년"],["보유","타란툴라 성운·SN 1987A"]],"desc":"우리은하에서 가장 큰 위성 은하로, 가까이서 공전하는 막대 불규칙 은하입니다. 국부 은하군에서 별 형성이 가장 격렬한 타란툴라 성운을 품고 있으며, 현대에 관측된 가장 가까운 초신성 SN 1987A가 나타났습니다. 남반구 하늘에서는 맨눈으로 볼 수 있습니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"LMC"} } },
-      { p: galPos(302.81, -44.33, 185), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 8.3, small: true, barAng: 1.1 }, size: 205, fade: 0.85 },
+      { p: galPos(302.81, -44.33, 185), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 8.3, small: true, barAng: 1.1 }, size: 205, fade: 0.85, stars: { kind: 'irregular', count: 10000, radius: 86, small: true, offx: 0.1, offz: 0.06, haloSize: 0.45, haloOpacity: 0.04, coreOpacity: 0 } },
         t: {"en":["Small Magellanic Cloud","Milky Way satellite"],"hans":["小麦哲伦云","银河系的卫星星系"],"hant":["小麥哲倫雲","銀河系的衛星星系"],"ja":["小マゼラン雲","天の川銀河の衛星銀河"],"ko":["소마젤란은하","우리은하의 위성 은하"]},
         info: { en:{"type":"Dwarf galaxy · satellite · not to scale","distance":"~200,000 light-years","constellation":"Tucana","facts":[["Distance","~200,000 ly"],["Legacy","Leavitt’s Cepheid law"]],"desc":"A dwarf-irregular companion of the Milky Way, paired with its larger sibling as the Magellanic Clouds. By measuring its Cepheid variable stars, Henrietta Leavitt uncovered the period–luminosity law — the first rung of the cosmic distance ladder that let astronomers measure the universe. Drawn on the far sky, not to scale.","catalog":"SMC"}, hans:{"type":"矮星系 · 卫星星系 · 非真实比例","distance":"约 20 万光年","constellation":"杜鹃座","facts":[["距离","约 20 万光年"],["贡献","勒维特造父定律"]],"desc":"银河系的一个不规则矮伴星系，与更大的同伴合称麦哲伦云。亨丽埃塔·勒维特通过测量其中的造父变星，发现了周期—光度关系——这是宇宙距离阶梯的第一级，让天文学家得以测量宇宙。这里画在远方天幕上，非真实比例。","catalog":"SMC"}, hant:{"type":"矮星系 · 衛星星系 · 非真實比例","distance":"約 20 萬光年","constellation":"杜鵑座","facts":[["距離","約 20 萬光年"],["貢獻","勒維特造父定律"]],"desc":"銀河系的一個不規則矮伴星系，與更大的同伴合稱麥哲倫雲。亨麗埃塔·勒維特透過測量其中的造父變星，發現了週期—光度關係——這是宇宙距離階梯的第一級，讓天文學家得以測量宇宙。這裡畫在遠方天幕上，非真實比例。","catalog":"SMC"}, ja:{"type":"矮小銀河 · 衛星銀河 · 実スケールではない","distance":"約20万光年","constellation":"きょしちょう座","facts":[["距離","約20万光年"],["功績","リービットのセファイド則"]],"desc":"天の川銀河の不規則矮小伴銀河で、より大きな兄弟星系とともにマゼラン雲と呼ばれます。ヘンリエッタ・リービットはこの銀河のセファイド変光星を測定し、周期光度関係を発見しました。これは宇宙の距離はしごの最初の一段であり、天文学者が宇宙を測ることを可能にしました。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"SMC"}, ko:{"type":"왜소 은하 · 위성 은하 · 실제 비율 아님","distance":"약 20만 광년","constellation":"큰부리새자리","facts":[["거리","약 20만 광년"],["업적","리비트의 세페이드 법칙"]],"desc":"우리은하의 불규칙 왜소 동반 은하로, 더 큰 형제 은하와 함께 마젤란은하로 불립니다. 헨리에타 리비트는 이 은하의 세페이드 변광성을 측정해 주기-광도 관계를 밝혀냈습니다. 이는 천문학자가 우주를 측정하게 해준 우주 거리 사다리의 첫 단입니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"SMC"} } }
     ];
@@ -729,6 +734,10 @@
       var zl = { en: '✨ Constellations · view the night sky →', hans: '✨ 星座天空 · 查看星空 →', hant: '✨ 星座天空 · 查看星空 →', ja: '✨ 星座の空 · 星空を見る →', ko: '✨ 별자리 하늘 · 밤하늘 보기 →' };
       bpBody.innerHTML += '<div id="bp-zodiac-link">' + (zl[lang] || zl.en) + '</div>';
     }
+    if (b.gal) { // galaxy card → fly the camera over for a close, in-3D look
+      var fl = { en: '🚀 Fly to this galaxy →', hans: '🚀 飞跃到此星系 →', hant: '🚀 飛越到此星系 →', ja: '🚀 この銀河へ飛ぶ →', ko: '🚀 이 은하로 날아가기 →' };
+      bpBody.innerHTML += '<div id="bp-flyto">' + (fl[lang] || fl.en) + '</div>';
+    }
   }
   window.openBeaconExtras = function (i) {
     renderPanel(i, beaconLang); bpEl.classList.add('open');
@@ -744,7 +753,40 @@
   bpEl.addEventListener('click', function (e) { e.stopPropagation(); }); // clicks inside the panel don't close it
   bpBody.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'bp-zodiac-link') enterSky();
+    else if (e.target && e.target.id === 'bp-flyto' && selectedBeacon !== null) flyToBeacon(selectedBeacon);
   });
+  // ── smooth camera fly-to (for galaxy beacons): ease camera + orbit target over to the
+  // galaxy so it can be observed close-up and orbited, plus a "back to the Milky Way" button.
+  var flyState = null, returnBtn = null;
+  var RET_TXT = { en: '← Back to the Milky Way', hans: '← 返回银河系', hant: '← 返回銀河系', ja: '← 天の川銀河へ戻る', ko: '← 우리은하로 돌아가기' };
+  function showReturnBtn(show) {
+    if (!returnBtn) { returnBtn = document.createElement('div'); returnBtn.id = 'return-mw';
+      returnBtn.addEventListener('click', function (e) { e.stopPropagation(); flyHome(); }); document.body.appendChild(returnBtn); }
+    returnBtn.textContent = RET_TXT[beaconLang] || RET_TXT.en;
+    returnBtn.style.display = show ? 'block' : 'none';
+  }
+  function flyTo(p1, t1, dur, onDone) {
+    flyState = { p0: camera.position.clone(), p1: p1.clone(), t0: controls.target.clone(), t1: t1.clone(), start: performance.now(), dur: dur, onDone: onDone };
+    controls.enabled = false;
+  }
+  function flyToBeacon(i) {
+    var b = BEACONS[i]; if (!b.gal) return;
+    var gp = b.p.clone(), galR = (b.gal.stars && b.gal.stars.radius) || 130;
+    var dir = camera.position.clone().sub(gp); if (dir.lengthSq() < 1) dir.set(0, 0.35, 1); dir.normalize();
+    flyTo(gp.clone().addScaledVector(dir, galR * 3.0), gp, 2400, function () { showReturnBtn(true); }); // frame the whole galaxy
+    if (selectedBeacon !== null) clearSelection(); // clear the card so the view is unobstructed
+  }
+  function flyHome() { flyTo(new THREE.Vector3(0, 390, 520), new THREE.Vector3(0, 0, 0), 2200, function () { showReturnBtn(false); }); }
+  function stepFly() { // called each frame while flying; returns true while active
+    if (!flyState) return false;
+    var k = Math.min(1, (performance.now() - flyState.start) / flyState.dur);
+    var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // easeInOutQuad
+    camera.position.lerpVectors(flyState.p0, flyState.p1, e);
+    controls.target.lerpVectors(flyState.t0, flyState.t1, e);
+    camera.lookAt(controls.target);
+    if (k >= 1) { var done = flyState.onDone; flyState = null; controls.enabled = true; if (done) done(); }
+    return true;
+  }
   window.addEventListener('keydown', function (e) { if ((e.key || '').toLowerCase() === 'escape' && selectedBeacon !== null) clearSelection(); });
   var beaconTmp = new THREE.Vector3();
   function updateBeacons() { // call AFTER render() — galaxyRoot/camera matrices are fresh then
@@ -752,7 +794,8 @@
       var b = BEACONS[i];
       beaconTmp.copy(b.p); if (!b.fixed) beaconTmp.applyMatrix4(galaxyRoot.matrixWorld); // external galaxies stay put on the far sky, not co-rotating with the disc
       beaconTmp.project(camera);
-      var vis = beaconTmp.z < 1 && beaconTmp.x > -1.05 && beaconTmp.x < 1.05 && beaconTmp.y > -1.05 && beaconTmp.y < 1.05;
+      var m = b.fixed ? 1.35 : 1.05; // far-sky galaxies span a wide area — keep the beacon while the galaxy is partly on-screen
+      var vis = beaconTmp.z < 1 && beaconTmp.x > -m && beaconTmp.x < m && beaconTmp.y > -m && beaconTmp.y < m;
       if (vis !== b.shown) { b.el.style.display = vis ? '' : 'none'; b.shown = vis; }
       if (vis) {
         b.sx = (beaconTmp.x * 0.5 + 0.5) * window.innerWidth;
@@ -1330,6 +1373,12 @@
       return;
     }
     galaxyRoot.rotation.y = t * GALAXY_SPIN; // the whole galaxy slowly rotates
+    for (var li = 0; li < galaxyLODs.length; li++) { // per-galaxy LOD + self-rotation about the disc axis
+      var L = galaxyLODs[li], dst = camera.position.distanceTo(L.center);
+      L.pts.geometry.setDrawRange(0, Math.max(400, Math.floor(L.maxN * Math.min(1, Math.max(0.14, L.refDist / dst)) * perfScale)));
+      L.mat.uniforms.uSize.value = L.baseSize * Math.min(3.2, Math.max(0.8, dst / L.refDist)) * renderer.getPixelRatio();
+      L.pts.quaternion.copy(L.q0).premultiply(galSpinTmp.setFromAxisAngle(L.axis, t * L.spin)); // spins in its own disc plane
+    }
     if (bgTwinkleMat) bgTwinkleMat.uniforms.uTime.value = t; // background-star twinkle
     var cbw = Math.sin(t * 0.32), cbr = 1 + 0.07 * cbw; // ~20s galactic-core breathe
     for (var cbi = 0; cbi < coreBreath.length; cbi++) {
@@ -1351,7 +1400,7 @@
         setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('dust density') !== -1) setMsg(''); }, 2500);
       }
     }
-    controls.update();
+    if (!stepFly()) controls.update(); // while flying to a galaxy, stepFly drives the camera
     render();
     updateBeacons(); // after render: galaxyRoot/camera world matrices are fresh
     rafId = requestAnimationFrame(frame);
@@ -1783,141 +1832,109 @@
     return mesh;
   }
 
-  // ── shared value-noise helpers (used by the great-neighbour painter) ─────────
-  function hash01(x, y, seed) { var n = Math.sin(x * 127.1 + y * 311.7 + seed) * 43758.5453; return n - Math.floor(n); }
-  function makeFbm(seed) { // 4-octave value-noise fbm (JS twin of the disc-nebula shader's)
-    function noise(x, y) {
-      var ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
-      fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
-      return hash01(ix, iy, seed) * (1 - fx) * (1 - fy) + hash01(ix + 1, iy, seed) * fx * (1 - fy) + hash01(ix, iy + 1, seed) * (1 - fx) * fy + hash01(ix + 1, iy + 1, seed) * fx * fy;
-    }
-    return function (x, y) { var v = 0, a = 0.5; for (var k = 0; k < 4; k++) { v += a * noise(x, y); x *= 2; y *= 2; a *= 0.5; } return v; };
-  }
-  // ── external galaxies on the far sky: high-res procedural stamps (512px), one per
-  // beacon that carries a `gal` descriptor, anchored exactly on that beacon's position.
-  // Four painters cover the Hubble tuning fork; each writes a black-transparent RGBA
-  // canvas shown additive on the sky (so it glows, and any dark dust lane is *absent*
-  // light). All share the disc-nebula's fbm noise for flocculent, non-repeating detail.
+  var galaxyLODs = []; // {pts, mat, center, maxN, refDist, baseSize, q0, axis, spin} per particle galaxy — LOD + self-rotation each frame
+  var galSpinTmp = new THREE.Quaternion();
   (function galaxies() {
-    function r2(a, b) { return a + Math.random() * (b - a); }
-    var S4 = 512;
-    function mkc() { var c = document.createElement('canvas'); c.width = c.height = S4; return c; }
+    // Each external-galaxy beacon carries a `stars` descriptor and is built as a real 3D
+    // particle galaxy (spiral / ellipsoid / irregular), oriented in 3D on the far sky with
+    // a bulge glow — real depth + resolved stars, with per-galaxy LOD by camera distance.
 
-    // SPIRAL — flocculent log-spiral arms, warm bulge → blue-white disc, near-side dust
-    // lane, resolved star speckles. sq = inclination squash (1 = face-on), arms, tight.
-    function paintSpiral(o) {
-      o = o || {}; var SQ = o.sq != null ? o.sq : 0.42, arms = o.arms || 2, seed = o.seed || 7.3, tightK = o.tight || 5.5;
-      var c = mkc(), cx = c.getContext('2d'); var fbmA = makeFbm(seed), fbmB = makeFbm(seed * 5.7 + 1);
-      var img = cx.createImageData(S4, S4), dd = img.data;
-      for (var py = 0; py < S4; py++) for (var px = 0; px < S4; px++) {
-        var ux = px / S4 * 2 - 1, uy = py / S4 * 2 - 1;
-        var env = Math.max(0, 1 - (ux * ux + uy * uy)); if (env < 0.02) continue;
-        var dx = ux / 0.92, dy = uy / (0.92 * SQ); var rr = Math.sqrt(dx * dx + dy * dy), th = Math.atan2(dy, dx);
-        var prof = Math.exp(-rr * 2.6) * Math.max(0, Math.min(1, (1.05 - rr) / 0.25));
-        var arm = Math.pow(Math.max(0, Math.cos(arms * th - Math.log(Math.max(rr, 0.05)) * tightK) * 0.5 + 0.5), 1.8);
-        arm *= 0.55 + 0.45 * fbmB(dx * 3 + 7, dy * 3 + 2);
-        var dens = (0.3 + 0.8 * arm) * prof, dust = 0;
-        if (uy > 0.02 && rr > 0.22 && rr < 0.62) dust = Math.sin((rr - 0.22) / 0.4 * 3.1416) * (0.5 + 0.5 * fbmA(dx * 4 + 3, dy * 4 + 11)) * 0.75;
-        var bul = Math.exp(-(ux * ux + uy * uy / (SQ * 1.6) / (SQ * 1.6)) * 26), halo = Math.exp(-rr * 1.1) * 0.05;
-        var a = Math.min(1, (dens * (1 - dust) + halo) * 1.15 + bul * 0.9) * env; if (a <= 0.004) continue;
-        var armMix = Math.max(0, Math.min(1, (rr - 0.16) * 3));
-        var R = 255 + (172 - 255) * armMix, G = 232 + (198 - 232) * armMix, B = 205 + (242 - 205) * armMix;
-        var vari = 0.86 + 0.28 * fbmB(dx * 2 + 15, dy * 2 + 9), i = (py * S4 + px) * 4;
-        dd[i] = Math.min(255, R * vari) | 0; dd[i + 1] = Math.min(255, G * vari) | 0; dd[i + 2] = Math.min(255, B * vari) | 0; dd[i + 3] = (a * 255) | 0;
+    function buildGalaxyStars(P, o) {
+      var TAU = 6.28318530718, N = Math.max(600, (o.count || 12000) | 0); // full LOD count; per-frame drawRange trims by distance
+      var R = o.radius || 120, kind = o.kind || 'spiral';
+      var mix = new THREE.Color();
+      var pos = new Float32Array(N * 3), scl = new Float32Array(N), colA = new Float32Array(N * 3);
+      function grand() { return Math.random() + Math.random() + Math.random() - 1.5; }
+      var i;
+      if (kind === 'ellipsoid') {                 // giant elliptical: old-star ellipsoid, concentrated core (+ optional dust lane)
+        var ell = o.ell != null ? o.ell : 0.82, dustBand = o.dustBand;
+        for (i = 0; i < N; i++) {
+          var u = Math.random() * 2 - 1, ph = Math.random() * TAU, s = Math.sqrt(1 - u * u), t = Math.pow(Math.random(), 2.3);
+          var px = s * Math.cos(ph) * t * R, py = u * t * R * ell, pz = s * Math.sin(ph) * t * R;
+          pos[i * 3] = px; pos[i * 3 + 1] = py; pos[i * 3 + 2] = pz;
+          mix.setRGB(1.0, 0.87 - 0.08 * t, 0.66 - 0.12 * t).multiplyScalar(0.5 * (0.55 + 0.45 * (1 - t))); // dust lane is a separate fixed dark sheet (below), so stars fill the disc and orbit past it
+          scl[i] = 0.3 + Math.random() * 0.7;
+          if (Math.random() < 0.02) { mix.setHex(0xffe08a).multiplyScalar(1.0); scl[i] = 0.9 + Math.random() * 0.7; } // scattered giants
+          colA[i * 3] = mix.r; colA[i * 3 + 1] = mix.g; colA[i * 3 + 2] = mix.b;
+        }
+      } else if (kind === 'irregular') {          // Magellanic: lopsided clumpy blobs, blue young stars + pink HII
+        var NC2 = Math.max(8, Math.round(N / 220)), clus = [];
+        for (var c2 = 0; c2 < NC2; c2++) clus.push({ x: grand() * R * 0.5 + (o.offx || 0.12) * R, y: grand() * R * 0.16, z: grand() * R * 0.5 + (o.offz || -0.05) * R, sz: R * 0.05 + Math.random() * Math.random() * R * 0.22 });
+        for (i = 0; i < N; i++) {
+          var k2 = clus[(Math.random() * NC2) | 0];
+          pos[i * 3] = k2.x + grand() * k2.sz; pos[i * 3 + 1] = k2.y + grand() * k2.sz * 0.6; pos[i * 3 + 2] = k2.z + grand() * k2.sz;
+          var bl = Math.random();
+          mix.setRGB(0.72 + 0.2 * bl, 0.8 + 0.12 * bl, 1.0).multiplyScalar(0.42);
+          scl[i] = 0.35 + Math.random() * 0.7;
+          var kn2 = Math.random();
+          if (kn2 < 0.06) { mix.setHex(0xdbeaff).multiplyScalar(1.1); scl[i] = 0.9 + Math.random() * 0.8; }      // blue star-forming knots
+          else if (kn2 < 0.075 && !o.small) { mix.setHex(0xff6aa0).multiplyScalar(1.0); scl[i] = 0.8 + Math.random() * 0.6; } // pink HII (Tarantula)
+          colA[i * 3] = mix.r; colA[i * 3 + 1] = mix.g; colA[i * 3 + 2] = mix.b;
+        }
+      } else {                                    // spiral: log-spiral arms + clustered star knots (like the Milky Way)
+        var arms = o.arms || 2, tight = o.tight != null ? o.tight : 0.9, thick = R * 0.06, armW = R * 0.11, radPow = 0.72;
+        var inside = new THREE.Color(o.inside || 0xffcf8a), outside = new THREE.Color(o.outside || 0x9fc3f2);
+        function pickArm(r) { var idx = (Math.random() < 0.7) ? Math.floor(Math.random() * (arms / 2)) * 2 : Math.floor(Math.random() * (arms / 2)) * 2 + 1, maj = (idx % 2 === 0); return { maj: maj, ang: idx * (TAU / arms) + r * tight * TAU + (Math.random() - 0.5) * 0.5 * (maj ? 1 : 1.25) }; }
+        var NC = Math.max(12, Math.round(N / 200)), clusters = [];
+        for (var c = 0; c < NC; c++) { var crf = Math.pow(Math.random(), radPow), cp = pickArm(crf), cR = crf * R + (Math.random() - 0.5) * armW;
+          clusters.push({ x: Math.cos(cp.ang) * cR, z: Math.sin(cp.ang) * cR, rf: crf, maj: cp.maj, sz: R * 0.016 + Math.random() * Math.random() * R * 0.1 }); }
+        for (i = 0; i < N; i++) {
+          var rf, major;
+          if (Math.random() < 0.8) { var k = clusters[(Math.random() * NC) | 0]; rf = k.rf; major = k.maj;
+            pos[i * 3] = k.x + grand() * k.sz; pos[i * 3 + 2] = k.z + grand() * k.sz; pos[i * 3 + 1] = grand() * thick * ((1 - rf) + 0.2) * 0.45; }
+          else { rf = Math.pow(Math.random(), radPow); var fp = pickArm(rf), offR = rf * R + (Math.random() - 0.5) * armW; major = fp.maj;
+            pos[i * 3] = Math.cos(fp.ang) * offR; pos[i * 3 + 2] = Math.sin(fp.ang) * offR; pos[i * 3 + 1] = (Math.random() - 0.5) * thick * ((1 - rf) + 0.2); }
+          mix.copy(inside).lerp(outside, Math.min(1, Math.max(0, (rf - 0.12) * 3.0))).multiplyScalar(0.5 * (major ? 1 : 0.72) * (1 - 0.4 * Math.min(1, Math.max(0, (rf - 0.78) * 4.5))));
+          scl[i] = (0.3 + Math.random() * 0.9) * (major ? 1 : 0.82);
+          var kn = Math.random();
+          if (kn < 0.004) { mix.setHex(0xffd45a).multiplyScalar(1.3); scl[i] = 1.4 + Math.random(); }
+          else if (major && rf > 0.28 && kn < 0.03) { var cr = Math.random(), col = cr < 0.6 ? 0xff6a3a : (cr < 0.8 ? 0xcfe6ff : 0x6a9cff); mix.setHex(col).multiplyScalar(1.15); scl[i] = 1.1 + Math.random() * 0.8; }
+          else if (major && rf > 0.28 && kn < 0.12) { mix.setHex(0xcfe6ff).multiplyScalar(1.0); scl[i] = 0.9 + Math.random() * 0.7; }
+          colA[i * 3] = mix.r; colA[i * 3 + 1] = mix.g; colA[i * 3 + 2] = mix.b;
+        }
       }
-      cx.putImageData(img, 0, 0);
-      for (var s = 0; s < 130; s++) { var ax = (Math.random() + Math.random() - 1) * 0.75, ay = (Math.random() + Math.random() - 1) * 0.75 * SQ;
-        cx.fillStyle = 'rgba(225,235,255,' + r2(0.2, 0.75).toFixed(2) + ')'; cx.fillRect(Math.round(256 + ax * 235), Math.round(256 + ay * 235), 1, 1); }
-      return c;
+      var g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('aColor', new THREE.BufferAttribute(colA, 3));
+      g.setAttribute('aScale', new THREE.BufferAttribute(scl, 1));
+      var gmat = new THREE.ShaderMaterial({
+        uniforms: { uSize: { value: (o.pointSize || 1.9) * renderer.getPixelRatio() } },
+        vertexShader: 'uniform float uSize; attribute float aScale; attribute vec3 aColor; varying vec3 vColor;' +
+          'void main(){ vec4 mp = modelMatrix * vec4(position,1.0); vec4 vp = viewMatrix * mp; gl_Position = projectionMatrix * vp;' +
+          ' gl_PointSize = uSize * aScale * (300.0 / -vp.z); vColor = aColor; }',
+        fragmentShader: GLOW_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+      });
+      var pts = new THREE.Points(g, gmat);
+      pts.frustumCulled = false;
+      // orient the disc: its normal sits `inc` radians off the viewer's line of sight, plus a roll
+      var viewDir = P.clone().negate().normalize();
+      var perp = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0, 1, 0));
+      if (perp.lengthSq() < 1e-4) perp.set(1, 0, 0);
+      perp.normalize();
+      var nrm = viewDir.clone().applyAxisAngle(perp, o.inc != null ? o.inc : 0.9);
+      var q0 = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), nrm);
+      q0.premultiply(new THREE.Quaternion().setFromAxisAngle(nrm, o.roll || 0));
+      pts.position.copy(P); pts.quaternion.copy(q0); scene.add(pts);
+      galaxyLODs.push({ pts: pts, mat: gmat, center: P.clone(), maxN: N, refDist: R * 3, baseSize: (o.pointSize || 1.9),
+        q0: q0, axis: nrm.clone(), spin: (o.spin != null ? o.spin : 0.018) }); // per-frame LOD + slow self-rotation about the disc axis
+      // bulge = a bright compact nucleus + a faint extended warm halo (avoids a solid grey ball)
+      function bulge(sz, op, hex) { var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: new THREE.Color(hex), transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.copy(P); s.scale.set(sz, sz, 1); scene.add(s); }
+      bulge(R * (o.haloSize || 0.62), o.haloOpacity || 0.16, o.halo || 0xffcf8a); // soft outer bulge glow
+      bulge(R * (o.coreSize || 0.2), o.coreOpacity || 0.9, o.core || 0xfff1dc);   // bright nucleus
+      if (o.dustBand) { // a real dark dust lane: a dark sheet lying in the disc plane, darkening the bulge behind it
+        var dl = document.createElement('canvas'); dl.width = dl.height = 128; var dcx = dl.getContext('2d');
+        var dgr = dcx.createRadialGradient(64, 64, 0, 64, 64, 64);
+        dgr.addColorStop(0, 'rgba(0,0,0,0.96)'); dgr.addColorStop(0.6, 'rgba(0,0,0,0.55)'); dgr.addColorStop(1, 'rgba(0,0,0,0)');
+        dcx.save(); dcx.translate(64, 64); dcx.scale(1, 0.5); dcx.fillStyle = dgr; dcx.beginPath(); dcx.arc(0, 0, 64, 0, 6.2832); dcx.fill(); dcx.restore();
+        var lane = new THREE.Mesh(new THREE.PlaneGeometry(R * 3.0, R * 1.5),
+          new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(dl), transparent: true, depthWrite: false, blending: THREE.NormalBlending }));
+        lane.quaternion.copy(q0).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2)); // lie in the disc plane, aligned with the disc's long axis
+        lane.position.copy(P); lane.renderOrder = 6; lane.frustumCulled = false; scene.add(lane);
+      }
     }
 
-    // GIANT ELLIPTICAL — big diffuse old-star ellipsoid (bright extended core + long
-    // halo). ell = axis ratio, tilt = orientation; dustBand adds a Centaurus-A-style
-    // dark lane cutting across the body.
-    function paintElliptical(o) {
-      o = o || {}; var ell = o.ell != null ? o.ell : 0.8, dustBand = o.dustBand, seed = o.seed || 3.1, tilt = o.tilt != null ? o.tilt : 0.3;
-      var c = mkc(), cx = c.getContext('2d'); var fbm = makeFbm(seed);
-      var img = cx.createImageData(S4, S4), dd = img.data, ca = Math.cos(tilt), sa = Math.sin(tilt);
-      for (var py = 0; py < S4; py++) for (var px = 0; px < S4; px++) {
-        var ux = px / S4 * 2 - 1, uy = py / S4 * 2 - 1;
-        var env = Math.max(0, 1 - (ux * ux + uy * uy)); if (env < 0.02) continue;
-        var rx = (ux * ca + uy * sa), ry = (-ux * sa + uy * ca) / ell; var rr = Math.sqrt(rx * rx + ry * ry);
-        var prof = Math.exp(-2.3 * Math.pow(Math.max(rr, 0.001), 0.6)), dust = 0;
-        if (dustBand) { var bandY = Math.abs(ry + 0.05 * Math.sin(rx * 3.2)) / 0.14; if (bandY < 1 && rr < 0.98) dust = (1 - bandY) * Math.min(1, rr * 3.2) * 0.92; }
-        var a = Math.min(1, prof * 1.5 * (1 - dust)) * env; if (a <= 0.004) continue;
-        var vari = 0.95 + 0.08 * fbm(rx * 3, ry * 3), i = (py * S4 + px) * 4;
-        dd[i] = Math.min(255, 255 * vari) | 0; dd[i + 1] = Math.min(255, (242 - 14 * rr) * vari) | 0; dd[i + 2] = Math.min(255, Math.max(0, 214 - 26 * rr) * vari) | 0; dd[i + 3] = (a * 255) | 0;
-      }
-      cx.putImageData(img, 0, 0);
-      for (var s = 0; s < 80; s++) { var t = Math.random() * 6.283, rad = Math.pow(Math.random(), 0.6) * 0.85, sx = Math.cos(t) * rad, sy = Math.sin(t) * rad * ell;
-        cx.fillStyle = 'rgba(255,246,224,' + r2(0.12, 0.4).toFixed(2) + ')'; cx.fillRect(Math.round(256 + (sx * ca - sy * sa) * 235), Math.round(256 + (sx * sa + sy * ca) * 235), 1, 1); }
-      return c;
-    }
-
-    // EDGE-ON / SOMBRERO — thin bright disc, a large round bulge, and a dark dust lane
-    // right on the disc midline. sq = disc thinness (small = more edge-on).
-    function paintSombrero(o) {
-      o = o || {}; var SQ = o.sq != null ? o.sq : 0.19, seed = o.seed || 9.4;
-      var c = mkc(), cx = c.getContext('2d'); var fbm = makeFbm(seed);
-      var img = cx.createImageData(S4, S4), dd = img.data;
-      for (var py = 0; py < S4; py++) for (var px = 0; px < S4; px++) {
-        var ux = px / S4 * 2 - 1, uy = py / S4 * 2 - 1;
-        var env = Math.max(0, 1 - (ux * ux + uy * uy)); if (env < 0.02) continue;
-        var dx = ux / 0.95, dy = uy / (0.95 * SQ); var rr = Math.sqrt(dx * dx + dy * dy);
-        var disc = Math.exp(-rr * 2.2) * Math.max(0, Math.min(1, (1.05 - rr) / 0.18));
-        var br = Math.sqrt(ux * ux + uy * uy / (0.62 * 0.62)), bul = Math.exp(-br * 4.6) * 1.15;
-        var lane = 0, band = Math.abs(uy) / (0.055 + 0.02 * fbm(dx * 6, 7));
-        if (band < 1 && Math.abs(dx) < 1.02) lane = (1 - band) * Math.max(0, Math.min(1, Math.abs(dx) * 2.2)) * 0.92;
-        var a = Math.min(1, (disc * 1.1 + bul) * (1 - lane)) * env; if (a <= 0.004) continue;
-        var warm = Math.max(0, Math.min(1, br)), vari = 0.9 + 0.2 * fbm(dx * 2 + 4, dy * 2 + 1), i = (py * S4 + px) * 4;
-        dd[i] = Math.min(255, 255 * vari) | 0; dd[i + 1] = Math.min(255, (238 - 16 * warm) * vari) | 0; dd[i + 2] = Math.min(255, (210 + 20 * warm) * vari) | 0; dd[i + 3] = (a * 255) | 0;
-      }
-      cx.putImageData(img, 0, 0);
-      for (var s = 0; s < 90; s++) { var ax = (Math.random() + Math.random() - 1) * 0.85, ay = (Math.random() + Math.random() - 1) * 0.85 * SQ;
-        if (Math.abs(ay) < 0.04) continue; cx.fillStyle = 'rgba(235,242,255,' + r2(0.15, 0.5).toFixed(2) + ')'; cx.fillRect(Math.round(256 + ax * 235), Math.round(256 + ay * 235), 1, 1); }
-      return c;
-    }
-
-    // IRREGULAR / MAGELLANIC — dim lopsided off-centre bar + patchy star clouds, blue
-    // star-forming knots, and (large only) a pink Tarantula-like HII region.
-    function paintIrregular(o) {
-      o = o || {}; var seed = o.seed || 21.7, small = o.small;
-      var c = mkc(), cx = c.getContext('2d'); var fbm = makeFbm(seed), fbm2 = makeFbm(seed * 2.3 + 3);
-      var img = cx.createImageData(S4, S4), dd = img.data;
-      var barAng = o.barAng != null ? o.barAng : 0.5, ca = Math.cos(barAng), sa = Math.sin(barAng);
-      var ox = o.offx != null ? o.offx : 0.14, oy = o.offy != null ? o.offy : -0.06;
-      for (var py = 0; py < S4; py++) for (var px = 0; px < S4; px++) {
-        var ux = px / S4 * 2 - 1, uy = py / S4 * 2 - 1;
-        var env = Math.max(0, 1 - (ux * ux + uy * uy)); if (env < 0.02) continue;
-        var mx = ux - ox, my = uy - oy, bx = (mx * ca + my * sa) / 0.7, by = (-mx * sa + my * ca) / 0.34;
-        var bar = Math.exp(-(bx * bx + by * by) * 1.8);
-        var lumps = Math.pow(Math.max(0, fbm(ux * 2.6 + 5, uy * 2.6) - 0.36), 1.3) * 2.4;
-        var a = Math.min(1, (bar * 0.62 + lumps * 0.6) * env * 0.8); if (a <= 0.004) continue;
-        var blueish = 0.55 + 0.45 * fbm2(ux * 4, uy * 4), i = (py * S4 + px) * 4;
-        dd[i] = Math.min(255, 188 + 46 * (1 - blueish)) | 0; dd[i + 1] = Math.min(255, 204 + 30 * blueish) | 0; dd[i + 2] = 240; dd[i + 3] = (a * 255) | 0;
-      }
-      cx.putImageData(img, 0, 0);
-      cx.globalCompositeOperation = 'lighter';
-      var n = small ? 16 : 32;
-      for (var s = 0; s < n; s++) { var t = Math.random() * 6.283, rad = Math.pow(Math.random(), 0.5) * (small ? 0.42 : 0.62);
-        var sx = Math.cos(t) * rad, sy = Math.sin(t) * rad * 0.55, X = 256 + (ox + (sx * ca - sy * sa)) * 235, Y = 256 + (oy + (sx * sa + sy * ca)) * 235;
-        var rk = r2(0.8, 2.2), gr = cx.createRadialGradient(X, Y, 0, X, Y, rk * 2.5);
-        gr.addColorStop(0, 'rgba(200,222,255,' + r2(0.3, 0.7).toFixed(2) + ')'); gr.addColorStop(1, 'rgba(180,205,255,0)');
-        cx.fillStyle = gr; cx.beginPath(); cx.arc(X, Y, rk * 2.5, 0, 6.283); cx.fill(); }
-      if (!small) { var TX = 256 + (ox + 0.27) * 235, TY = 256 + (oy + 0.06) * 235, tr = r2(24, 32);
-        var g = cx.createRadialGradient(TX, TY, 0, TX, TY, tr);
-        g.addColorStop(0, 'rgba(255,150,190,0.9)'); g.addColorStop(0.45, 'rgba(255,110,165,0.4)'); g.addColorStop(1, 'rgba(255,90,150,0)');
-        cx.fillStyle = g; cx.beginPath(); cx.arc(TX, TY, tr, 0, 6.283); cx.fill();
-        for (var k = 0; k < 6; k++) { cx.fillStyle = 'rgba(220,235,255,0.9)'; cx.fillRect(TX + r2(-8, 8), TY + r2(-8, 8), 1.4, 1.4); } }
-      return c;
-    }
-
-    var PAINT = { spiral: paintSpiral, ell: paintElliptical, sombrero: paintSombrero, irr: paintIrregular };
     for (var gi = 0; gi < BEACONS.length; gi++) {
-      var b = BEACONS[gi]; if (!b.gal) continue;
-      var cnv = PAINT[b.gal.mode](b.gal.opts || {});
-      scene.add(billboardBatch(new THREE.CanvasTexture(cnv),
-        [{ p: [b.p.x, b.p.y, b.p.z], size: b.gal.size, rot: b.gal.rot != null ? b.gal.rot : r2(0, 6.283), cell: 0, fade: b.gal.fade != null ? b.gal.fade : 0.7 }], 1));
+      var b = BEACONS[gi]; if (b.gal && b.gal.stars) buildGalaxyStars(b.p, b.gal.stars); // real 3D particle galaxy
     }
   })();
 
