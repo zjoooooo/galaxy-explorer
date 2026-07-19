@@ -680,6 +680,37 @@
       (function (idx) { el.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(idx); }); })(i);
       BEACONS.push({ p: d.p, el: el, t: d.t, info: d.info, fixed: d.fixed, gal: d.gal, shown: true });
     }
+    // ── internal objects, revealed by scanning a galaxy. Child beacons project
+    // through their parent galaxy's world matrix, so they co-rotate with it.
+    // lp = position in the galaxy's LOCAL frame (disc in XZ, +Y = disc normal),
+    // scaled to the parent's radius (M31 R≈132, Cen A R≈120). Tunable in-browser.
+    var CHILDREN = [
+      { parent: 'M31', lp: new THREE.Vector3(80, 6, 34), feat: { kind: 'starcloud' },
+        t: { en: ['NGC 206', 'star cloud'], hans: ['NGC 206', '恒星云'], hant: ['NGC 206', '恆星雲'], ja: ['NGC 206', '星の雲'], ko: ['NGC 206', '별구름'] },
+        info: { en: { type: 'Star cloud · inside M31', facts: [['Type', 'OB association'], ['Host', 'Andromeda']], desc: 'PLACEHOLDER — replaced in Task 6.', catalog: 'NGC 206' } },
+        img: 'images/ngc206.jpg', credit: '' },
+      { parent: 'M31', lp: new THREE.Vector3(-46, 54, -30), feat: { kind: 'globular' },
+        t: { en: ['G1 (Mayall II)', 'globular cluster'], hans: ['G1（梅奥尔 II）', '球状星团'], hant: ['G1（梅奧爾 II）', '球狀星團'], ja: ['G1（メイオールII）', '球状星団'], ko: ['G1 (메이올 II)', '구상성단'] },
+        info: { en: { type: 'Globular cluster · inside M31', facts: [['Mass', '~10 million suns'], ['Host', 'Andromeda']], desc: 'PLACEHOLDER — replaced in Task 6.', catalog: 'G1 / Mayall II' } },
+        img: 'images/g1.jpg', credit: '' },
+      { parent: 'NGC 5128', lp: new THREE.Vector3(24, 78, 8), feat: { kind: 'jet', dir: new THREE.Vector3(0.22, 0.95, 0.1).normalize(), len: 168 },
+        t: { en: ['Relativistic jet', 'from the black hole'], hans: ['相对论喷流', '来自黑洞'], hant: ['相對論噴流', '來自黑洞'], ja: ['相対論的ジェット', 'ブラックホールから'], ko: ['상대론적 제트', '블랙홀에서'] },
+        info: { en: { type: 'Relativistic jet · Centaurus A', facts: [['Length', 'thousands of ly'], ['Source', 'central black hole']], desc: 'PLACEHOLDER — replaced in Task 6.', catalog: 'Cen A jet' } },
+        img: 'images/cena-jet.jpg', credit: '' },
+      { parent: 'NGC 5128', lp: new THREE.Vector3(48, 2, -22), feat: { kind: 'nebula' },
+        t: { en: ['Star-forming region', 'in the dust lane'], hans: ['恒星形成区', '尘埃带中'], hant: ['恆星形成區', '塵埃帶中'], ja: ['星形成領域', 'ダストレーン内'], ko: ['별 형성 영역', '먼지 띠 속'] },
+        info: { en: { type: 'Star-forming region · Centaurus A', facts: [['Contains', 'young blue clusters'], ['Trigger', 'galaxy merger']], desc: 'PLACEHOLDER — replaced in Task 6.', catalog: 'Cen A HII' } },
+        img: 'images/cena-sfr.jpg', credit: '' }
+    ];
+    CHILDREN.forEach(function (c) {
+      var el = document.createElement('div');
+      el.className = 'beacon child';
+      el.innerHTML = '<div class="b-mark"><span class="b-ring"></span><span class="b-ring r2"></span><span class="b-dot"></span></div><div class="b-label"></div>';
+      host.appendChild(el);
+      var idx = BEACONS.length;
+      (function (i) { el.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(i); }); })(idx);
+      BEACONS.push({ el: el, t: c.t, info: c.info, child: true, parent: c.parent, lp: c.lp, feat: c.feat, img: c.img, credit: c.credit, revealed: false, parentPts: null, feature: null, shown: false });
+    });
     setBeaconLang(beaconLang);
     var langSel = document.getElementById('lang');
     if (langSel) { langSel.value = beaconLang; langSel.addEventListener('change', function () { setBeaconLang(langSel.value); }); }
@@ -692,7 +723,7 @@
       langs.forEach(function (L) {
         var o = b.info[L];
         if (!o) throw new Error('beacon ' + i + ' missing info.' + L);
-        fields.forEach(function (f) { if (o[f] == null) throw new Error('beacon ' + i + ' info.' + L + '.' + f + ' missing'); });
+        fields.forEach(function (f) { if (b.child && (f === 'distance' || f === 'constellation')) return; if (o[f] == null) throw new Error('beacon ' + i + ' info.' + L + '.' + f + ' missing'); });
         if (!Array.isArray(o.facts)) throw new Error('beacon ' + i + ' info.' + L + '.facts not array');
       });
     });
@@ -741,7 +772,7 @@
   }
   window.openBeaconExtras = function (i) {
     renderPanel(i, beaconLang); bpEl.classList.add('open');
-    if (BEACONS[i].fixed) { beaconRing.visible = false; return; } // no 3D ring for far-sky external galaxies
+    if (BEACONS[i].fixed || BEACONS[i].child) { beaconRing.visible = false; return; } // no 3D ring for far-sky galaxies or in-galaxy objects
     var ac = getComputedStyle(BEACONS[i].el).getPropertyValue('--bc').trim() || '#8fc2ff';
     beaconRing.material.color.set(ac);
     beaconRing.position.copy(BEACONS[i].p);
@@ -792,7 +823,12 @@
   function updateBeacons() { // call AFTER render() — galaxyRoot/camera matrices are fresh then
     for (var i = 0; i < BEACONS.length; i++) {
       var b = BEACONS[i];
-      beaconTmp.copy(b.p); if (!b.fixed) beaconTmp.applyMatrix4(galaxyRoot.matrixWorld); // external galaxies stay put on the far sky, not co-rotating with the disc
+      if (b.child) {
+        if (!b.revealed || !b.parentPts) { if (b.shown) { b.el.style.display = 'none'; b.shown = false; } continue; }
+        beaconTmp.copy(b.lp).applyMatrix4(b.parentPts.matrixWorld); // ride the parent galaxy's transform (co-rotates)
+      } else {
+        beaconTmp.copy(b.p); if (!b.fixed) beaconTmp.applyMatrix4(galaxyRoot.matrixWorld); // external galaxies stay put on the far sky, not co-rotating with the disc
+      }
       beaconTmp.project(camera);
       var m = b.fixed ? 1.35 : 1.05; // far-sky galaxies span a wide area — keep the beacon while the galaxy is partly on-screen
       var vis = beaconTmp.z < 1 && beaconTmp.x > -m && beaconTmp.x < m && beaconTmp.y > -m && beaconTmp.y < m;
