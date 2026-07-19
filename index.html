@@ -2165,7 +2165,7 @@
         var laneTex = new THREE.CanvasTexture(dl);
         laneTex.generateMipmaps = false; laneTex.minFilter = THREE.LinearFilter; // deep mips average band+clear into a grey sheet → a fake dark rectangle at distance
         var lane = new THREE.Mesh(new THREE.PlaneGeometry(ringLane ? R * 2.6 : R * 3.2, ringLane ? R * 2.6 : R * 1.9),
-          new THREE.MeshBasicMaterial({ map: laneTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: ringLane ? THREE.NormalBlending : THREE.MultiplyBlending })); // DoubleSide: the band must show from below the disc too
+          new THREE.MeshBasicMaterial({ map: laneTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false, blending: ringLane ? THREE.NormalBlending : THREE.MultiplyBlending })); // DoubleSide: show from below too. fog:false is CRITICAL — scene fog blackens the distant quad, and multiply-by-black erased everything behind it (the "black rectangle")
         lane.quaternion.copy(q0).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2)); // lie in the disc plane, aligned with the disc's long axis
         if (ringLane) { // spin the dark half-ring around the disc axis so it faces the viewer (the lane does not co-rotate, so this stays correct)
           var dN = viewDir.clone().sub(nrm.clone().multiplyScalar(viewDir.dot(nrm))).normalize();
