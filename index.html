@@ -2162,8 +2162,10 @@
           }
           dcx.putImageData(img2, 0, 0);
         }
+        var laneTex = new THREE.CanvasTexture(dl);
+        laneTex.generateMipmaps = false; laneTex.minFilter = THREE.LinearFilter; // deep mips average band+clear into a grey sheet → a fake dark rectangle at distance
         var lane = new THREE.Mesh(new THREE.PlaneGeometry(ringLane ? R * 2.6 : R * 3.2, ringLane ? R * 2.6 : R * 1.9),
-          new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(dl), transparent: true, depthWrite: false, blending: ringLane ? THREE.NormalBlending : THREE.MultiplyBlending }));
+          new THREE.MeshBasicMaterial({ map: laneTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: ringLane ? THREE.NormalBlending : THREE.MultiplyBlending })); // DoubleSide: the band must show from below the disc too
         lane.quaternion.copy(q0).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2)); // lie in the disc plane, aligned with the disc's long axis
         if (ringLane) { // spin the dark half-ring around the disc axis so it faces the viewer (the lane does not co-rotate, so this stays correct)
           var dN = viewDir.clone().sub(nrm.clone().multiplyScalar(viewDir.dot(nrm))).normalize();
@@ -2197,20 +2199,26 @@
     function smokeTextures() { // procedural turbulent puff textures — the mottled cloud matter of the lobes
       if (SMOKE_TEXS) return SMOKE_TEXS;
       SMOKE_TEXS = [];
-      for (var k = 0; k < 3; k++) {
+      for (var k = 0; k < 3; k++) {                                        // per-pixel gaussian blobs — canvas gradients dither with RGB noise on close-up sprites
         var cv = document.createElement('canvas'); cv.width = cv.height = 128;
-        var ctx = cv.getContext('2d');
-        for (var i = 0; i < 48; i++) {                                     // clustered soft blobs → fractal-ish smoke
+        var ctx = cv.getContext('2d'), blobs = [];
+        for (var i = 0; i < 46; i++) {
           var a = Math.random() * 6.283, r = Math.pow(Math.random(), 1.5) * 42;
-          var x = 64 + Math.cos(a) * r, y = 64 + Math.sin(a) * r;
-          var rad = 7 + Math.random() * 19, al = 0.05 + Math.random() * 0.10;
-          var gr = ctx.createRadialGradient(x, y, 0, x, y, rad);
-          gr.addColorStop(0, 'rgba(255,255,255,' + al.toFixed(3) + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-          ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.283); ctx.fill();
+          blobs.push({ x: 64 + Math.cos(a) * r, y: 64 + Math.sin(a) * r, s: 7 + Math.random() * 19, w: 0.05 + Math.random() * 0.1 });
         }
-        var mask = ctx.createRadialGradient(64, 64, 26, 64, 64, 64);       // soft edge so sprite borders never show
-        mask.addColorStop(0, 'rgba(255,255,255,1)'); mask.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.globalCompositeOperation = 'destination-in'; ctx.fillStyle = mask; ctx.fillRect(0, 0, 128, 128);
+        var im = ctx.createImageData(128, 128), dt = im.data;
+        for (var py = 0; py < 128; py++) for (var px = 0; px < 128; px++) {
+          var acc = 0;
+          for (var b = 0; b < blobs.length; b++) {
+            var bx = px + 0.5 - blobs[b].x, by = py + 0.5 - blobs[b].y, ss = blobs[b].s;
+            var q = (bx * bx + by * by) / (ss * ss);
+            if (q < 4) acc += blobs[b].w * Math.exp(-q * 2.0);
+          }
+          var rx = (px + 0.5 - 64) / 64, ry = (py + 0.5 - 64) / 64, rr = Math.sqrt(rx * rx + ry * ry);
+          var msk = rr >= 1 ? 0 : (rr < 0.45 ? 1 : 1 - (rr - 0.45) / 0.55); // soft edge so sprite borders never show
+          var o4 = (py * 128 + px) * 4; dt[o4] = 255; dt[o4 + 1] = 255; dt[o4 + 2] = 255; dt[o4 + 3] = Math.round(Math.min(1, acc) * msk * 255);
+        }
+        ctx.putImageData(im, 0, 0);
         SMOKE_TEXS.push(new THREE.CanvasTexture(cv));
       }
       return SMOKE_TEXS;
