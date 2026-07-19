@@ -116,3 +116,10 @@ Eckhard Slawik / NOIRLab series as the zodiac cards (Wikimedia Commons).
 - `images/cen-a.jpg` — ESO · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Centaurus_A_%28NGC_5128%29_%28eso0315a%29.jpg)
 - `images/lmc.jpg` — CTIO/NOIRLab/NSF/AURA/SMASH/D. Nidever (Montana State University) · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Deepest%2C_widest_view_of_the_Large_Magellanic_Cloud_from_SMASH.jpg)
 - `images/smc.jpg` — ESA/Hubble and Digitized Sky Survey 2 · Public domain · [source](https://commons.wikimedia.org/wiki/File:Small_Magellanic_Cloud_%28ground-based_image%29_%28heic0603d%29.jpg)
+
+### In-galaxy object images
+
+- `images/ngc206.jpg` — T. A. Rector and A. Strom (University of Alaska Anchorage)/WIYN/NOIRLab/NSF/AURA · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Star_forming_region,_NGC_206_%28noao-ngc206%29.jpg)
+- `images/g1.jpg` — Judy Schmidt (reprocessed Hubble/WFPC2 data) · CC BY 2.0 · [source](https://commons.wikimedia.org/wiki/File:Mayall_II_%28HST-Judy_Schmidt-JPG%29.jpg)
+- `images/cena-jet.jpg` — X-ray: NASA/CXC/CfA/R. Kraft et al.; Submillimetre: MPIfR/ESO/APEX/A. Weiss et al.; Optical: ESO/WFI · Public domain · [source](https://commons.wikimedia.org/wiki/File:Centaurus_A-_Black_Hole_Outflows_From_Centaurus_A_%282009-cena_-_cena_lg%29.jpg)
+- `images/cena-sfr.jpg` — NASA/ESA Hubble (Caldwell 77) · CC BY 2.0 · [source](https://commons.wikimedia.org/wiki/File:Caldwell_77.jpg)

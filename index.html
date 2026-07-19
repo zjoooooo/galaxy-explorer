@@ -696,20 +696,44 @@
     var CHILDREN = [
       { parent: 'M31', lp: new THREE.Vector3(80, 6, 34), feat: { kind: 'starcloud' },
         t: { en: ['NGC 206', 'star cloud'], hans: ['NGC 206', '恒星云'], hant: ['NGC 206', '恆星雲'], ja: ['NGC 206', '星の雲'], ko: ['NGC 206', '별구름'] },
-        info: { en: { type: 'Star cloud · inside M31', facts: [['Type', 'OB association'], ['Host', 'Andromeda']], desc: 'PLACEHOLDER — replaced in Task 6.', catalog: 'NGC 206' } },
-        img: 'images/ngc206.jpg', credit: '' },
+        info: {
+          en: { type: 'Star cloud · inside M31', facts: [['Type', 'OB star association'], ['Host', 'Andromeda (M31)']], desc: 'The brightest star cloud in the Andromeda Galaxy — a vast association of thousands of hot young blue stars, and one of the largest star-forming complexes in the whole Local Group. It shines from a gap between two of Andromeda’s spiral arms.', catalog: 'NGC 206' },
+          hans: { type: '恒星云 · M31 内', facts: [['类型', 'OB星协'], ['宿主', '仙女座(M31)']], desc: '仙女座星系中最明亮的恒星云——由数千颗炽热年轻蓝色恒星组成的庞大星协，也是整个本星系群中最大的恒星形成区之一。它在仙女座两条旋臂之间的缝隙中发光。', catalog: 'NGC 206' },
+          hant: { type: '恆星雲 · M31 內', facts: [['類型', 'OB星協'], ['宿主', '仙女座(M31)']], desc: '仙女座星系中最明亮的恆星雲——由數千顆熾熱年輕藍色恆星組成的龐大星協，也是整個本星系群中最大的恆星形成區之一。它在仙女座兩條旋臂之間的縫隙中發光。', catalog: 'NGC 206' },
+          ja: { type: '星の雲 · M31 の内部', facts: [['種別', 'OBアソシエーション'], ['所属', 'アンドロメダ(M31)']], desc: 'アンドロメダ銀河で最も明るい星の雲で、数千個の高温で若い青い星が集まった巨大なアソシエーションです。局部銀河群全体でも最大級の星形成領域の一つで、アンドロメダの二本の渦状腕の隙間から輝いています。', catalog: 'NGC 206' },
+          ko: { type: '별구름 · M31 내부', facts: [['유형', 'OB 성협'], ['소속', '안드로메다(M31)']], desc: '안드로메다 은하에서 가장 밝은 별구름으로, 수천 개의 뜨겁고 젊은 파란 별로 이루어진 거대한 성협입니다. 국부 은하군 전체에서 가장 큰 별 형성 영역 중 하나이며, 안드로메다의 두 나선팔 사이 틈에서 빛납니다.', catalog: 'NGC 206' }
+        },
+        img: 'images/ngc206.jpg', credit: 'T. A. Rector & A. Strom (UAA)/NOIRLab' },
       { parent: 'M31', lp: new THREE.Vector3(-46, 54, -30), feat: { kind: 'globular' },
         t: { en: ['G1 (Mayall II)', 'globular cluster'], hans: ['G1（梅奥尔 II）', '球状星团'], hant: ['G1（梅奧爾 II）', '球狀星團'], ja: ['G1（メイオールII）', '球状星団'], ko: ['G1 (메이올 II)', '구상성단'] },
-        info: { en: { type: 'Globular cluster · inside M31', facts: [['Mass', '~10 million suns'], ['Host', 'Andromeda']], desc: 'PLACEHOLDER — replaced in Task 6.', catalog: 'G1 / Mayall II' } },
-        img: 'images/g1.jpg', credit: '' },
+        info: {
+          en: { type: 'Globular cluster · inside M31', facts: [['Mass', '~10 million suns'], ['Host', 'Andromeda (M31)']], desc: 'The brightest and most massive globular cluster in the Local Group — a dense ball of ancient stars orbiting far out in Andromeda’s halo. Its crowded core may hide an intermediate-mass black hole.', catalog: 'G1 / Mayall II' },
+          hans: { type: '球状星团 · M31 内', facts: [['质量', '约 1000 万太阳质量'], ['母星系', '仙女座星系（M31）']], desc: '本星系群中最明亮、质量最大的球状星团——一团由古老恒星构成的致密球体，在仙女座星系晕的外缘绕行。其拥挤的核心可能隐藏着一个中等质量黑洞。', catalog: 'G1 / Mayall II' },
+          hant: { type: '球狀星團 · M31 內', facts: [['質量', '約 1000 萬太陽質量'], ['母星系', '仙女座星系（M31）']], desc: '本星系群中最明亮、質量最大的球狀星團——一團由古老恆星構成的緻密球體，在仙女座星系暈的外緣繞行。其擁擠的核心可能隱藏著一個中等質量黑洞。', catalog: 'G1 / Mayall II' },
+          ja: { type: '球状星団 · M31 内', facts: [['質量', '太陽の約1000万倍'], ['母銀河', 'アンドロメダ（M31）']], desc: '局部銀河群で最も明るく最も質量の大きい球状星団で、古い星々が密集した球体がアンドロメダのハローの外縁を周回しています。混み合った中心部には中間質量ブラックホールが潜んでいるかもしれません。', catalog: 'G1 / Mayall II' },
+          ko: { type: '구상성단 · M31 내부', facts: [['질량', '태양 약 1000만 배'], ['모은하', '안드로메다 (M31)']], desc: '국부은하군에서 가장 밝고 질량이 큰 구상성단으로, 오래된 별들이 빽빽이 모인 공 모양의 집단이 안드로메다 헤일로 바깥쪽을 돌고 있습니다. 붐비는 중심부에는 중간질량 블랙홀이 숨어 있을지도 모릅니다.', catalog: 'G1 / Mayall II' }
+        },
+        img: 'images/g1.jpg', credit: 'Judy Schmidt (Hubble/WFPC2)' },
       { parent: 'NGC 5128', lp: new THREE.Vector3(24, 78, 8), feat: { kind: 'jet', dir: new THREE.Vector3(0.22, 0.95, 0.1).normalize(), len: 168 },
         t: { en: ['Relativistic jet', 'from the black hole'], hans: ['相对论喷流', '来自黑洞'], hant: ['相對論噴流', '來自黑洞'], ja: ['相対論的ジェット', 'ブラックホールから'], ko: ['상대론적 제트', '블랙홀에서'] },
-        info: { en: { type: 'Relativistic jet · Centaurus A', facts: [['Length', 'thousands of ly'], ['Source', 'central black hole']], desc: 'PLACEHOLDER — replaced in Task 6.', catalog: 'Cen A jet' } },
-        img: 'images/cena-jet.jpg', credit: '' },
+        info: {
+          en: { type: 'Relativistic jet · Centaurus A', facts: [['Source', 'central black hole'], ['Glows in', 'radio + X-rays']], desc: 'A beam of plasma hurled outward at nearly the speed of light by the supermassive black hole at the galaxy’s heart. It blazes in radio and X-ray light, making Centaurus A one of the brightest radio sources in the entire sky.', catalog: 'Cen A jet' },
+          hans: { type: '相对论喷流 · 半人马座A', facts: [['来源', '中心黑洞'], ['发光波段', '射电 + X射线']], desc: '由位于星系中心的超大质量黑洞以接近光速向外喷射的等离子体束。它在射电和X射线波段极为明亮，使半人马座A成为全天最亮的射电源之一。', catalog: 'Cen A jet' },
+          hant: { type: '相對論噴流 · 半人馬座A', facts: [['來源', '中心黑洞'], ['發光波段', '電波 + X射線']], desc: '由位於星系中心的超大質量黑洞以接近光速向外噴射的電漿束。它在電波與X射線波段極為明亮，使半人馬座A成為全天最亮的電波源之一。', catalog: 'Cen A jet' },
+          ja: { type: '相対論的ジェット · ケンタウルス座A', facts: [['発生源', '中心のブラックホール'], ['輝く波長', '電波 + X線']], desc: '銀河の中心にある超大質量ブラックホールが、ほぼ光速で外へ放つプラズマの流れです。電波とX線で明るく輝き、ケンタウルス座Aを全天で最も明るい電波源の一つにしています。', catalog: 'Cen A jet' },
+          ko: { type: '상대론적 제트 · 센타우루스자리 A', facts: [['근원', '중심 블랙홀'], ['빛나는 파장', '전파 + X선']], desc: '은하 중심의 초대질량 블랙홀이 거의 빛의 속도로 바깥으로 내뿜는 플라스마 흐름입니다. 전파와 X선으로 환하게 빛나며, 센타우루스자리 A를 하늘 전체에서 가장 밝은 전파원 중 하나로 만듭니다.', catalog: 'Cen A jet' }
+        },
+        img: 'images/cena-jet.jpg', credit: 'NASA/CXC · MPIfR/ESO/APEX · ESO/WFI' },
       { parent: 'NGC 5128', lp: new THREE.Vector3(48, 2, -22), feat: { kind: 'nebula' },
         t: { en: ['Star-forming region', 'in the dust lane'], hans: ['恒星形成区', '尘埃带中'], hant: ['恆星形成區', '塵埃帶中'], ja: ['星形成領域', 'ダストレーン内'], ko: ['별 형성 영역', '먼지 띠 속'] },
-        info: { en: { type: 'Star-forming region · Centaurus A', facts: [['Contains', 'young blue clusters'], ['Trigger', 'galaxy merger']], desc: 'PLACEHOLDER — replaced in Task 6.', catalog: 'Cen A HII' } },
-        img: 'images/cena-sfr.jpg', credit: '' }
+        info: {
+          en: { type: 'Star-forming region · Centaurus A', facts: [['Contains', 'young blue clusters'], ['Trigger', 'galaxy merger']], desc: 'Knots of glowing pink hydrogen and hot blue star clusters strung along the galaxy’s warped dark dust lane — a burst of new star birth set off when Centaurus A devoured a smaller spiral galaxy.', catalog: 'Cen A HII' },
+          hans: { type: '恒星形成区 · 半人马座A', facts: [['包含', '年轻的蓝色星团'], ['触发', '星系并合']], desc: '一团团发光的粉红色氢气与炽热的蓝色星团，沿着星系扭曲的黑暗尘埃带排布。这是半人马座A吞噬一个较小旋涡星系时引发的新一轮恒星诞生。', catalog: 'Cen A HII' },
+          hant: { type: '恆星形成區 · 半人馬座A', facts: [['包含', '年輕的藍色星團'], ['觸發', '星系併合']], desc: '一團團發光的粉紅色氫氣與熾熱的藍色星團，沿著星系扭曲的黑暗塵埃帶排布。這是半人馬座A吞噬一個較小螺旋星系時引發的新一輪恆星誕生。', catalog: 'Cen A HII' },
+          ja: { type: '星形成領域 · ケンタウルス座A', facts: [['含む', '若い青色星団'], ['引き金', '銀河の合体']], desc: '銀河のゆがんだ暗いダストレーンに沿って、ピンクに輝く水素ガスと高温の青い星団が連なっています。これは、ケンタウルス座Aが小さな渦巻銀河を飲み込んだ際に引き起こされた、新たな星形成の爆発です。', catalog: 'Cen A HII' },
+          ko: { type: '별 형성 영역 · 센타우루스자리 A', facts: [['포함', '젊은 파란색 성단'], ['촉발', '은하 병합']], desc: '은하의 뒤틀린 어두운 먼지 띠를 따라 분홍빛으로 빛나는 수소 가스와 뜨거운 파란색 성단이 늘어서 있습니다. 센타우루스자리 A가 더 작은 나선 은하를 집어삼키면서 촉발된 새로운 별 탄생의 폭발입니다.', catalog: 'Cen A HII' }
+        },
+        img: 'images/cena-sfr.jpg', credit: 'NASA/ESA Hubble' }
     ];
     CHILDREN.forEach(function (c) {
       var el = document.createElement('div');
