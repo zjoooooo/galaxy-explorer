@@ -114,14 +114,6 @@
     padding: 8px 16px; border-radius: 20px; cursor: pointer; background: rgba(20,26,40,.72);
     border: 1px solid rgba(255,255,255,.14); color: #cfe0ff; font-size: 13px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   #return-mw:hover { background: rgba(30,40,60,.85); color: #fff; }
-  #scan-btn { position: fixed; top: 16px; left: 50%; transform: translateX(calc(-50% + 150px)); z-index: 50; display: none;
-    padding: 8px 16px; border-radius: 20px; cursor: pointer; background: rgba(20,40,60,.72);
-    border: 1px solid rgba(120,200,255,.3); color: #bfe6ff; font-size: 13px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-  #scan-btn:hover { background: rgba(30,60,90,.9); color: #fff; }
-  #scan-line { position: fixed; left: 0; width: 100%; height: 2px; z-index: 45; display: none; pointer-events: none;
-    background: linear-gradient(90deg, transparent, #7fd0ff, #eaf8ff, #7fd0ff, transparent);
-    box-shadow: 0 0 18px 4px rgba(120,208,255,.55); }
-  .detect-ring { position: fixed; z-index: 46; pointer-events: none; border: 2px solid rgba(150,225,255,.9); border-radius: 50%; }
   body.gx-cinema #beacon-panel { display: none !important; }
   /* mobile: panel becomes a bottom drawer */
   @media (max-width: 640px) {
@@ -524,7 +516,6 @@
     var sb = document.getElementById('skyback');
     if (sb) { var SB = { en: '← Back to Galaxy', hans: '← 返回银河系', hant: '← 返回銀河系', ja: '← 銀河に戻る', ko: '← 은하로 돌아가기' }; sb.textContent = SB[lang] || SB.en; }
     if (returnBtn && returnBtn.style.display === 'block') returnBtn.textContent = RET_TXT[lang] || RET_TXT.en;
-    if (scanBtn && scanBtn.style.display === 'block') scanBtn.textContent = SCAN_TXT[lang] || SCAN_TXT.en;
     if (typeof selectedBeacon !== 'undefined' && selectedBeacon !== null && typeof renderPanel === 'function') renderPanel(selectedBeacon, lang);
     if (typeof paintSkyLabels === 'function' && typeof SKY_CONS !== 'undefined' && SKY_CONS.length) paintSkyLabels(lang);
     if (typeof skySelected !== 'undefined' && skySelected !== null && typeof renderConstellationPanel === 'function') renderConstellationPanel(skySelected, lang);
@@ -702,7 +693,7 @@
       (function (idx) { el.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(idx); }); })(i);
       BEACONS.push({ p: d.p, el: el, t: d.t, info: d.info, fixed: d.fixed, gal: d.gal, shown: true });
     }
-    // ── internal objects, revealed by scanning a galaxy. Child beacons project
+    // ── internal objects inside the galaxies (always visible). Child beacons project
     // through their parent galaxy's world matrix, so they co-rotate with it.
     // lp = position in the galaxy's LOCAL frame (disc in XZ, +Y = disc normal),
     // scaled to the parent's radius (M31 R≈132, Cen A R≈120). Tunable in-browser.
@@ -805,7 +796,7 @@
       host.appendChild(el);
       var idx = BEACONS.length;
       (function (i) { el.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(i); }); })(idx);
-      BEACONS.push({ el: el, t: c.t, info: c.info, child: true, parent: c.parent, lp: c.lp, feat: c.feat, img: c.img, credit: c.credit, revealed: false, parentPts: null, feature: null, shown: false });
+      BEACONS.push({ el: el, t: c.t, info: c.info, child: true, parent: c.parent, lp: c.lp, feat: c.feat, img: c.img, credit: c.credit, parentPts: null, feature: null, shown: false });
     });
     setBeaconLang(beaconLang);
     var langSel = document.getElementById('lang');
@@ -900,11 +891,10 @@
     var b = BEACONS[i]; if (!b.gal) return;
     var gp = b.p.clone(), galR = (b.gal.stars && b.gal.stars.radius) || 130;
     var dir = camera.position.clone().sub(gp); if (dir.lengthSq() < 1) dir.set(0, 0.35, 1); dir.normalize();
-    var cat = b.info.en.catalog;
-    flyTo(gp.clone().addScaledVector(dir, galR * 3.0), gp, 2400, function () { showReturnBtn(true); showScanBtn(cat); }); // frame the whole galaxy + offer the scan
+    flyTo(gp.clone().addScaledVector(dir, galR * 3.0), gp, 2400, function () { showReturnBtn(true); }); // frame the whole galaxy
     if (selectedBeacon !== null) clearSelection(); // clear the card so the view is unobstructed
   }
-  function flyHome() { flyTo(new THREE.Vector3(0, 390, 520), new THREE.Vector3(0, 0, 0), 2200, function () { showReturnBtn(false); }); if (scanBtn && scanBtn.dataset.cat) { hideChildren(scanBtn.dataset.cat); showScanBtn(null); } }
+  function flyHome() { flyTo(new THREE.Vector3(0, 390, 520), new THREE.Vector3(0, 0, 0), 2200, function () { showReturnBtn(false); }); }
   function stepFly() { // called each frame while flying; returns true while active
     if (!flyState) return false;
     var k = Math.min(1, (performance.now() - flyState.start) / flyState.dur);
@@ -915,71 +905,13 @@
     if (k >= 1) { var done = flyState.onDone; flyState = null; controls.enabled = true; if (done) done(); }
     return true;
   }
-  // ── scan controller: a top→bottom sweep line reveals a galaxy's child beacons as it passes them.
-  var SCAN_TXT = { en: '🔍 Scan this galaxy', hans: '🔍 扫描本星系', hant: '🔍 掃描本星系', ja: '🔍 この銀河をスキャン', ko: '🔍 이 은하 스캔' };
-  var scanBtn = null, scanLine = null, scanState = null, scanTmp = new THREE.Vector3();
-  function galaxyChildren(cat) { return BEACONS.filter(function (b) { return b.child && b.parent === cat; }); }
-  function ensureScanEls() {
-    if (scanBtn) return;
-    scanBtn = document.createElement('div'); scanBtn.id = 'scan-btn';
-    scanBtn.addEventListener('click', function (e) { e.stopPropagation(); if (scanBtn.dataset.cat) startScan(scanBtn.dataset.cat); });
-    document.body.appendChild(scanBtn);
-    scanLine = document.createElement('div'); scanLine.id = 'scan-line'; document.body.appendChild(scanLine);
-  }
-  function showScanBtn(cat) {
-    ensureScanEls();
-    if (cat && galaxyChildren(cat).length) { scanBtn.dataset.cat = cat; scanBtn.textContent = SCAN_TXT[beaconLang] || SCAN_TXT.en; scanBtn.style.display = 'block'; }
-    else { scanBtn.style.display = 'none'; delete scanBtn.dataset.cat; }
-  }
-  function hideChildren(cat) { galaxyChildren(cat).forEach(function (c) { c.revealed = false; if (c.feature) c.feature.group.visible = false; c.el.style.display = 'none'; c.shown = false; }); }
-  function startScan(cat) {
-    ensureScanEls(); hideChildren(cat);
-    scanState = { cat: cat, start: performance.now(), dur: 3600 }; // half-speed sweep — more sci-fi, easier to follow
-    scanLine.style.display = 'block'; scanLine.style.opacity = '1';
-  }
-  function stepScan() { // advance the sweep + reveal crossed children
-    if (!scanState) return;
-    var k = Math.min(1, (performance.now() - scanState.start) / scanState.dur), e = 1 - Math.pow(1 - k, 2);
-    var yPx = e * window.innerHeight;
-    scanLine.style.top = yPx + 'px';
-    galaxyChildren(scanState.cat).forEach(function (c) {
-      if (c.revealed || !c.parentPts) return;
-      scanTmp.copy(c.lp).applyMatrix4(c.parentPts.matrixWorld).project(camera);
-      var sy = (-scanTmp.y * 0.5 + 0.5) * window.innerHeight;
-      if (scanTmp.z < 1 && yPx >= sy) revealChild(c);
-    });
-    if (k >= 1) { scanLine.style.opacity = '0'; setTimeout(function () { if (scanLine) scanLine.style.display = 'none'; }, 400); scanState = null; }
-  }
-  function pingAt(sx, sy) { // transient radar-contact ring at a screen point
-    var r = document.createElement('div'); r.className = 'detect-ring'; document.body.appendChild(r);
-    var t0 = performance.now();
-    (function anim() {
-      var k = Math.min(1, (performance.now() - t0) / 600), d = 8 + k * 90;
-      r.style.width = d + 'px'; r.style.height = d + 'px'; r.style.left = (sx - d / 2) + 'px'; r.style.top = (sy - d / 2) + 'px'; r.style.opacity = String(1 - k);
-      if (k < 1) requestAnimationFrame(anim); else r.remove();
-    })();
-  }
-  function revealChild(c) { // ping + type-specific reveal animation
-    c.revealed = true;
-    if (c.parentPts) { scanTmp.copy(c.lp).applyMatrix4(c.parentPts.matrixWorld).project(camera); pingAt((scanTmp.x * 0.5 + 0.5) * window.innerWidth, (-scanTmp.y * 0.5 + 0.5) * window.innerHeight); }
-    if (!c.feature) return;
-    var grp = c.feature.group; grp.visible = true;
-    var t0 = performance.now(), kind = c.feat.kind;
-    (function grow() {
-      var k = Math.min(1, (performance.now() - t0) / 700), e = 1 - Math.pow(1 - k, 3);
-      if (kind === 'jet') grp.scale.setScalar(e);                     // shoots out from the nucleus
-      else if (kind === 'nebula') grp.scale.setScalar(0.3 + 0.7 * e); // blooms open
-      else grp.scale.setScalar(0.4 + 0.6 * e);                        // starcloud / globular pop in
-      if (k < 1) requestAnimationFrame(grow); else grp.scale.setScalar(1);
-    })();
-  }
   window.addEventListener('keydown', function (e) { if ((e.key || '').toLowerCase() === 'escape' && selectedBeacon !== null) clearSelection(); });
   var beaconTmp = new THREE.Vector3();
   function updateBeacons() { // call AFTER render() — galaxyRoot/camera matrices are fresh then
     for (var i = 0; i < BEACONS.length; i++) {
       var b = BEACONS[i];
       if (b.child) {
-        if (!b.revealed || !b.parentPts) { if (b.shown) { b.el.style.display = 'none'; b.shown = false; } continue; }
+        if (!b.parentPts) { if (b.shown) { b.el.style.display = 'none'; b.shown = false; } continue; }
         beaconTmp.copy(b.lp).applyMatrix4(b.parentPts.matrixWorld); // ride the parent galaxy's transform (co-rotates)
       } else {
         beaconTmp.copy(b.p); if (!b.fixed) beaconTmp.applyMatrix4(galaxyRoot.matrixWorld); // external galaxies stay put on the far sky, not co-rotating with the disc
@@ -1565,15 +1497,17 @@
     }
     galaxyRoot.rotation.y = t * GALAXY_SPIN; // the whole galaxy slowly rotates
     for (var li = 0; li < galaxyLODs.length; li++) { // per-galaxy LOD + self-rotation about the disc axis
-      var L = galaxyLODs[li], dst = camera.position.distanceTo(L.center);
+      var L = galaxyLODs[li], dst = camera.position.distanceTo(L.center); L.dst = dst; // cached for the feature LOD gate below
       L.pts.geometry.setDrawRange(0, Math.max(400, Math.floor(L.maxN * Math.min(1, Math.max(0.14, L.refDist / dst)) * perfScale)));
       L.mat.uniforms.uSize.value = L.baseSize * Math.min(3.2, Math.max(0.8, dst / L.refDist)) * renderer.getPixelRatio();
       L.pts.quaternion.copy(L.q0).premultiply(galSpinTmp.setFromAxisAngle(L.axis, t * L.spin)); // spins in its own disc plane
     }
-    for (var ci = 0; ci < BEACONS.length; ci++) { var cb = BEACONS[ci]; if (cb.child && cb.revealed && cb.feature) cb.feature.update(t); } // animate revealed in-galaxy features
-    if (scanBtn && scanBtn.dataset.cat) { // left the galaxy? hide its children + scan UI
-      var scat = scanBtn.dataset.cat, slod = null; for (var si = 0; si < galaxyLODs.length; si++) if (galaxyLODs[si].cat === scat) { slod = galaxyLODs[si]; break; }
-      if (slod && camera.position.distanceTo(slod.center) > slod.refDist * 2.2) { hideChildren(scat); showScanBtn(null); scanState = null; if (scanLine) scanLine.style.display = 'none'; }
+    for (var ci = 0; ci < BEACONS.length; ci++) { // in-galaxy features: always on, but LOD-gated — hidden + not animated when sub-pixel at distance
+      var cb = BEACONS[ci];
+      if (!cb.child || !cb.feature) continue;
+      var fvis = !cb.lod || cb.lod.dst < cb.lod.refDist * 4;
+      cb.feature.group.visible = fvis;
+      if (fvis) cb.feature.update(t);
     }
     if (bgTwinkleMat) bgTwinkleMat.uniforms.uTime.value = t; // background-star twinkle
     var cbw = Math.sin(t * 0.32), cbr = 1 + 0.07 * cbw; // ~20s galactic-core breathe
@@ -1597,7 +1531,6 @@
       }
     }
     if (!stepFly()) controls.update(); // while flying to a galaxy, stepFly drives the camera
-    stepScan(); // advance the scan sweep, if any
     render();
     updateBeacons(); // after render: galaxyRoot/camera world matrices are fresh
     rafId = requestAnimationFrame(frame);
@@ -2178,7 +2111,7 @@
     }
 
     // ── in-galaxy object features: small additive point/sprite groups added under
-    // a galaxy's Points (local frame) so they co-rotate; revealed by scanning.
+    // a galaxy's Points (local frame) so they co-rotate; always on, LOD-gated by distance.
     function starPoints(n, spread, color, sizeMul, flatten) {
       var pos = new Float32Array(n * 3), scl = new Float32Array(n), col = new Float32Array(n * 3), c = new THREE.Color(color);
       for (var i = 0; i < n; i++) {
@@ -2344,11 +2277,10 @@
         if (!c.child) return;
         var lod = null; for (var i = 0; i < galaxyLODs.length; i++) if (galaxyLODs[i].cat === c.parent) { lod = galaxyLODs[i]; break; }
         if (!lod) return;
-        c.parentPts = lod.pts;
+        c.parentPts = lod.pts; c.lod = lod; // lod link → distance-gates the feature in the frame loop
         c.feature = buildFeature(c.feat);
         c.feature.group.position.copy(c.feat.kind === 'jet' ? new THREE.Vector3(0, 0, 0) : c.lp); // jet emanates from the nucleus; others sit at lp
-        c.feature.group.visible = false;
-        lod.pts.add(c.feature.group);
+        lod.pts.add(c.feature.group); // always on — no scan gate
       });
     }
 
