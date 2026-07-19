@@ -911,7 +911,7 @@
     for (var i = 0; i < BEACONS.length; i++) {
       var b = BEACONS[i];
       if (b.child) {
-        if (!b.parentPts) { if (b.shown) { b.el.style.display = 'none'; b.shown = false; } continue; }
+        if (!b.parentPts || (b.lod && b.lod.dst > b.lod.refDist * 1.6)) { if (b.shown) { b.el.style.display = 'none'; b.shown = false; } continue; } // markers only near the galaxy (fly-in lands at refDist) — no blue-white dots on distant galaxies
         beaconTmp.copy(b.lp).applyMatrix4(b.parentPts.matrixWorld); // ride the parent galaxy's transform (co-rotates)
       } else {
         beaconTmp.copy(b.p); if (!b.fixed) beaconTmp.applyMatrix4(galaxyRoot.matrixWorld); // external galaxies stay put on the far sky, not co-rotating with the disc
