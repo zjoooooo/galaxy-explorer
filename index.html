@@ -1415,6 +1415,7 @@
       L.mat.uniforms.uSize.value = L.baseSize * Math.min(3.2, Math.max(0.8, dst / L.refDist)) * renderer.getPixelRatio();
       L.pts.quaternion.copy(L.q0).premultiply(galSpinTmp.setFromAxisAngle(L.axis, t * L.spin)); // spins in its own disc plane
     }
+    for (var ci = 0; ci < BEACONS.length; ci++) { var cb = BEACONS[ci]; if (cb.child && cb.revealed && cb.feature) cb.feature.update(t); } // animate revealed in-galaxy features
     if (bgTwinkleMat) bgTwinkleMat.uniforms.uTime.value = t; // background-star twinkle
     var cbw = Math.sin(t * 0.32), cbr = 1 + 0.07 * cbw; // ~20s galactic-core breathe
     for (var cbi = 0; cbi < coreBreath.length; cbi++) {
@@ -1998,8 +1999,13 @@
       var g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aT', new THREE.BufferAttribute(aT, 1)); g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
       return new THREE.Points(g, new THREE.ShaderMaterial({
-        uniforms: { uSize: { value: 3.0 * renderer.getPixelRatio() } },
-        vertexShader: 'uniform float uSize; attribute float aT; attribute vec3 aColor; varying vec3 vColor; void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp; gl_PointSize = uSize * (1.5 - aT) * (300.0/-vp.z); vColor = aColor; }',
+        uniforms: { uSize: { value: 3.0 * renderer.getPixelRatio() }, uTime: { value: 0 } },
+        vertexShader: 'uniform float uSize; uniform float uTime; attribute float aT; attribute vec3 aColor; varying vec3 vColor;' +
+          'void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp;' +
+          ' float flow = 0.55 + 0.45*sin(aT*14.0 - uTime*3.0 + aColor.r*20.0);' +   // plasma pulses stream outward
+          ' float knot = pow(max(0.0, sin(aT*6.0 - uTime*2.2)), 8.0);' +            // sharper travelling knots
+          ' gl_PointSize = uSize * (1.5 - aT) * (300.0/-vp.z);' +
+          ' vColor = aColor * (flow + knot); }',
         fragmentShader: GLOW_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
       }));
     }
@@ -2008,13 +2014,17 @@
       if (feat.kind === 'globular') {
         group.add(starPoints(220, 9, 0xfff0d8, 1.0));
         var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xffe8c8, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending })); core.scale.set(14, 14, 1); group.add(core);
+        // static on purpose (old, quiet cluster)
       } else if (feat.kind === 'starcloud') {
-        group.add(starPoints(150, 16, 0xdbeaff, 1.1, 0.5));
+        var scPts = starPoints(150, 16, 0xdbeaff, 1.1, 0.5); group.add(scPts);
+        update = function (t) { scPts.material.uniforms.uSize.value = (2.4 + 0.9 * Math.sin(t * 3.1)) * renderer.getPixelRatio(); }; // young-star shimmer
       } else if (feat.kind === 'nebula') {
         var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xff6aa8, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })); glow.scale.set(34, 24, 1); group.add(glow);
-        group.add(starPoints(26, 12, 0xcfe0ff, 1.2, 0.6));
+        var nbPts = starPoints(26, 12, 0xcfe0ff, 1.2, 0.6); group.add(nbPts);
+        update = function (t) { var b = 0.5 + 0.5 * Math.sin(t * 0.62); glow.material.opacity = 0.4 + 0.28 * b; var s = 30 + 8 * b; glow.scale.set(s, s * 0.7, 1); nbPts.material.uniforms.uSize.value = (2.4 + 1.1 * Math.sin(t * 2.3)) * renderer.getPixelRatio(); }; // slow breathe + twinkle
       } else if (feat.kind === 'jet') {
-        group.add(buildJet(feat));
+        var jet = buildJet(feat); group.add(jet);
+        update = function (t) { jet.material.uniforms.uTime.value = t; };
       }
       return { group: group, update: update };
     }
