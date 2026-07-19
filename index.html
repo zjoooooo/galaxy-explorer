@@ -2085,43 +2085,75 @@
         fragmentShader: GLOW_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
       }));
     }
-    function buildJet(feat) { // turbulent plasma plume — soft foggy cone flaring from the nucleus
-      var n = 2600, len = feat.len || 150, dir = (feat.dir || new THREE.Vector3(0, 1, 0)).clone().normalize();
-      var up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
-      var e1 = new THREE.Vector3().crossVectors(dir, up).normalize();      // lateral basis around the jet axis
-      var e2 = new THREE.Vector3().crossVectors(dir, e1).normalize();
-      var pos = new Float32Array(n * 3), aT = new Float32Array(n), aR = new Float32Array(n), aSeed = new Float32Array(n), col = new Float32Array(n * 3);
-      var cHot = new THREE.Color(0xe4eeff), cCool = new THREE.Color(0x5486d8), ax = new THREE.Vector3();
-      function gauss() { return (Math.random() + Math.random() + Math.random() - 1.5) / 1.5; } // ~centred, dense core
+    function jetLobe(dir, len, e1, e2, o) { // diffuse cloud lobe — overlapping soft glow sprites billowing outward (the "smoke" of the jet)
+      var grp = new THREE.Group(), base = new THREE.Color(o.color), tipc = new THREE.Color(o.tip || o.color), parts = [];
+      for (var i = 0; i < o.count; i++) {
+        var t = 0.16 + 0.84 * (i + Math.random() * 0.6) / o.count;        // from just off the nucleus to the tip
+        var w = len * (0.10 + Math.pow(t, 1.25) * o.flare);               // widens outward → billowing plume / end bubble
+        var m = new THREE.SpriteMaterial({ map: GLOW_TEX, color: base.clone().lerp(tipc, t), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+        var s = new THREE.Sprite(m);
+        s.position.copy(dir).multiplyScalar(t * len)
+          .addScaledVector(e1, o.curve * t * t * len + (Math.random() - 0.5) * w * 0.35) // gentle photo-like bend + clumpiness
+          .addScaledVector(e2, (Math.random() - 0.5) * w * 0.3);
+        s.scale.set(w * (0.85 + Math.random() * 0.5), w * (0.7 + Math.random() * 0.5), 1);
+        var op = o.op * (0.55 + 0.45 * Math.random()) * (1 - 0.3 * t);    // translucent — stars stay visible through the cloud
+        m.opacity = op; parts.push({ m: m, op: op, ph: Math.random() * 6.283 });
+        grp.add(s);
+      }
+      grp.userData.parts = parts;
+      return grp;
+    }
+    function jetStream(dir, len, e1, e2, o) { // narrow bright inner filament — the visible X-ray jet spine (uTime flow)
+      var n = o.n, pos = new Float32Array(n * 3), aT = new Float32Array(n), aR = new Float32Array(n), aSeed = new Float32Array(n), col = new Float32Array(n * 3);
+      var cA = new THREE.Color(o.from), cB = new THREE.Color(o.to), ax = new THREE.Vector3();
+      function gauss() { return (Math.random() + Math.random() + Math.random() - 1.5) / 1.5; }
       for (var i = 0; i < n; i++) {
-        var t = Math.pow(Math.random(), 0.72);                            // spread along the plume, still denser near the base
-        var radius = (0.015 + t * 0.24) * len;                            // narrow root → flares out (turbulence)
+        var t = Math.pow(Math.random(), 0.8), radius = (0.022 + t * 0.08) * len; // narrow-ish filament, softer than a hairline
         var gx = gauss(), gy = gauss(), rr = Math.sqrt(gx * gx + gy * gy);
-        ax.copy(dir).multiplyScalar(t * len + gauss() * 0.02 * len);      // along axis, with a little jitter
-        pos[i * 3]     = ax.x + e1.x * gx * radius + e2.x * gy * radius;
-        pos[i * 3 + 1] = ax.y + e1.y * gx * radius + e2.y * gy * radius;
-        pos[i * 3 + 2] = ax.z + e1.z * gx * radius + e2.z * gy * radius;
+        ax.copy(dir).multiplyScalar(t * len);
+        pos[i * 3]     = ax.x + e1.x * (gx * radius + o.curve * t * t * len) + e2.x * gy * radius;
+        pos[i * 3 + 1] = ax.y + e1.y * (gx * radius + o.curve * t * t * len) + e2.y * gy * radius;
+        pos[i * 3 + 2] = ax.z + e1.z * (gx * radius + o.curve * t * t * len) + e2.z * gy * radius;
         aT[i] = t; aR[i] = Math.min(1.5, rr); aSeed[i] = Math.random();
-        var mix = Math.min(1, t * 0.5 + rr * 0.32);                       // hot core → cooler, dimmer at edges/tip
-        col[i * 3]     = cHot.r + (cCool.r - cHot.r) * mix;
-        col[i * 3 + 1] = cHot.g + (cCool.g - cHot.g) * mix;
-        col[i * 3 + 2] = cHot.b + (cCool.b - cHot.b) * mix;
+        var mix = Math.min(1, t * 1.1);
+        col[i * 3] = cA.r + (cB.r - cA.r) * mix; col[i * 3 + 1] = cA.g + (cB.g - cA.g) * mix; col[i * 3 + 2] = cA.b + (cB.b - cA.b) * mix;
       }
       var g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aT', new THREE.BufferAttribute(aT, 1));
       g.setAttribute('aR', new THREE.BufferAttribute(aR, 1)); g.setAttribute('aSeed', new THREE.BufferAttribute(aSeed, 1)); g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
       return new THREE.Points(g, new THREE.ShaderMaterial({
-        uniforms: { uSize: { value: 5.5 * renderer.getPixelRatio() }, uTime: { value: 0 } },
-        vertexShader: 'uniform float uSize; uniform float uTime; attribute float aT; attribute float aR; attribute float aSeed; attribute vec3 aColor; varying vec3 vColor;' +
+        uniforms: { uSize: { value: 3.2 * renderer.getPixelRatio() }, uTime: { value: 0 }, uGain: { value: o.gain } },
+        vertexShader: 'uniform float uSize; uniform float uTime; uniform float uGain; attribute float aT; attribute float aR; attribute float aSeed; attribute vec3 aColor; varying vec3 vColor;' +
           'void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp;' +
-          ' float flow = 0.74 + 0.26*sin(aT*5.0 - uTime*2.0 + aSeed*6.2831);' +      // slow long-wave density ripple (no hard knots)
-          ' float lenFade = 0.28 + 0.72*pow(1.0-aT, 1.3);' +                          // bright base, dissipates outward
-          ' float radFade = exp(-aR*aR*1.15);' +                                      // dense core, thin foggy edge
-          ' gl_PointSize = uSize * (0.5 + 1.1*(1.0-aT)) * (300.0/-vp.z);' +           // big soft points at the base, small dense ones at the tip
-          ' vColor = aColor * lenFade * radFade * flow * 0.5; }',                     // low per-point brightness → additive fog
+          ' float flow = 0.72 + 0.28*sin(aT*5.0 - uTime*2.0 + aSeed*6.2831);' +      // slow plasma streaming, no hard knots
+          ' float lenFade = 0.25 + 0.75*pow(1.0-aT, 1.2);' +                          // bright at the nucleus, dissolves outward
+          ' float radFade = exp(-aR*aR*1.3);' +
+          ' gl_PointSize = uSize * (0.5 + 0.9*(1.0-aT)) * (300.0/-vp.z);' +
+          ' vColor = aColor * lenFade * radFade * flow * uGain; }',
         fragmentShader: 'varying vec3 vColor; void main(){ float d = distance(gl_PointCoord, vec2(0.5)) * 2.0; float s = exp(-d*d*1.9); if (s < 0.012) discard; gl_FragColor = vec4(vColor, s); }',
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
       }));
+    }
+    function buildJet(feat) { // bipolar jet modelled on the real Cen A composite photo: an orange billowing
+      // lobe one way (submm), a translucent blue bubble lobe the other (radio/X-ray), bright filaments inside
+      var len = feat.len || 150, dir = (feat.dir || new THREE.Vector3(0, 1, 0)).clone().normalize();
+      var up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+      var e1 = new THREE.Vector3().crossVectors(dir, up).normalize(), e2 = new THREE.Vector3().crossVectors(dir, e1).normalize();
+      var back = dir.clone().negate(), grp = new THREE.Group();
+      var lobeA = jetLobe(dir, len, e1, e2, { color: 0xd08744, tip: 0xa5642e, count: 14, flare: 0.30, curve: 0.22, op: 0.15 });        // warm orange plume
+      var lobeB = jetLobe(back, len * 0.9, e1, e2, { color: 0x8fb2e8, tip: 0x6f92d4, count: 12, flare: 0.36, curve: -0.26, op: 0.12 }); // pale blue end-bubble, bent the other way
+      var streamA = jetStream(dir, len * 0.45, e1, e2, { n: 900, from: 0xfff2dc, to: 0x9fc0f0, curve: 0.10, gain: 0.6 });               // white-hot inner spine, hugs the nucleus
+      var streamB = jetStream(back, len * 0.3, e1, e2, { n: 500, from: 0xf2e8da, to: 0x8aa8dd, curve: -0.12, gain: 0.38 });             // fainter counter-spine
+      var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xfff6e6, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
+      core.scale.set(len * 0.12, len * 0.12, 1);
+      grp.add(lobeA); grp.add(lobeB); grp.add(streamA); grp.add(streamB); grp.add(core);
+      grp.userData.update = function (t) {
+        streamA.material.uniforms.uTime.value = t; streamB.material.uniforms.uTime.value = t;
+        var pa = lobeA.userData.parts, pb = lobeB.userData.parts, i;
+        for (i = 0; i < pa.length; i++) pa[i].m.opacity = pa[i].op * (0.82 + 0.18 * Math.sin(t * 0.5 + pa[i].ph));  // clouds slowly churn
+        for (i = 0; i < pb.length; i++) pb[i].m.opacity = pb[i].op * (0.82 + 0.18 * Math.sin(t * 0.45 + pb[i].ph));
+      };
+      return grp;
     }
     function buildFeature(feat) {
       var group = new THREE.Group(), update = function () {};
@@ -2138,7 +2170,7 @@
         update = function (t) { var b = 0.5 + 0.5 * Math.sin(t * 0.62); glow.material.opacity = 0.4 + 0.28 * b; var s = 30 + 8 * b; glow.scale.set(s, s * 0.7, 1); nbPts.material.uniforms.uSize.value = (2.4 + 1.1 * Math.sin(t * 2.3)) * renderer.getPixelRatio(); }; // slow breathe + twinkle
       } else if (feat.kind === 'jet') {
         var jet = buildJet(feat); group.add(jet);
-        update = function (t) { jet.material.uniforms.uTime.value = t; };
+        update = jet.userData.update; // drives stream uTime + slow cloud churn
       }
       return { group: group, update: update };
     }
