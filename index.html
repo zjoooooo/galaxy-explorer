@@ -696,7 +696,7 @@
       el.innerHTML = '<div class="b-mark"><span class="b-ring"></span><span class="b-ring r2"></span><span class="b-dot"></span></div><div class="b-label"></div>';
       host.appendChild(el);
       (function (idx) { el.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(idx); }); })(i);
-      BEACONS.push({ p: d.p, el: el, t: d.t, info: d.info, fixed: d.fixed, gal: d.gal, shown: true });
+      BEACONS.push({ p: d.p, el: el, t: d.t, info: d.info, fixed: d.fixed, gal: d.gal, shown: false }); // shown:false MUST match the initial display:none set above — else updateBeacons' vis!==shown guard never un-hides it
     }
     // ── internal objects inside the galaxies (always visible). Child beacons project
     // through their parent galaxy's world matrix, so they co-rotate with it.
@@ -2157,10 +2157,10 @@
         var ringLane = o.dustBand === 'ring'; // 'ring' = Sombrero-style dust-torus rim; true = centred dark sheet (Cen A)
         var dl = document.createElement('canvas'); dl.width = dl.height = 128; var dcx = dl.getContext('2d');
         if (ringLane) {
-          var rg = dcx.createRadialGradient(64, 64, 26, 64, 64, 58);          // dark annulus hugging the disc rim
-          rg.addColorStop(0, 'rgba(0,0,0,0)'); rg.addColorStop(0.5, 'rgba(0,0,0,0.96)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+          var rg = dcx.createRadialGradient(64, 64, 24, 64, 64, 64);          // bold wide dark annulus hugging the disc rim (the Sombrero brim)
+          rg.addColorStop(0, 'rgba(0,0,0,0)'); rg.addColorStop(0.34, 'rgba(0,0,0,0.75)'); rg.addColorStop(0.52, 'rgba(0,0,0,1)'); rg.addColorStop(0.72, 'rgba(0,0,0,1)'); rg.addColorStop(0.9, 'rgba(0,0,0,0.6)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
           dcx.fillStyle = rg; dcx.fillRect(0, 0, 128, 128);
-          var fade = dcx.createLinearGradient(0, 60, 0, 96);                  // keep only the NEAR half — the far rim hides behind the bulge
+          var fade = dcx.createLinearGradient(0, 64, 0, 98);                  // keep only the NEAR half — the far rim hides behind the bulge
           fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,1)');
           dcx.globalCompositeOperation = 'destination-out'; dcx.fillStyle = fade; dcx.fillRect(0, 0, 128, 128);
           dcx.globalCompositeOperation = 'source-over';
