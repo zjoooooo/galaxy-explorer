@@ -40,6 +40,8 @@
   .skylabel small { display: block; font-size: 10px; color: #8fa3c8; letter-spacing: .12em; }
   .skylabel.dim { opacity: .35; }
   .skylabel.sel { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 14px rgba(150,190,255,.9); }
+  .skylabel.skygal { font-size: 12px; color: #bfe6ff; margin-top: 14px; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 12px rgba(150,210,255,.6); } /* the galaxy markers — offset below their glow */
+  .skylabel.skygal.sel { color: #fff; }
 
   /* location beacons: borderless glow-dot + pulse rings + floating label (no boxes, no borders) */
   /* absolute (not fixed): under Safari pinch/page-zoom, fixed layers detach from the
@@ -519,6 +521,8 @@
     if (typeof selectedBeacon !== 'undefined' && selectedBeacon !== null && typeof renderPanel === 'function') renderPanel(selectedBeacon, lang);
     if (typeof paintSkyLabels === 'function' && typeof SKY_CONS !== 'undefined' && SKY_CONS.length) paintSkyLabels(lang);
     if (typeof skySelected !== 'undefined' && skySelected !== null && typeof renderConstellationPanel === 'function') renderConstellationPanel(skySelected, lang);
+    if (typeof paintSkyGalLabels === 'function' && typeof SKY_GAL !== 'undefined' && SKY_GAL.length) paintSkyGalLabels(lang);
+    if (typeof window.skyGalSelected !== 'undefined' && window.skyGalSelected !== null && typeof renderPanel === 'function') renderPanel(SKY_GAL[window.skyGalSelected].beaconIdx, lang);
   }
   (function buildBeacons() {
     var TAU = Math.PI * 2;
@@ -854,7 +858,7 @@
       var zl = { en: '✨ Constellations · view the night sky →', hans: '✨ 星座天空 · 查看星空 →', hant: '✨ 星座天空 · 查看星空 →', ja: '✨ 星座の空 · 星空を見る →', ko: '✨ 별자리 하늘 · 밤하늘 보기 →' };
       bpBody.innerHTML += '<div id="bp-zodiac-link">' + (zl[lang] || zl.en) + '</div>';
     }
-    if (b.gal) { // galaxy card → fly the camera over for a close, in-3D look
+    if (b.gal && viewMode !== 'sky') { // galaxy card → fly the camera over (galaxy view only; meaningless in the sky map)
       var fl = { en: '🚀 Fly to this galaxy →', hans: '🚀 飞跃到此星系 →', hant: '🚀 飛越到此星系 →', ja: '🚀 この銀河へ飛ぶ →', ko: '🚀 이 은하로 날아가기 →' };
       bpBody.innerHTML += '<div id="bp-flyto">' + (fl[lang] || fl.en) + '</div>';
     }
@@ -1335,7 +1339,32 @@
       t:{"en":"Canis Major","hans":"大犬座","hant":"大犬座","ja":"おおいぬ座","ko":"큰개자리"},
       stars:[[6.752,-16.72,-1.46],[6.378,-17.96,1.98],[7.14,-26.39,1.83],[6.977,-28.97,1.5],[7.402,-29.3,2.45]], starNames:["Sirius","Mirzam","Wezen","Adhara","Aludra"], lines:[[1,0],[0,3],[3,2],[2,4]],
       info:{ en:{"season":"Winter · Southern sky","brightest":"Sirius","desc":"Canis Major is the greater of the two hunting dogs following Orion across the sky, often linked to Laelaps, a mythological hound so swift it always caught its prey. Its brightest star, Sirius, is the most brilliant star in the entire night sky, and its predawn 'heliacal' rising once told the ancient Egyptians that the Nile's annual flood was near. Look just below and to the left of Orion on a winter evening to spot the Dog Star gleaming with a faint blue-white sparkle."}, hans:{"season":"冬季 · 南天","brightest":"天狼星","desc":"大犬座是跟随猎户座奔驰于天际的两只猎犬中较大的一只，常与神话中的猎犬拉埃拉普斯相联系——它奔跑极快，追逐的猎物无一能够逃脱。它最亮的恒星天狼星是整个夜空中最明亮的恒星；在古埃及，天狼星黎明前的偕日升起曾预示着尼罗河一年一度的泛滥即将来临。冬夜里，只要望向猎户座的左下方，就能看到这颗闪着淡淡蓝白光芒的天狼星。"}, hant:{"season":"冬季 · 南天","brightest":"天狼星","desc":"大犬座是跟隨獵戶座奔馳於天際的兩隻獵犬中較大的一隻，常與神話中的獵犬拉埃拉普斯相聯繫——牠奔跑極快，追逐的獵物無一能夠逃脫。牠最亮的恆星天狼星是整個夜空中最明亮的恆星；在古埃及，天狼星黎明前的偕日升起曾預示著尼羅河一年一度的氾濫即將來臨。冬夜裡，只要望向獵戶座的左下方，就能看到這顆閃著淡淡藍白光芒的天狼星。"}, ja:{"season":"冬 · 南天","brightest":"シリウス","desc":"おおいぬ座は、天を駆けるオリオンに従う二匹の猟犬のうち大きいほうで、どんな獲物も逃さない俊足の神話の猟犬ライラプスとしばしば結びつけられます。最も明るい星シリウスは全天で最も輝く恒星で、その夜明け前の出現（ヘリアカル・ライジング）は、かつて古代エジプトでナイル川の氾濫が近いことを告げる目印でした。冬の夕空でオリオンの左下を見れば、青白くきらめくこの「犬の星」を見つけられます。"}, ko:{"season":"겨울 · 남쪽 하늘","brightest":"시리우스","desc":"큰개자리는 하늘을 가로질러 오리온을 뒤따르는 두 마리 사냥개 중 큰 쪽으로, 어떤 사냥감도 놓치지 않을 만큼 빠른 신화 속 사냥개 라일랍스와 자주 연결됩니다. 가장 밝은 별 시리우스는 밤하늘 전체에서 가장 밝게 빛나는 항성으로, 새벽녘 동트기 직전에 떠오르는 '일출 직전 출현(헬리아컬 라이징)'은 고대 이집트에서 나일강의 연례 범람이 다가왔음을 알려 주는 신호였습니다. 겨울 저녁 오리온의 왼쪽 아래를 바라보면 푸른빛이 도는 흰빛으로 반짝이는 이 '개의 별'을 찾을 수 있습니다."} },
-      img:"images/cons-canis-major.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" }
+      img:"images/cons-canis-major.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"andromeda",
+      t:{"en":"Andromeda","hans":"仙女座","hant":"仙女座","ja":"アンドロメダ座","ko":"안드로메다자리"},
+      stars:[[0.139,29.09,2.06],[0.655,30.86,3.27],[1.162,35.62,2.05],[0.947,38.5,3.86],[0.831,41.08,4.09],[2.065,42.33,2.1]], starNames:["Alpheratz","Delta And","Mirach","Mu And","Nu And","Almach"], lines:[[0,1],[1,2],[2,5],[2,3],[3,4]],
+      info:{ en:{"season":"Autumn · Northern Hemisphere","brightest":"Alpheratz","desc":"Andromeda is the chained princess of Greek myth, daughter of Cassiopeia, left on the shore as a sacrifice to a sea monster and rescued by the hero Perseus. Her brightest star, Alpheratz, is shared with the Great Square of Pegasus. Follow the chain of stars from Alpheratz through Mirach and step up two fainter stars to reach the Andromeda Galaxy (M31) — the nearest great spiral to our own and the most distant object visible to the unaided eye."}, hans:{"season":"秋季 · 北半球","brightest":"壁宿二","desc":"仙女座是希腊神话中被锁在海边的公主——仙后座的女儿安德洛墨达，被献给海怪作祭品，最终由英雄珀耳修斯所救。它最亮的星壁宿二，同时也是飞马座大四边形的一角。从壁宿二沿着星链经过奎宿九，再向上跨过两颗较暗的星，便能抵达仙女座星系(M31)——距离我们最近的大型旋涡星系，也是肉眼可见的最遥远天体。"}, hant:{"season":"秋季 · 北半球","brightest":"壁宿二","desc":"仙女座是希臘神話中被鎖在海邊的公主——仙后座的女兒安德洛墨達，被獻給海怪作祭品，最終由英雄珀耳修斯所救。它最亮的星壁宿二，同時也是飛馬座大四邊形的一角。從壁宿二沿著星鏈經過奎宿九，再向上跨過兩顆較暗的星，便能抵達仙女座星系(M31)——距離我們最近的大型螺旋星系，也是肉眼可見的最遙遠天體。"}, ja:{"season":"秋 · 北半球","brightest":"アルフェラッツ","desc":"アンドロメダ座はギリシア神話で鎖につながれた王女、カシオペア座の娘アンドロメダの姿です。海の怪物への生贄として岸辺につながれましたが、英雄ペルセウスに救われました。最も明るい星アルフェラッツは、ペガススの大四辺形の一角でもあります。アルフェラッツからミラクへと星の連なりをたどり、さらに二つの暗めの星を上へたどると、アンドロメダ銀河(M31)に至ります——私たちの銀河系に最も近い大きな渦巻銀河であり、肉眼で見える最も遠い天体です。"}, ko:{"season":"가을 · 북반구","brightest":"알페라츠","desc":"안드로메다자리는 그리스 신화 속 사슬에 묶인 공주로, 카시오페이아자리의 딸 안드로메다의 모습입니다. 바다 괴물의 제물로 해변에 묶였다가 영웅 페르세우스에게 구원받았습니다. 가장 밝은 별 알페라츠는 페가수스 대사각형의 한 꼭짓점이기도 합니다. 알페라츠에서 미라크를 지나 별들의 사슬을 따라가다 조금 더 어두운 두 별을 위로 짚어 올라가면 안드로메다 은하(M31)에 이릅니다 — 우리 은하에서 가장 가까운 큰 나선 은하이자, 맨눈으로 볼 수 있는 가장 먼 천체입니다."} },
+      img:"images/cons-andromeda.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"triangulum",
+      t:{"en":"Triangulum","hans":"三角座","hant":"三角座","ja":"さんかく座","ko":"삼각형자리"},
+      stars:[[1.885,29.58,3.42],[2.159,34.99,3.0],[2.288,33.85,4.01]], starNames:["Mothallah","Beta Trianguli","Gamma Trianguli"], lines:[[0,1],[1,2],[2,0]],
+      info:{ en:{"season":"Autumn · Northern Hemisphere","brightest":"Beta Trianguli","desc":"Triangulum is one of the sky's smallest and simplest constellations — three modest stars drawing a slender triangle, known to the ancient Greeks as Deltoton for its likeness to their letter delta. Tucked beside it lies the Triangulum Galaxy (M33), the third-largest member of our Local Group and, under very dark skies, one of the farthest things the naked eye can glimpse."}, hans:{"season":"秋季 · 北半球","brightest":"娄宿增九","desc":"三角座是天空中最小、最简单的星座之一——三颗并不显眼的星勾勒出一个细长的三角形，古希腊人因其形似字母Δ（delta），称之为Deltoton。紧挨在它旁边的是三角座星系(M33)，本星系群中第三大的成员，在极为黑暗的夜空下，更是肉眼所能瞥见的最遥远的天体之一。"}, hant:{"season":"秋季 · 北半球","brightest":"婁宿增九","desc":"三角座是天空中最小、最簡單的星座之一——三顆並不顯眼的星勾勒出一個細長的三角形，古希臘人因其形似字母Δ（delta），稱之為Deltoton。緊挨在它旁邊的是三角座星系(M33)，本星系群中第三大的成員，在極為黑暗的夜空下，更是肉眼所能瞥見的最遙遠的天體之一。"}, ja:{"season":"秋 · 北半球","brightest":"さんかく座ベータ星","desc":"さんかく座は空でもっとも小さく、もっとも簡素な星座のひとつです——三つの控えめな星が細長い三角形を描き、古代ギリシアの人々はその文字Δ（デルタ）に似た姿からDeltotonと呼びました。そのすぐそばにはさんかく座銀河(M33)が横たわり、局部銀河群で三番目に大きな一員であり、非常に暗い空のもとでは肉眼でとらえられるもっとも遠い天体のひとつです。"}, ko:{"season":"가을 · 북반구","brightest":"삼각형자리 베타","desc":"삼각형자리는 하늘에서 가장 작고 단순한 별자리 가운데 하나로, 그리 밝지 않은 세 별이 가느다란 삼각형을 그립니다. 고대 그리스 사람들은 그 모습이 문자 Δ(델타)를 닮았다 하여 Deltoton이라 불렀습니다. 바로 곁에는 삼각형자리 은하(M33)가 자리하는데, 국부 은하군에서 세 번째로 큰 일원이자 아주 어두운 하늘 아래에서는 맨눈으로 볼 수 있는 가장 먼 천체 가운데 하나입니다."} },
+      img:"images/cons-triangulum.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"centaurus",
+      t:{"en":"Centaurus","hans":"半人马座","hant":"半人馬座","ja":"ケンタウルス座","ko":"센타우루스자리"},
+      stars:[[14.66,-60.83,-0.27],[14.064,-60.37,0.61],[13.665,-53.47,2.29],[12.692,-48.96,2.2],[12.14,-50.72,2.57],[13.343,-36.71,2.75],[14.111,-36.37,2.06]], starNames:["Rigil Kentaurus","Hadar","Epsilon Cen","Gamma Cen","Delta Cen","Iota Cen","Menkent"], lines:[[0,1],[1,2],[2,3],[3,4],[2,5],[5,6]],
+      info:{ en:{"season":"Autumn · Southern Hemisphere","brightest":"Alpha Centauri (Rigil Kentaurus)","desc":"Centaurus is the celestial centaur, often identified with wise Chiron, tutor of heroes. One of the grandest southern constellations, its two brightest stars — Alpha and Beta Centauri — point the way to the nearby Southern Cross. Alpha Centauri is the closest star system to the Sun, just over four light-years away. Within the centaur's body glows Centaurus A, the nearest giant active galaxy, its black hole firing jets across the radio sky."}, hans:{"season":"秋季 · 南半球","brightest":"南门二","desc":"半人马座是天上的半人马，常被认作智慧的喀戎——众英雄的导师。它是南天最壮丽的星座之一，两颗最亮的星——南门二与马腹一——为人们指出邻近南十字座的方向。南门二是距离太阳最近的恒星系统，仅四光年多一点。在半人马的身躯之中，闪耀着半人马座A，那是离我们最近的巨型活动星系，其黑洞向射电天空喷射出道道喷流。"}, hant:{"season":"秋季 · 南半球","brightest":"南門二","desc":"半人馬座是天上的半人馬，常被認作智慧的凱隆——眾英雄的導師。它是南天最壯麗的星座之一，兩顆最亮的星——南門二與馬腹一——為人們指出鄰近南十字座的方向。南門二是距離太陽最近的恆星系統，僅四光年多一點。在半人馬的身軀之中，閃耀著半人馬座A，那是離我們最近的巨型活動星系，其黑洞向電波天空噴射出道道噴流。"}, ja:{"season":"秋 · 南半球","brightest":"ケンタウルス座アルファ星（リギル・ケンタウルス）","desc":"ケンタウルス座は天のケンタウロスで、しばしば英雄たちの師である賢者ケイローンの姿とされます。南天でもっとも壮麗な星座のひとつで、いちばん明るい二つの星——ケンタウルス座アルファ星とハダル——が近くのみなみじゅうじ座への道しるべとなります。ケンタウルス座アルファ星は太陽にもっとも近い恒星系で、わずか四光年あまりのかなたにあります。ケンタウロスの胴のなかには、もっとも近い巨大活動銀河ケンタウルス座Aが輝き、そのブラックホールが電波の空へジェットを噴き出しています。"}, ko:{"season":"가을 · 남반구","brightest":"센타우루스자리 알파(리길 켄타우루스)","desc":"센타우루스자리는 하늘의 켄타우로스로, 흔히 영웅들의 스승인 현자 케이론의 모습으로 여겨집니다. 남쪽 하늘에서 가장 웅장한 별자리 가운데 하나로, 가장 밝은 두 별인 센타우루스자리 알파와 하다르가 가까운 남십자자리로 가는 길을 알려 줍니다. 센타우루스자리 알파는 태양에서 가장 가까운 항성계로, 겨우 4광년 남짓 떨어져 있습니다. 켄타우로스의 몸통 안에는 가장 가까운 거대 활동 은하인 센타우루스자리 A가 빛나며, 그 블랙홀이 전파 하늘을 가로질러 제트를 뿜어냅니다."} },
+      img:"images/cons-centaurus.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"dorado",
+      t:{"en":"Dorado","hans":"剑鱼座","hant":"劍魚座","ja":"かじき座","ko":"황새치자리"},
+      stars:[[4.567,-55.04,3.27],[5.56,-62.49,3.76],[4.267,-51.49,4.25],[5.746,-65.74,4.34],[5.092,-57.47,4.71]], starNames:["Alpha Doradus","Beta Doradus","Gamma Doradus","Delta Doradus","Zeta Doradus"], lines:[[2,0],[0,4],[4,1],[1,3]],
+      info:{ en:{"season":"Summer · Southern Hemisphere","brightest":"Alpha Doradus","desc":"Dorado, the swordfish, was charted by Renaissance navigators mapping the far southern sky. Faint in stars, it guards a spectacular treasure: most of the Large Magellanic Cloud, a satellite galaxy of the Milky Way that hangs in the southern night as a detached patch of soft light, cradling the furious Tarantula Nebula."}, hans:{"season":"夏季 · 南半球","brightest":"金鱼一","desc":"剑鱼座即天上的剑鱼，是文艺复兴时期的航海家在测绘南天星空时描绘出的星座。它本身星光稀疏，却守护着一处壮丽的宝藏——大麦哲伦云的大部分。这是银河系的一个伴星系，宛如一团脱离银河、柔和的光斑悬在南方的夜空，怀中还托着狂暴的蜘蛛星云。"}, hant:{"season":"夏季 · 南半球","brightest":"金魚一","desc":"劍魚座即天上的劍魚，是文藝復興時期的航海家在測繪南天星空時描繪出的星座。它本身星光稀疏，卻守護著一處壯麗的寶藏——大麥哲倫雲的大部分。這是銀河系的一個伴星系，宛如一團脫離銀河、柔和的光斑懸在南方的夜空，懷中還托著狂暴的蜘蛛星雲。"}, ja:{"season":"夏 · 南半球","brightest":"かじき座アルファ星","desc":"かじき座は、南天の星空を測量したルネサンス期の航海者たちが描き出した、天のかじきの星座です。星そのものは乏しいものの、壮麗な宝物を守っています——大マゼラン雲の大部分です。これは天の川銀河の伴銀河で、銀河から離れた柔らかな光の斑点として南の夜空に浮かび、猛々しいタランチュラ星雲を抱いています。"}, ko:{"season":"여름 · 남반구","brightest":"황새치자리 알파","desc":"황새치자리는 남쪽 하늘을 측량하던 르네상스 시대의 항해자들이 그려 넣은 황새치의 별자리입니다. 별은 드물지만, 눈부신 보물을 지키고 있습니다. 바로 대마젤란은하의 대부분으로, 우리 은하의 위성 은하인 이 천체는 은하에서 떨어져 나온 부드러운 빛 조각처럼 남쪽 밤하늘에 걸려, 사나운 타란툴라 성운을 감싸 안고 있습니다."} },
+      img:"images/cons-dorado.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
+    { key:"tucana",
+      t:{"en":"Tucana","hans":"杜鹃座","hant":"杜鵑座","ja":"きょしちょう座","ko":"큰부리새자리"},
+      stars:[[22.308,-60.26,2.87],[23.29,-58.24,3.99],[0.333,-64.87,4.23],[0.525,-62.96,4.37],[22.455,-64.97,4.49],[23.998,-65.58,4.5]], starNames:["Alpha Tucanae","Gamma Tucanae","Zeta Tucanae","Beta Tucanae","Delta Tucanae","Epsilon Tucanae"], lines:[[0,1],[1,5],[5,3],[3,2],[0,4]],
+      info:{ en:{"season":"Spring · Southern Hemisphere","brightest":"Alpha Tucanae","desc":"Tucana, the toucan, is another far-southern constellation named by the navigators of the Age of Exploration. Its own stars are faint, but it holds one of the richest corners of the southern sky: the Small Magellanic Cloud, a companion galaxy of the Milky Way, and beside it the dazzling globular cluster 47 Tucanae, second in splendour only to Omega Centauri."}, hans:{"season":"春季 · 南半球","brightest":"鸟喙一","desc":"杜鹃座描绘的是一只巨嘴鸟(杜鹃)，也是一个由大航海时代的航海家命名的遥远南天星座。它自身的星星都很黯淡，却坐拥南天最富丽的一隅：银河系的伴星系小麦哲伦云，以及紧邻其旁、璀璨夺目的球状星团杜鹃座47——其壮丽仅次于半人马座ω。"}, hant:{"season":"春季 · 南半球","brightest":"鳥喙一","desc":"杜鵑座描繪的是一隻巨嘴鳥，也是一個由大航海時代的航海家命名的遙遠南天星座。它自身的星星都很黯淡，卻坐擁南天最富麗的一隅：銀河系的伴星系小麥哲倫雲，以及緊鄰其旁、璀璨奪目的球狀星團杜鵑座47——其壯麗僅次於半人馬座ω。"}, ja:{"season":"春 · 南半球","brightest":"きょしちょう座アルファ星","desc":"きょしちょう座は天のオオハシで、大航海時代の航海者たちが名づけた、もう一つのはるか南天の星座です。自身の星は暗いものの、南天でもっとも豊かな一角を抱えています——天の川銀河の伴銀河である小マゼラン雲、そしてそのかたわらに輝く球状星団きょしちょう座47は、その壮麗さでケンタウルス座オメガに次ぐものです。"}, ko:{"season":"봄 · 남반구","brightest":"큰부리새자리 알파","desc":"큰부리새자리는 하늘의 큰부리새로, 대항해시대의 항해자들이 이름 붙인 남쪽 하늘 깊은 곳의 또 하나의 별자리입니다. 자체의 별들은 어둡지만, 남쪽 하늘에서 가장 풍요로운 한 구역을 품고 있습니다. 우리 은하의 동반 은하인 소마젤란은하, 그리고 그 곁에서 눈부시게 빛나는 구상성단 큰부리새자리 47은 그 장려함이 센타우루스자리 오메가에 버금갑니다."} },
+      img:"images/cons-tucana.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" }
   ];
   var SKY_CONS = [];
   (function buildZodiac() {
@@ -1386,6 +1415,46 @@
     paintSkyLabels(beaconLang);
     host.style.display = 'none'; // hidden until enterSky
   })();
+  // ── external galaxies as deep-sky markers on the celestial sphere, at their true J2000
+  // RA/Dec, sitting inside their host constellations. Clicking reuses the galaxy's beacon card.
+  var SKY_GAL = [];
+  window.skyGalSelected = null;
+  (function buildSkyGalaxies() {
+    var host = document.getElementById('skylabels');
+    var GALS = [ // catalog matches BEACONS[i].info.en.catalog; ra in hours, dec in degrees; kind → tint
+      { cat: 'M31', ra: 0.712, dec: 41.27, kind: 'spiral' }, { cat: 'M33', ra: 1.564, dec: 30.66, kind: 'spiral' },
+      { cat: 'M104', ra: 12.666, dec: -11.62, kind: 'spiral' }, { cat: 'M87', ra: 12.514, dec: 12.39, kind: 'ell' },
+      { cat: 'NGC 5128', ra: 13.424, dec: -43.02, kind: 'ell' }, { cat: 'LMC', ra: 5.393, dec: -69.76, kind: 'irr' },
+      { cat: 'SMC', ra: 0.877, dec: -72.8, kind: 'irr' }
+    ];
+    GALS.forEach(function (G, gi) {
+      var bi = -1; for (var i = 0; i < BEACONS.length; i++) { if (BEACONS[i].gal && BEACONS[i].info.en.catalog === G.cat) { bi = i; break; } }
+      if (bi < 0) return;
+      var dir = raDecDir(G.ra, G.dec);
+      var col = G.kind === 'ell' ? 0xffe6c0 : (G.kind === 'irr' ? 0xe6ecff : 0xbcd8ff);
+      var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: col, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
+      sp.position.copy(dir).multiplyScalar(SKY_R * 0.99);
+      var sz = SKY_R * 0.024; sp.scale.set(sz * 1.7, sz, 1); // oval glow — reads as a galaxy, not a point star
+      skyScene.add(sp);
+      var el = document.createElement('div'); el.className = 'skylabel skygal'; el.style.display = 'none';
+      host.appendChild(el);
+      (function (idx) { el.addEventListener('click', function (e) { e.stopPropagation(); selectSkyGal(idx); }); })(gi);
+      SKY_GAL.push({ beaconIdx: bi, dir: dir, el: el, sprite: sp, shown: false });
+    });
+    paintSkyGalLabels(beaconLang);
+  })();
+  function paintSkyGalLabels(lang) { // no emoji — the oval glow sprite is the marker; keeps rendering robust everywhere
+    SKY_GAL.forEach(function (g) { var b = BEACONS[g.beaconIdx]; g.el.innerHTML = esc((b.t[lang] || b.t.en)[0]); });
+  }
+  function selectSkyGal(gi) {
+    if (gi === window.skyGalSelected) { clearSkySelection(); return; }
+    window.skySelected = null; // drop any constellation highlight
+    SKY_CONS.forEach(function (c) { c.el.classList.remove('sel', 'dim'); c.lineMat.opacity = 0.45; c.starMat.uniforms.uMul.value = 1; });
+    window.skyGalSelected = gi;
+    SKY_GAL.forEach(function (g, i) { g.el.classList.toggle('sel', i === gi); g.sprite.material.opacity = i === gi ? 1 : 0.85; });
+    renderPanel(SKY_GAL[gi].beaconIdx, beaconLang); // galaxy's own 5-language card (fly-to link suppressed in sky view)
+    bpEl.classList.add('open');
+  }
   function paintSkyLabels(lang) {
     SKY_CONS.forEach(function (c) {
       c.el.innerHTML = (c.z.t[lang] || c.z.t.en) + (c.z.symbol ? '<small>' + c.z.symbol + '</small>' : '');
@@ -1402,6 +1471,13 @@
         c.el.style.left = ((skyTmp.x * 0.5 + 0.5) * window.innerWidth) + 'px';
         c.el.style.top = ((-skyTmp.y * 0.5 + 0.5) * window.innerHeight) + 'px';
       }
+    }
+    for (var gi = 0; gi < SKY_GAL.length; gi++) { // galaxy markers ride the same projection
+      var g = SKY_GAL[gi];
+      skyTmp.copy(g.dir).multiplyScalar(SKY_R).project(skyCamera);
+      var gv = viewMode === 'sky' && skyTmp.z < 1 && skyTmp.x > -1.05 && skyTmp.x < 1.05 && skyTmp.y > -1.05 && skyTmp.y < 1.05;
+      if (gv !== g.shown) { g.el.style.display = gv ? '' : 'none'; g.shown = gv; }
+      if (gv) { g.el.style.left = ((skyTmp.x * 0.5 + 0.5) * window.innerWidth) + 'px'; g.el.style.top = ((-skyTmp.y * 0.5 + 0.5) * window.innerHeight) + 'px'; }
     }
   };
   window.skySelected = null;
@@ -1422,6 +1498,7 @@
   }
   function selectSky(i) {
     if (i === skySelected) { clearSkySelection(); return; }
+    window.skyGalSelected = null; SKY_GAL.forEach(function (g) { g.el.classList.remove('sel'); g.sprite.material.opacity = 0.85; }); // drop any galaxy highlight
     window.skySelected = i;
     SKY_CONS.forEach(function (c, ci) {
       c.el.classList.toggle('sel', ci === i);
@@ -1433,21 +1510,22 @@
     bpEl.classList.add('open');
   }
   window.clearSkySelection = function () {
-    window.skySelected = null;
+    window.skySelected = null; window.skyGalSelected = null;
     SKY_CONS.forEach(function (c) {
       c.el.classList.remove('sel', 'dim');
       c.lineMat.opacity = 0.45;
       c.starMat.uniforms.uMul.value = 1;
     });
+    SKY_GAL.forEach(function (g) { g.el.classList.remove('sel'); g.sprite.material.opacity = 0.85; });
     bpEl.classList.remove('open');
   };
   window.addEventListener('keydown', function (e) {
-    if ((e.key || '').toLowerCase() === 'escape' && viewMode === 'sky' && skySelected != null) {
+    if ((e.key || '').toLowerCase() === 'escape' && viewMode === 'sky' && (skySelected != null || window.skyGalSelected != null)) {
       clearSkySelection();
       e.stopImmediatePropagation(); // consume: the NEXT Esc exits the sky view, not this one
     }
   });
-  window.addEventListener('click', function () { if (viewMode === 'sky' && skySelected != null) clearSkySelection(); });
+  window.addEventListener('click', function () { if (viewMode === 'sky' && (skySelected != null || window.skyGalSelected != null)) clearSkySelection(); });
   var skybackEl = document.getElementById('skyback');
   function enterSky() {
     if (viewMode === 'sky') return;

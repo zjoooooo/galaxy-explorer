@@ -106,6 +106,11 @@ Eckhard Slawik / NOIRLab series as the zodiac cards (Wikimedia Commons).
 - `images/cons-lyra.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Lyra_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(lyra).jpg)
 - `images/cons-ursa-minor.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Ursa_Minor_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(ursa-minor).jpg)
 - `images/cons-canis-major.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Canis_Major_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(canis-major).jpg)
+- `images/cons-andromeda.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Andromeda_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(andromeda).jpg)
+- `images/cons-triangulum.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Triangulum_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(triangulum).jpg)
+- `images/cons-centaurus.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Centaurus_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(centaurus).jpg)
+- `images/cons-dorado.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Dorado_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(dorado).jpg)
+- `images/cons-tucana.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Tucana_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(tucana).jpg)
 
 ### External galaxy images
 
