@@ -2153,40 +2153,39 @@
       bulge(R * (o.coreSize || 0.2), o.coreOpacity || 0.9, o.core || 0xfff1dc);   // bright nucleus
       if (o.halo2Size) bulge(R * o.halo2Size, o.halo2Opacity || 0.07, o.halo2 || 0xfdf6ea); // extra faint extended envelope — stacked gaussians ≈ smooth edgeless falloff (Sombrero)
       if (o.nucleusSize) { bulge(R * o.nucleusSize * 1.9, 0.9, o.nucleus || 0xfffdf6); bulge(R * o.nucleusSize, 1.0, 0xffffff); } // a single blazing nucleus body — outshines the particle grain at the very centre
-      if (o.dustBand === 'ring') { // Sombrero brim — a PARTICULATE dust torus: dark, non-luminous points in the disc
-        // plane that co-rotate and darken the bright stars/bulge behind them (real dust clumps, not a flat plane)
-        var nd = o.dustN || 18000, dp = new Float32Array(nd * 3), dA = new Float32Array(nd);
-        var dR = (o.dustR || 1.0) * R, dW = (o.dustW || 0.11) * R, dThk = R * 0.022, NDC = 220, dcl = []; // dense fine ring at the disc RIM → a continuous dark outer edge
-        for (var dc = 0; dc < NDC; dc++) { var da2 = Math.random() * TAU, dr2 = dR + grand() * dW; dcl.push({ x: Math.cos(da2) * dr2, z: Math.sin(da2) * dr2, sz: R * 0.009 + Math.random() * Math.random() * R * 0.028 }); }
-        for (var di = 0; di < nd; di++) { var kc = dcl[(Math.random() * NDC) | 0];
-          dp[di * 3] = kc.x + grand() * kc.sz; dp[di * 3 + 1] = grand() * dThk; dp[di * 3 + 2] = kc.z + grand() * kc.sz; dA[di] = 0.45 + Math.random() * 0.55; }
-        var dg = new THREE.BufferGeometry();
-        dg.setAttribute('position', new THREE.BufferAttribute(dp, 3)); dg.setAttribute('aA', new THREE.BufferAttribute(dA, 1));
-        var dpts = new THREE.Points(dg, new THREE.ShaderMaterial({
-          uniforms: { uSize: { value: 3.6 * renderer.getPixelRatio() } },
-          vertexShader: 'uniform float uSize; attribute float aA; varying float vA; void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp; gl_PointSize = uSize * (300.0/-vp.z); vA = aA; }',
-          // MULTIPLY absorption: mix toward a dark tint at the centre, 1.0 (no-op) at the edge. Over bright
-          // stars/bulge it darkens toward brown; over black sky dst*x = black, so the dust is invisible (never emissive).
-          fragmentShader: 'varying float vA; void main(){ float d = distance(gl_PointCoord, vec2(0.5)) * 2.0; if (d > 1.0) discard; float s = pow(1.0 - d, 1.2) * vA; vec3 c = mix(vec3(1.0), vec3(0.09, 0.07, 0.06), s); gl_FragColor = vec4(c, 1.0); }',
-          transparent: true, depthWrite: false, fog: false, blending: THREE.MultiplyBlending
-        }));
-        dpts.frustumCulled = false; dpts.renderOrder = 7; // draw after the additive stars → darkens them into a dust lane
-        pts.add(dpts); // co-rotates with the disc (the dust is part of the disc)
-      } else if (o.dustBand) { // Cen A: ABSORPTION sheet (multiply blending) — white transmits, warm dark brown absorbs;
-        // over the bright bulge it reads as the photo's reddish-brown dust band; over black sky it stays invisible.
+      if (o.dustBand) { // a real dark dust lane lying in the disc plane, darkening the bulge/stars behind it
+        var ringLane = o.dustBand === 'ring'; // 'ring' = Sombrero-style dust-torus rim; true = centred dark sheet (Cen A)
         var dl = document.createElement('canvas'); dl.width = dl.height = 128; var dcx = dl.getContext('2d');
-        var img2 = dcx.createImageData(128, 128), dd = img2.data;
-        for (var qy = 0; qy < 128; qy++) for (var qx = 0; qx < 128; qx++) {
-          var ddx = (qx + 0.5) / 64 - 1, ddy = ((qy + 0.5) / 64 - 1) * 3, rr2 = Math.sqrt(ddx * ddx + ddy * ddy);
-          var aa = rr2 >= 0.8 ? 0 : (rr2 < 0.45 ? (0.9 - 0.12 * (rr2 / 0.45)) : 0.78 * (1 - (rr2 - 0.45) / 0.35)); // narrow dense band → feathered rim
-          var o8 = (qy * 128 + qx) * 4;
-          dd[o8] = Math.round(255 - aa * 211); dd[o8 + 1] = Math.round(255 - aa * 229); dd[o8 + 2] = Math.round(255 - aa * 237); dd[o8 + 3] = 255; // → transmission toward rgb(44,26,18)
+        if (ringLane) {
+          var rg = dcx.createRadialGradient(64, 64, 24, 64, 64, 64);          // bold wide dark annulus hugging the disc rim (the Sombrero brim)
+          rg.addColorStop(0, 'rgba(0,0,0,0)'); rg.addColorStop(0.34, 'rgba(0,0,0,0.75)'); rg.addColorStop(0.52, 'rgba(0,0,0,1)'); rg.addColorStop(0.72, 'rgba(0,0,0,1)'); rg.addColorStop(0.9, 'rgba(0,0,0,0.6)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+          dcx.fillStyle = rg; dcx.fillRect(0, 0, 128, 128);
+          var fade = dcx.createLinearGradient(0, 64, 0, 98);                  // keep only the NEAR half — the far rim hides behind the bulge
+          fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,1)');
+          dcx.globalCompositeOperation = 'destination-out'; dcx.fillStyle = fade; dcx.fillRect(0, 0, 128, 128);
+          dcx.globalCompositeOperation = 'source-over';
+        } else { // Cen A: ABSORPTION sheet (multiply blending) — white transmits, warm dark brown absorbs.
+          // Over the bright bulge it reads as the photo's reddish-brown dust band; over black sky it stays invisible.
+          var img2 = dcx.createImageData(128, 128), dd = img2.data;
+          for (var qy = 0; qy < 128; qy++) for (var qx = 0; qx < 128; qx++) {
+            var ddx = (qx + 0.5) / 64 - 1, ddy = ((qy + 0.5) / 64 - 1) * 3, rr2 = Math.sqrt(ddx * ddx + ddy * ddy);
+            var aa = rr2 >= 0.8 ? 0 : (rr2 < 0.45 ? (0.9 - 0.12 * (rr2 / 0.45)) : 0.78 * (1 - (rr2 - 0.45) / 0.35)); // narrow dense band → feathered rim (photo: band ≈ 1/5 of the diameter)
+            var o8 = (qy * 128 + qx) * 4;
+            dd[o8] = Math.round(255 - aa * 211); dd[o8 + 1] = Math.round(255 - aa * 229); dd[o8 + 2] = Math.round(255 - aa * 237); dd[o8 + 3] = 255; // → transmission toward rgb(44,26,18)
+          }
+          dcx.putImageData(img2, 0, 0);
         }
-        dcx.putImageData(img2, 0, 0);
-        var laneTex = new THREE.CanvasTexture(dl); laneTex.generateMipmaps = false; laneTex.minFilter = THREE.LinearFilter;
-        var lane = new THREE.Mesh(new THREE.PlaneGeometry(R * 3.2, R * 1.9),
-          new THREE.MeshBasicMaterial({ map: laneTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false, blending: THREE.MultiplyBlending })); // fog:false — scene fog would blacken the distant quad and multiply-by-black erases everything behind it
-        lane.quaternion.copy(q0).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2));
+        var laneTex = new THREE.CanvasTexture(dl);
+        laneTex.generateMipmaps = false; laneTex.minFilter = THREE.LinearFilter; // deep mips average band+clear into a grey sheet → a fake dark rectangle at distance
+        var lane = new THREE.Mesh(new THREE.PlaneGeometry(ringLane ? R * 2.6 : R * 3.2, ringLane ? R * 2.6 : R * 1.9),
+          new THREE.MeshBasicMaterial({ map: laneTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false, blending: ringLane ? THREE.NormalBlending : THREE.MultiplyBlending })); // DoubleSide: show from below too. fog:false is CRITICAL — scene fog blackens the distant quad, and multiply-by-black erased everything behind it (the "black rectangle")
+        lane.quaternion.copy(q0).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2)); // lie in the disc plane, aligned with the disc's long axis
+        if (ringLane) { // spin the dark half-ring around the disc axis so it faces the viewer (the lane does not co-rotate, so this stays correct)
+          var dN = viewDir.clone().sub(nrm.clone().multiplyScalar(viewDir.dot(nrm))).normalize();
+          var w0 = new THREE.Vector3(0, 1, 0).applyQuaternion(lane.quaternion); // texture-up in world
+          var beta = Math.atan2(new THREE.Vector3().crossVectors(w0, dN).dot(nrm), w0.dot(dN));
+          lane.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(nrm, beta));
+        }
         lane.position.copy(P); lane.renderOrder = 6; lane.frustumCulled = false; scene.add(lane);
       }
     }
