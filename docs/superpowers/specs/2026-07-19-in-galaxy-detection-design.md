@@ -79,8 +79,13 @@ used for scanning.)
    sweeps from the top of the viewport to the bottom over ~1.8 s (ease-out).
 2. Each frame, for every child of the scanned galaxy, project its world position
    to screen. When the scan line's `y` passes a child's screen `y` and it is not
-   yet revealed → **reveal** it: its 3D feature fades/pops in and its HTML beacon
-   fades in (a short per-object animation).
+   yet revealed → **reveal** it:
+   - a quick expanding **detection ring** pings at its position (radar-contact
+     feedback — a short-lived additive ring sprite);
+   - its 3D feature plays a **type-specific reveal** — jet shoots out from the
+     nucleus (length 0→full), nebula blooms open (scale 0→1), starcloud sparkles
+     in (stars pop in staggered), globular fades in as a tight knot;
+   - its HTML beacon fades in.
 3. When the line reaches the bottom, it fades out. All children are now revealed.
 
 **After scan.** Revealed child beacons behave like normal beacons: hover/label,
@@ -96,23 +101,30 @@ hide all child beacons and their features, reset the scan state, and hide the
 
 ## 3D feature renderers
 
-Each feature is a small object added under the galaxy's `pts` (local frame), so
-it co-rotates. All additive-blended, revealed by animating opacity/scale from 0.
+Each feature is a small object (`Points` cloud and/or `GLOW_TEX` sprites) added
+under the galaxy's `pts` local frame, so it co-rotates. All additive-blended.
+Animated features drive a `uTime` uniform from the frame loop — the same
+mechanism as the existing background-star twinkle. Point counts are hundreds, so
+cost is negligible and they are exempt from LOD.
 
-- **jet** — a thin blue-white beam: a short line of bright points (or a stretched
-  additive sprite) from the nucleus outward along a fixed local direction,
-  ~1.4× the galaxy radius, brightest at the base.
-- **nebula** — a pink emission glow (additive `GLOW_TEX` sprite, magenta) plus a
-  few hot blue point-stars scattered in it.
-- **starcloud** — a dense bright blue-white clump of points (a mini gaussian
-  cluster of ~150 points) at `lp`.
-- **globular** — a compact, near-spherical dense knot of ~200 warm-white points,
-  small radius, bright center.
-- **supernova** *(future)* — a single bright white point + a faint thin
-  expanding ring sprite.
-
-Feature point counts are tiny (hundreds), so they add negligible cost and are
-exempt from LOD.
+- **jet** *(animated)* — ~300 points in a thin, slightly-flaring cone from the
+  nucleus outward along a fixed local axis (dense/bright base → sparse/faint tip,
+  ~1.4× galaxy radius). Each point carries `aT` (0 base → 1 tip) and a random
+  phase. A `uTime` shader flows brightness outward —
+  `flow = 0.55 + 0.45*sin(aT*14 - uTime*3 + phase)` plus sharper travelling
+  `knot`s — so plasma pulses stream out of the nucleus. Blue-white, with a
+  fainter counter-jet pointing the opposite way.
+- **nebula** *(animated)* — a magenta emission glow (`GLOW_TEX` sprite) that
+  slowly **breathes** (opacity + scale on a ~10 s sine), plus a handful of hot
+  blue point-stars **twinkling** inside it (twinkle shader).
+- **starcloud** *(animated)* — a bright blue-white gaussian clump of ~150 points;
+  its young hot stars **twinkle and occasionally flare** (twinkle+flare shader) —
+  an active stellar nursery.
+- **globular** *(static, on purpose)* — a compact near-spherical knot of ~200
+  warm-white points, bright center, left essentially still. The young-and-active
+  (nebula/starcloud) vs old-and-quiet (globular) contrast is itself a teaching point.
+- **supernova** *(future)* — a bright pulsing white point + a slow expanding ring
+  sprite (SN 1987A's real ring).
 
 ## Data flow
 
