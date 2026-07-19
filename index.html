@@ -863,7 +863,29 @@
     });
     if (k >= 1) { scanLine.style.opacity = '0'; setTimeout(function () { if (scanLine) scanLine.style.display = 'none'; }, 400); scanState = null; }
   }
-  function revealChild(c) { c.revealed = true; if (c.feature) c.feature.group.visible = true; } // per-type reveal anim added in Task 5
+  function pingAt(sx, sy) { // transient radar-contact ring at a screen point
+    var r = document.createElement('div'); r.className = 'detect-ring'; document.body.appendChild(r);
+    var t0 = performance.now();
+    (function anim() {
+      var k = Math.min(1, (performance.now() - t0) / 600), d = 8 + k * 90;
+      r.style.width = d + 'px'; r.style.height = d + 'px'; r.style.left = (sx - d / 2) + 'px'; r.style.top = (sy - d / 2) + 'px'; r.style.opacity = String(1 - k);
+      if (k < 1) requestAnimationFrame(anim); else r.remove();
+    })();
+  }
+  function revealChild(c) { // ping + type-specific reveal animation
+    c.revealed = true;
+    if (c.parentPts) { scanTmp.copy(c.lp).applyMatrix4(c.parentPts.matrixWorld).project(camera); pingAt((scanTmp.x * 0.5 + 0.5) * window.innerWidth, (-scanTmp.y * 0.5 + 0.5) * window.innerHeight); }
+    if (!c.feature) return;
+    var grp = c.feature.group; grp.visible = true;
+    var t0 = performance.now(), kind = c.feat.kind;
+    (function grow() {
+      var k = Math.min(1, (performance.now() - t0) / 700), e = 1 - Math.pow(1 - k, 3);
+      if (kind === 'jet') grp.scale.setScalar(e);                     // shoots out from the nucleus
+      else if (kind === 'nebula') grp.scale.setScalar(0.3 + 0.7 * e); // blooms open
+      else grp.scale.setScalar(0.4 + 0.6 * e);                        // starcloud / globular pop in
+      if (k < 1) requestAnimationFrame(grow); else grp.scale.setScalar(1);
+    })();
+  }
   window.addEventListener('keydown', function (e) { if ((e.key || '').toLowerCase() === 'escape' && selectedBeacon !== null) clearSelection(); });
   var beaconTmp = new THREE.Vector3();
   function updateBeacons() { // call AFTER render() — galaxyRoot/camera matrices are fresh then
