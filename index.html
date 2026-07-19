@@ -2155,9 +2155,9 @@
       if (o.nucleusSize) { bulge(R * o.nucleusSize * 1.9, 0.9, o.nucleus || 0xfffdf6); bulge(R * o.nucleusSize, 1.0, 0xffffff); } // a single blazing nucleus body — outshines the particle grain at the very centre
       if (o.dustBand === 'ring') { // Sombrero brim — a PARTICULATE dust torus: dark, non-luminous points in the disc
         // plane that co-rotate and darken the bright stars/bulge behind them (real dust clumps, not a flat plane)
-        var nd = o.dustN || 6500, dp = new Float32Array(nd * 3), dA = new Float32Array(nd);
-        var dR = (o.dustR || 0.9) * R, dW = (o.dustW || 0.14) * R, dThk = R * 0.028, NDC = 72, dcl = [];
-        for (var dc = 0; dc < NDC; dc++) { var da2 = Math.random() * TAU, dr2 = dR + grand() * dW; dcl.push({ x: Math.cos(da2) * dr2, z: Math.sin(da2) * dr2, sz: R * 0.02 + Math.random() * Math.random() * R * 0.08 }); }
+        var nd = o.dustN || 18000, dp = new Float32Array(nd * 3), dA = new Float32Array(nd);
+        var dR = (o.dustR || 1.0) * R, dW = (o.dustW || 0.11) * R, dThk = R * 0.022, NDC = 220, dcl = []; // dense fine ring at the disc RIM → a continuous dark outer edge
+        for (var dc = 0; dc < NDC; dc++) { var da2 = Math.random() * TAU, dr2 = dR + grand() * dW; dcl.push({ x: Math.cos(da2) * dr2, z: Math.sin(da2) * dr2, sz: R * 0.009 + Math.random() * Math.random() * R * 0.028 }); }
         for (var di = 0; di < nd; di++) { var kc = dcl[(Math.random() * NDC) | 0];
           dp[di * 3] = kc.x + grand() * kc.sz; dp[di * 3 + 1] = grand() * dThk; dp[di * 3 + 2] = kc.z + grand() * kc.sz; dA[di] = 0.45 + Math.random() * 0.55; }
         var dg = new THREE.BufferGeometry();
@@ -2167,7 +2167,7 @@
           vertexShader: 'uniform float uSize; attribute float aA; varying float vA; void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp; gl_PointSize = uSize * (300.0/-vp.z); vA = aA; }',
           // MULTIPLY absorption: mix toward a dark tint at the centre, 1.0 (no-op) at the edge. Over bright
           // stars/bulge it darkens toward brown; over black sky dst*x = black, so the dust is invisible (never emissive).
-          fragmentShader: 'varying float vA; void main(){ float d = distance(gl_PointCoord, vec2(0.5)) * 2.0; if (d > 1.0) discard; float s = pow(1.0 - d, 1.4) * vA; vec3 c = mix(vec3(1.0), vec3(0.24, 0.19, 0.15), s); gl_FragColor = vec4(c, 1.0); }',
+          fragmentShader: 'varying float vA; void main(){ float d = distance(gl_PointCoord, vec2(0.5)) * 2.0; if (d > 1.0) discard; float s = pow(1.0 - d, 1.2) * vA; vec3 c = mix(vec3(1.0), vec3(0.09, 0.07, 0.06), s); gl_FragColor = vec4(c, 1.0); }',
           transparent: true, depthWrite: false, fog: false, blending: THREE.MultiplyBlending
         }));
         dpts.frustumCulled = false; dpts.renderOrder = 7; // draw after the additive stars → darkens them into a dust lane
