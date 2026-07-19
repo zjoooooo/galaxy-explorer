@@ -1969,9 +1969,72 @@
       }
     }
 
-    for (var gi = 0; gi < BEACONS.length; gi++) {
-      var b = BEACONS[gi]; if (b.gal && b.gal.stars) buildGalaxyStars(b.p, b.gal.stars); // real 3D particle galaxy
+    // ── in-galaxy object features: small additive point/sprite groups added under
+    // a galaxy's Points (local frame) so they co-rotate; revealed by scanning.
+    function starPoints(n, spread, color, sizeMul, flatten) {
+      var pos = new Float32Array(n * 3), scl = new Float32Array(n), col = new Float32Array(n * 3), c = new THREE.Color(color);
+      for (var i = 0; i < n; i++) {
+        var u = Math.random() * 2 - 1, ph = Math.random() * 6.283, s = Math.sqrt(1 - u * u), t = Math.pow(Math.random(), 0.6) * spread;
+        pos[i * 3] = s * Math.cos(ph) * t; pos[i * 3 + 1] = u * t * (flatten || 1); pos[i * 3 + 2] = s * Math.sin(ph) * t;
+        scl[i] = (0.5 + Math.random() * 1.2) * (sizeMul || 1);
+        var v = 0.8 + Math.random() * 0.3; col[i * 3] = c.r * v; col[i * 3 + 1] = c.g * v; col[i * 3 + 2] = c.b * v;
+      }
+      var g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aColor', new THREE.BufferAttribute(col, 3)); g.setAttribute('aScale', new THREE.BufferAttribute(scl, 1));
+      return new THREE.Points(g, new THREE.ShaderMaterial({
+        uniforms: { uSize: { value: 2.4 * renderer.getPixelRatio() } },
+        vertexShader: 'uniform float uSize; attribute float aScale; attribute vec3 aColor; varying vec3 vColor; void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp; gl_PointSize = uSize * aScale * (300.0/-vp.z); vColor = aColor; }',
+        fragmentShader: GLOW_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+      }));
     }
+    function buildJet(feat) { // straight beam (animated in Task 3); dir/len in local units
+      var n = 300, len = feat.len || 150, dir = (feat.dir || new THREE.Vector3(0, 1, 0)).clone().normalize();
+      var pos = new Float32Array(n * 3), aT = new Float32Array(n), col = new Float32Array(n * 3), c = new THREE.Color(0xbfd6ff), tmp = new THREE.Vector3();
+      for (var i = 0; i < n; i++) {
+        var t = Math.pow(Math.random(), 0.7), r = (0.02 + t * 0.10) * len * (Math.random() - 0.5) * 2;
+        tmp.copy(dir).multiplyScalar(t * len); pos[i * 3] = tmp.x + r; pos[i * 3 + 1] = tmp.y + r * 0.6; pos[i * 3 + 2] = tmp.z + r;
+        aT[i] = t; var v = 1 - t * 0.7; col[i * 3] = c.r * v; col[i * 3 + 1] = c.g * v; col[i * 3 + 2] = c.b;
+      }
+      var g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aT', new THREE.BufferAttribute(aT, 1)); g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+      return new THREE.Points(g, new THREE.ShaderMaterial({
+        uniforms: { uSize: { value: 3.0 * renderer.getPixelRatio() } },
+        vertexShader: 'uniform float uSize; attribute float aT; attribute vec3 aColor; varying vec3 vColor; void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp; gl_PointSize = uSize * (1.5 - aT) * (300.0/-vp.z); vColor = aColor; }',
+        fragmentShader: GLOW_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+      }));
+    }
+    function buildFeature(feat) {
+      var group = new THREE.Group(), update = function () {};
+      if (feat.kind === 'globular') {
+        group.add(starPoints(220, 9, 0xfff0d8, 1.0));
+        var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xffe8c8, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending })); core.scale.set(14, 14, 1); group.add(core);
+      } else if (feat.kind === 'starcloud') {
+        group.add(starPoints(150, 16, 0xdbeaff, 1.1, 0.5));
+      } else if (feat.kind === 'nebula') {
+        var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xff6aa8, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })); glow.scale.set(34, 24, 1); group.add(glow);
+        group.add(starPoints(26, 12, 0xcfe0ff, 1.2, 0.6));
+      } else if (feat.kind === 'jet') {
+        group.add(buildJet(feat));
+      }
+      return { group: group, update: update };
+    }
+    function linkGalaxyChildren() {
+      BEACONS.forEach(function (c) {
+        if (!c.child) return;
+        var lod = null; for (var i = 0; i < galaxyLODs.length; i++) if (galaxyLODs[i].cat === c.parent) { lod = galaxyLODs[i]; break; }
+        if (!lod) return;
+        c.parentPts = lod.pts;
+        c.feature = buildFeature(c.feat);
+        c.feature.group.position.copy(c.feat.kind === 'jet' ? new THREE.Vector3(0, 0, 0) : c.lp); // jet emanates from the nucleus; others sit at lp
+        c.feature.group.visible = false;
+        lod.pts.add(c.feature.group);
+      });
+    }
+
+    for (var gi = 0; gi < BEACONS.length; gi++) {
+      var b = BEACONS[gi]; if (b.gal && b.gal.stars) { buildGalaxyStars(b.p, b.gal.stars); galaxyLODs[galaxyLODs.length - 1].cat = b.info.en.catalog; } // real 3D particle galaxy
+    }
+    linkGalaxyChildren();
   })();
 
   // ── background music (speaker button / M, autoplays on load): local mp3s in ./audio/,
