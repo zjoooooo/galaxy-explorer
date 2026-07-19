@@ -2085,19 +2085,42 @@
         fragmentShader: GLOW_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
       }));
     }
-    function jetLobe(dir, len, e1, e2, o) { // diffuse cloud lobe — overlapping soft glow sprites billowing outward (the "smoke" of the jet)
-      var grp = new THREE.Group(), base = new THREE.Color(o.color), tipc = new THREE.Color(o.tip || o.color), parts = [];
+    var SMOKE_TEXS = null;
+    function smokeTextures() { // procedural turbulent puff textures — the mottled cloud matter of the lobes
+      if (SMOKE_TEXS) return SMOKE_TEXS;
+      SMOKE_TEXS = [];
+      for (var k = 0; k < 3; k++) {
+        var cv = document.createElement('canvas'); cv.width = cv.height = 128;
+        var ctx = cv.getContext('2d');
+        for (var i = 0; i < 48; i++) {                                     // clustered soft blobs → fractal-ish smoke
+          var a = Math.random() * 6.283, r = Math.pow(Math.random(), 1.5) * 42;
+          var x = 64 + Math.cos(a) * r, y = 64 + Math.sin(a) * r;
+          var rad = 7 + Math.random() * 19, al = 0.05 + Math.random() * 0.10;
+          var gr = ctx.createRadialGradient(x, y, 0, x, y, rad);
+          gr.addColorStop(0, 'rgba(255,255,255,' + al.toFixed(3) + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.283); ctx.fill();
+        }
+        var mask = ctx.createRadialGradient(64, 64, 26, 64, 64, 64);       // soft edge so sprite borders never show
+        mask.addColorStop(0, 'rgba(255,255,255,1)'); mask.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.globalCompositeOperation = 'destination-in'; ctx.fillStyle = mask; ctx.fillRect(0, 0, 128, 128);
+        SMOKE_TEXS.push(new THREE.CanvasTexture(cv));
+      }
+      return SMOKE_TEXS;
+    }
+    function jetLobe(dir, len, e1, e2, o) { // diffuse lobe — smoke-textured sprites strung tight on the SAME centreline as the inner jet
+      var grp = new THREE.Group(), base = new THREE.Color(o.color), tipc = new THREE.Color(o.tip || o.color), parts = [], texs = smokeTextures();
       for (var i = 0; i < o.count; i++) {
-        var t = 0.16 + 0.84 * (i + Math.random() * 0.6) / o.count;        // from just off the nucleus to the tip
-        var w = len * (0.10 + Math.pow(t, 1.25) * o.flare);               // widens outward → billowing plume / end bubble
-        var m = new THREE.SpriteMaterial({ map: GLOW_TEX, color: base.clone().lerp(tipc, t), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+        var t = 0.12 + 0.88 * (i + Math.random() * 0.5) / o.count;        // from just off the nucleus to the tip
+        var w = len * (0.09 + Math.pow(t, 1.3) * o.flare);                // narrow root → moderate billow (photo proportions)
+        var m = new THREE.SpriteMaterial({ map: texs[(Math.random() * texs.length) | 0], color: base.clone().lerp(tipc, t),
+          rotation: Math.random() * 6.283, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
         var s = new THREE.Sprite(m);
         s.position.copy(dir).multiplyScalar(t * len)
-          .addScaledVector(e1, o.curve * t * t * len + (Math.random() - 0.5) * w * 0.35) // gentle photo-like bend + clumpiness
-          .addScaledVector(e2, (Math.random() - 0.5) * w * 0.3);
-        s.scale.set(w * (0.85 + Math.random() * 0.5), w * (0.7 + Math.random() * 0.5), 1);
-        var op = o.op * (0.55 + 0.45 * Math.random()) * (1 - 0.3 * t);    // translucent — stars stay visible through the cloud
-        m.opacity = op; parts.push({ m: m, op: op, ph: Math.random() * 6.283 });
+          .addScaledVector(e1, o.curve * t * t * len + (Math.random() - 0.5) * w * 0.18) // hugs the centreline — no skew off the spine
+          .addScaledVector(e2, (Math.random() - 0.5) * w * 0.18);
+        s.scale.set(w * (0.9 + Math.random() * 0.4), w * (0.75 + Math.random() * 0.4), 1);
+        var op = o.op * (0.6 + 0.4 * Math.random()) * (0.45 + 0.55 * Math.sin(3.1416 * Math.min(1, t * 0.9 + 0.05))); // dim root, bright mid, soft tip
+        m.opacity = op; parts.push({ m: m, op: op, ph: Math.random() * 6.283, rot: m.rotation });
         grp.add(s);
       }
       grp.userData.parts = parts;
@@ -2140,18 +2163,18 @@
       var up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
       var e1 = new THREE.Vector3().crossVectors(dir, up).normalize(), e2 = new THREE.Vector3().crossVectors(dir, e1).normalize();
       var back = dir.clone().negate(), grp = new THREE.Group();
-      var lobeA = jetLobe(dir, len, e1, e2, { color: 0xd08744, tip: 0xa5642e, count: 14, flare: 0.30, curve: 0.22, op: 0.15 });        // warm orange plume
-      var lobeB = jetLobe(back, len * 0.9, e1, e2, { color: 0x8fb2e8, tip: 0x6f92d4, count: 12, flare: 0.36, curve: -0.26, op: 0.12 }); // pale blue end-bubble, bent the other way
-      var streamA = jetStream(dir, len * 0.45, e1, e2, { n: 900, from: 0xfff2dc, to: 0x9fc0f0, curve: 0.10, gain: 0.6 });               // white-hot inner spine, hugs the nucleus
-      var streamB = jetStream(back, len * 0.3, e1, e2, { n: 500, from: 0xf2e8da, to: 0x8aa8dd, curve: -0.12, gain: 0.38 });             // fainter counter-spine
+      var lobeA = jetLobe(dir, len, e1, e2, { color: 0xd08744, tip: 0xa5642e, count: 20, flare: 0.24, curve: 0.16, op: 0.5 });         // warm orange turbulent plume
+      var lobeB = jetLobe(back, len * 0.9, e1, e2, { color: 0x8fb2e8, tip: 0x6f92d4, count: 18, flare: 0.28, curve: -0.18, op: 0.4 }); // pale blue end-bubble, bent the other way
+      var streamA = jetStream(dir, len * 0.45, e1, e2, { n: 900, from: 0xfff2dc, to: 0x9fc0f0, curve: 0.07, gain: 0.6 });               // white-hot spine ON the lobe centreline (curve scaled to its shorter length)
+      var streamB = jetStream(back, len * 0.3, e1, e2, { n: 500, from: 0xf2e8da, to: 0x8aa8dd, curve: -0.06, gain: 0.38 });             // fainter counter-spine, ditto
       var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xfff6e6, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
       core.scale.set(len * 0.12, len * 0.12, 1);
       grp.add(lobeA); grp.add(lobeB); grp.add(streamA); grp.add(streamB); grp.add(core);
       grp.userData.update = function (t) {
         streamA.material.uniforms.uTime.value = t; streamB.material.uniforms.uTime.value = t;
         var pa = lobeA.userData.parts, pb = lobeB.userData.parts, i;
-        for (i = 0; i < pa.length; i++) pa[i].m.opacity = pa[i].op * (0.82 + 0.18 * Math.sin(t * 0.5 + pa[i].ph));  // clouds slowly churn
-        for (i = 0; i < pb.length; i++) pb[i].m.opacity = pb[i].op * (0.82 + 0.18 * Math.sin(t * 0.45 + pb[i].ph));
+        for (i = 0; i < pa.length; i++) { pa[i].m.opacity = pa[i].op * (0.82 + 0.18 * Math.sin(t * 0.5 + pa[i].ph)); pa[i].m.rotation = pa[i].rot + 0.06 * Math.sin(t * 0.22 + pa[i].ph); }  // clouds slowly churn + swirl
+        for (i = 0; i < pb.length; i++) { pb[i].m.opacity = pb[i].op * (0.82 + 0.18 * Math.sin(t * 0.45 + pb[i].ph)); pb[i].m.rotation = pb[i].rot + 0.06 * Math.sin(t * 0.2 + pb[i].ph); }
       };
       return grp;
     }
