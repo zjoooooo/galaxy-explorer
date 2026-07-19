@@ -688,6 +688,7 @@
     for (var i = 0; i < DEFS.length; i++) {
       var d = DEFS[i], el = document.createElement('div');
       el.className = 'beacon' + (d.cls ? ' ' + d.cls : '');
+      el.style.display = 'none'; // hidden until first positioned — unpositioned beacons otherwise stack clickable at the page's top-left
       el.innerHTML = '<div class="b-mark"><span class="b-ring"></span><span class="b-ring r2"></span><span class="b-dot"></span></div><div class="b-label"></div>';
       host.appendChild(el);
       (function (idx) { el.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(idx); }); })(i);
@@ -792,6 +793,7 @@
     CHILDREN.forEach(function (c) {
       var el = document.createElement('div');
       el.className = 'beacon child';
+      el.style.display = 'none'; // hidden until first positioned — see the DEFS loop note
       el.innerHTML = '<div class="b-mark"><span class="b-ring"></span><span class="b-ring r2"></span><span class="b-dot"></span></div><div class="b-label"></div>';
       host.appendChild(el);
       var idx = BEACONS.length;
@@ -911,7 +913,7 @@
     for (var i = 0; i < BEACONS.length; i++) {
       var b = BEACONS[i];
       if (b.child) {
-        if (!b.parentPts || (b.lod && b.lod.dst > b.lod.refDist * 1.6)) { if (b.shown) { b.el.style.display = 'none'; b.shown = false; } continue; } // markers only near the galaxy (fly-in lands at refDist) — no blue-white dots on distant galaxies
+        if (!b.parentPts || (b.lod && b.lod.dst > b.lod.refDist * 1.6)) { b.el.style.display = 'none'; b.shown = false; continue; } // markers only near the galaxy (fly-in lands at refDist); unconditional hide — a never-shown element must not linger visible
         beaconTmp.copy(b.lp).applyMatrix4(b.parentPts.matrixWorld); // ride the parent galaxy's transform (co-rotates)
       } else {
         beaconTmp.copy(b.p); if (!b.fixed) beaconTmp.applyMatrix4(galaxyRoot.matrixWorld); // external galaxies stay put on the far sky, not co-rotating with the disc
