@@ -350,26 +350,55 @@
       ok(typeof clearSolarCard === 'function', 'clearSolarCard missing');
       ok(typeof enterSolarSky === 'function', 'enterSolarSky missing');
       ok(typeof stepSolarFlight === 'function', 'stepSolarFlight missing');
+      ok(typeof solarActiveProxies === 'function', 'solarActiveProxies missing');
       var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldFlight = solarFlight, oldPaused = solarPaused, oldCardOpen = solarCardOpen;
       var oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
       var oldElapsed = solarElapsed, oldShader = solarShaderTime, oldBelt = solarAsteroidBelt && solarAsteroidBelt.rotation.y, oldGalaxyView = savedGalaxyView;
       var oldControls = { enabled: solarControls.enabled, minDistance: solarControls.minDistance, maxDistance: solarControls.maxDistance, frameLast: solarFrameLast, perfLast: perfLast };
+      var oldObjects = {}, oldLabelButtons = solarLabelButtons, oldLabels = {}, oldGlowScale = solarGlowSprite && solarGlowSprite.scale.clone();
+      SOLAR_BODIES.forEach(function (body) {
+        var object = SOLAR_OBJECTS[body.id], label = solarLabelButtons[body.id];
+        oldObjects[body.id] = { lodVisible: object.lodGroup.visible, orbitVisible: object.orbitLine.visible, proxyVisible: object.hitProxy.visible,
+          proxyActive: object.hitProxy.userData.solarActive, proxyScale: object.hitProxy.scale.clone(), position: object.positionNode.position.clone(), spin: object.spinNode.rotation.y };
+        oldLabels[body.id] = label ? { text: label.textContent, aria: label.getAttribute('aria-label'), display: label.style.display, left: label.style.left, top: label.style.top, selected: label.classList.contains('sel') } : null;
+      });
       try {
         if (viewMode !== 'solar') enterSolar();
+        updateSolarLabels();
+        ok(Object.keys(solarLabelButtons).length === SOLAR_BODIES.length, 'not every solar body received a label');
+        SOLAR_BODIES.forEach(function (body) {
+          var text = (body.info[beaconLang] || body.info.en).name;
+          ok(solarLabelButtons[body.id].textContent === text, body.id + ' label is not localized');
+          ok(solarLabelButtons[body.id].getAttribute('aria-label') === text, body.id + ' label aria name is not localized');
+        });
+        var overviewProxies = solarActiveProxies();
+        ok(overviewProxies.length && overviewProxies.every(function (proxy) { return proxy.visible && proxy.userData.solarActive && !SOLAR_BY_ID[proxy.userData.solarId].parent; }), 'overview raycast includes an inactive proxy');
+        var earthObject = SOLAR_OBJECTS.earth, earthPoint = new THREE.Vector3(); earthObject.mesh.getWorldPosition(earthPoint);
+        var expectedProxyRadius = 2 * Math.tan(solarCamera.fov * Math.PI / 360) * solarCamera.position.distanceTo(earthPoint) / window.innerHeight * 16;
+        ok(solarHitRadius(earthObject, earthPoint) >= expectedProxyRadius, 'Earth proxy is smaller than a 32 CSS-pixel target');
+        ok(earthObject.hitProxy.scale.x >= expectedProxyRadius, 'Earth hit proxy did not receive its touch size');
         focusSolarBody('earth'); stepSolarFlight(Infinity);
-        ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1, 'Earth focus did not retain overview');
+        ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1 && solarPaused, 'Earth focus did not retain overview or pause motion');
+        ok(solarActiveProxies().every(function (proxy) { var body = SOLAR_BY_ID[proxy.userData.solarId]; return body.id === 'earth' || body.parent === 'earth'; }), 'Earth focus raycast escaped its local system');
         focusSolarBody('moon'); stepSolarFlight(Infinity);
-        ok(solarNav.selectedId === 'moon' && solarNav.parentId === 'earth' && solarNav.cameraStack.length === 2, 'Moon focus did not retain Earth');
+        ok(solarNav.selectedId === 'moon' && solarNav.parentId === 'earth' && solarNav.cameraStack.length === 2 && solarPaused, 'Moon focus did not retain Earth or pause motion');
         leaveSolarLevel();
-        ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1, 'Back did not restore Earth focus');
+        ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1 && solarPaused, 'Back did not restore Earth focus or retain pause');
         leaveSolarLevel();
-        ok(solarNav.level === 'overview' && solarNav.selectedId === null && solarNav.cameraStack.length === 0, 'Back did not restore overview');
+        ok(solarNav.level === 'overview' && solarNav.selectedId === null && solarNav.cameraStack.length === 0 && !solarPaused, 'Back did not restore overview or resume motion');
+        var resumedElapsed = solarElapsed; updateSolarMotion(0.05); ok(solarElapsed > resumedElapsed, 'overview motion did not resume');
         focusSolarBody('earth'); stepSolarFlight(Infinity);
         ok(enterSolarSky(), 'Earth sky transition did not start');
         leaveSolarLevel();
         ok(solarNav.selectedId === 'earth' && solarNav.parentId === null, 'Sky return did not retain Earth focus');
+        focusSolarBody('earth'); stepSolarFlight(Infinity);
+        var focusDepth = solarNav.cameraStack.length;
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        ok(!solarCardOpen && solarNav.selectedId === 'earth' && solarNav.cameraStack.length === focusDepth, 'Escape did not close only the solar card');
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        ok(solarNav.level === 'overview' && solarNav.cameraStack.length === 0, 'second Escape did not leave one solar level');
         clearSolarCard();
-        ok(solarNav.selectedId === 'earth', 'Closing a card changed focus');
+        ok(solarNav.selectedId === null, 'closing a card changed the restored focus');
       } finally {
         if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
         solarNav = oldNav; solarFlight = oldFlight; solarPaused = oldPaused; solarCardOpen = oldCardOpen; savedGalaxyView = oldGalaxyView;
@@ -377,7 +406,20 @@
         solarControls.enabled = oldControls.enabled; solarControls.minDistance = oldControls.minDistance; solarControls.maxDistance = oldControls.maxDistance;
         solarElapsed = oldElapsed; solarShaderTime = oldShader; solarCoronaMaterial.uniforms.uTime.value = oldShader;
         if (solarAsteroidBelt) solarAsteroidBelt.rotation.y = oldBelt;
-        solarFrameLast = oldControls.frameLast; perfLast = oldControls.perfLast; viewMode = oldView; updateSolarVisibility();
+        if (solarGlowSprite && oldGlowScale) solarGlowSprite.scale.copy(oldGlowScale);
+        solarFrameLast = oldControls.frameLast; perfLast = oldControls.perfLast; viewMode = oldView;
+        SOLAR_BODIES.forEach(function (body) {
+          var object = SOLAR_OBJECTS[body.id], oldObject = oldObjects[body.id];
+          object.lodGroup.visible = oldObject.lodVisible; object.orbitLine.visible = oldObject.orbitVisible; object.hitProxy.visible = oldObject.proxyVisible;
+          object.hitProxy.userData.solarActive = oldObject.proxyActive; object.hitProxy.scale.copy(oldObject.proxyScale); object.positionNode.position.copy(oldObject.position); object.spinNode.rotation.y = oldObject.spin;
+          var oldLabel = oldLabels[body.id], label = solarLabelButtons[body.id];
+          if (oldLabel && label) {
+            label.textContent = oldLabel.text; label.setAttribute('aria-label', oldLabel.aria); label.style.display = oldLabel.display; label.style.left = oldLabel.left; label.style.top = oldLabel.top; label.classList.toggle('sel', oldLabel.selected);
+          } else if (label) {
+            solarLabelButtons[body.id].parentNode.removeChild(solarLabelButtons[body.id]); delete solarLabelButtons[body.id];
+          }
+        });
+        solarLabelButtons = oldLabelButtons;
       }
     });
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
@@ -1550,8 +1592,8 @@
   }
   function solarLabelText(body) {
     var L = typeof beaconLang === 'string' ? beaconLang : 'en';
-    if (!body.copy[L]) L = 'en';
-    return body.copy[L][0];
+    if (!body.info[L]) L = 'en';
+    return body.info[L].name;
   }
   function solarLabelFor(body) {
     var label = solarLabelButtons[body.id];
@@ -1649,6 +1691,10 @@
     return true;
   }
   function selectSolarBody(id) { return focusSolarBody(id); }
+  function solarActiveProxies() {
+    return SOLAR_BODIES.map(function (body) { return SOLAR_OBJECTS[body.id].hitProxy; })
+      .filter(function (proxy) { return proxy.visible && proxy.userData.solarActive; });
+  }
   function leaveSolarLevel() {
     settleSolarFlight(performance.now());
     if (solarNav.level === 'sky' && solarNav.skySnapshot) {
@@ -1656,7 +1702,9 @@
     }
     var snapshot = solarNav.cameraStack.pop();
     if (!snapshot) return false;
-    setSolarNavigation(snapshot); return true;
+    setSolarNavigation(snapshot);
+    if (solarNav.level === 'overview') setSolarPaused(false);
+    return true;
   }
   function resetSolarNavigation() {
     solarFlight = null; solarCardOpen = false;
@@ -1681,7 +1729,7 @@
     solarPointer.down = false; if (solarPointer.moved) return;
     var point = solarPointerPosition(e); if (!point.width || !point.height) return;
     solarRaycaster.setFromCamera({ x: point.x / point.width * 2 - 1, y: -(point.y / point.height) * 2 + 1 }, solarCamera);
-    var proxies = SOLAR_BODIES.map(function (body) { return SOLAR_OBJECTS[body.id].hitProxy; }).filter(function (proxy) { return proxy.visible && proxy.userData.solarActive; });
+    var proxies = solarActiveProxies();
     solarRoot.updateMatrixWorld(true);
     var hits = solarRaycaster.intersectObjects(proxies, false);
     if (hits.length) selectSolarBody(hits[0].object.userData.solarId);
@@ -1725,6 +1773,7 @@
   solarBackEl.addEventListener('click', function () { if (!leaveSolarLevel()) exitSolar(); });
   window.addEventListener('keydown', function (e) {
     if ((e.key || '').toLowerCase() !== 'escape' || viewMode !== 'solar') return;
+    if (solarCardOpen) { clearSolarCard(); e.stopImmediatePropagation(); return; }
     if (!leaveSolarLevel()) exitSolar();
     e.stopImmediatePropagation();
   });
