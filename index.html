@@ -486,6 +486,35 @@
         viewMode = oldView;
       }
     });
+    check('solar-performance-regression', function () {
+      var oldStage = solarPerf.stage, oldEpoch = solarPerf.epoch, oldActive = solarLOD.active2, oldFades = solarLOD.fades.slice(), oldCache = solarLOD.cache, oldPending = solarLOD.pending;
+      var oldBelt = solarAsteroidBelt.geometry.drawRange.count, oldBackdrop = solarBackdrop.geometry.drawRange.count, oldLabels = solarPerf.labelEvery, oldWatch = [solarPerfEMA, solarPerfLast, solarPerfNextCheck];
+      var oldNav = { selectedId: solarNav.selectedId, level: solarNav.level, parentId: solarNav.parentId }, oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
+      var objects = {};
+      SOLAR_BODIES.forEach(function (body) { var o = SOLAR_OBJECTS[body.id]; objects[body.id] = { epoch: o.lodEpoch, perfEpoch: o.lodPerfEpoch, target: o.lodTarget, request: o.lodRequest, fade: o.lodFade, tier: o.lodTier, meshes: o.lodMeshes.map(function (m) { return [m.visible, m.material.opacity, m.material.depthWrite]; }), special: Object.keys(o.specialty).map(function (k) { var m = o.specialty[k]; return [k, m.visible, m.material && m.material.opacity]; }) }; });
+      try {
+        if (viewMode !== 'solar') enterSolar();
+        solarNav.selectedId = 'earth'; solarNav.level = 'focus'; solarNav.parentId = null; updateSolarVisibility();
+        var earth = SOLAR_OBJECTS.earth, point = new THREE.Vector3(); earth.mesh.getWorldPosition(point);
+        solarCamera.position.copy(point).add(new THREE.Vector3(0, earth.radius * 8, earth.radius * 14)); solarControls.target.copy(solarFrameSelectedBody(point, earth.radius)); solarControls.update();
+        point.project(solarCamera); var sx = (point.x * .5 + .5) * window.innerWidth, sy = (-point.y * .5 + .5) * window.innerHeight, drawerTop = window.innerHeight * .48;
+        ok(point.z >= -1 && point.z <= 1 && sx >= 0 && sx <= window.innerWidth && sy >= 0 && sy < drawerTop, 'Earth is not framed in the visible compact viewport');
+        applySolarPerformanceTier(0); var base = [solarAsteroidBelt.geometry.drawRange.count, solarBackdrop.geometry.drawRange.count, solarPerf.labelEvery, solarLOD.textureCeiling, solarPerf.specialty];
+        applySolarPerformanceTier(1); ok(solarAsteroidBelt.geometry.drawRange.count < base[0] && solarBackdrop.geometry.drawRange.count === base[1] && solarPerf.labelEvery === base[2], 'stage 1 changed more than asteroid range');
+        applySolarPerformanceTier(2); ok(solarBackdrop.geometry.drawRange.count < base[1] && solarPerf.labelEvery === base[2], 'stage 2 did not add only backdrop degradation');
+        applySolarPerformanceTier(3); ok(solarPerf.labelEvery > base[2], 'stage 3 did not add label cadence');
+        applySolarPerformanceTier(4); ok(solarLOD.textureCeiling === 2048, 'stage 4 did not add nonselected texture ceiling');
+        applySolarPerformanceTier(5); ok(!solarPerf.specialty, 'stage 5 did not add specialty reduction');
+        var epoch = solarPerf.epoch; applySolarPerformanceTier(5); ok(solarPerf.epoch === epoch, 'repeated stage call was not idempotent');
+        applySolarPerformanceTier(0); ok(solarAsteroidBelt.geometry.drawRange.count === base[0] && solarBackdrop.geometry.drawRange.count === base[1] && solarPerf.labelEvery === base[2] && solarPerf.specialty === base[4], 'stage recovery did not restore fields');
+        resetSolarPerformanceWatchdog(0); solarPerfEMA = 45; solarPerfNextCheck = 0; sampleSolarPerformance(1); ok(solarPerf.stage === 1 && solarPerfNextCheck === 10001, 'watchdog did not make the first 0-to-1 transition and reschedule');
+        solarLOD.active2 = 'earth'; earth.lodEpoch = 9; earth.lodPerfEpoch = solarPerf.epoch; earth.lodTarget = 2; var stale = solarPerf.epoch; solarPerf.epoch++; ok(!solarLODRequestCurrent(earth, 9, 'earth', 2, stale), 'stale delayed LOD request remained current');
+      } finally {
+        solarPerf.stage = oldStage; solarPerf.epoch = oldEpoch; solarLOD.active2 = oldActive; solarLOD.fades = oldFades; solarLOD.cache = oldCache; solarLOD.pending = oldPending; solarAsteroidBelt.geometry.setDrawRange(0, oldBelt); solarBackdrop.geometry.setDrawRange(0, oldBackdrop); solarPerf.labelEvery = oldLabels; solarPerfEMA = oldWatch[0]; solarPerfLast = oldWatch[1]; solarPerfNextCheck = oldWatch[2];
+        solarNav.selectedId = oldNav.selectedId; solarNav.level = oldNav.level; solarNav.parentId = oldNav.parentId; solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
+        SOLAR_BODIES.forEach(function (body) { var o = SOLAR_OBJECTS[body.id], s = objects[body.id]; o.lodEpoch = s.epoch; o.lodPerfEpoch = s.perfEpoch; o.lodTarget = s.target; o.lodRequest = s.request; o.lodFade = s.fade; o.lodTier = s.tier; o.lodMeshes.forEach(function (m, i) { m.visible = s.meshes[i][0]; m.material.opacity = s.meshes[i][1]; m.material.depthWrite = s.meshes[i][2]; }); s.special.forEach(function (x) { var m = o.specialty[x[0]]; m.visible = x[1]; if (m.material) m.material.opacity = x[2]; }); });
+      }
+    });
     check('solar-runtime-objects', function () {
       ok(typeof buildSolarBodies === 'function', 'buildSolarBodies missing');
       ok(SOLAR_OBJECTS && Object.keys(SOLAR_OBJECTS).length === SOLAR_BODIES.length, 'runtime body count is wrong');
@@ -1812,7 +1841,7 @@
     else if (solarLOD.active2 === id) { solarDemoteLOD2(object); solarLOD.active2 = null; }
     if (object.lodTarget === tier && object.lodTier === tier && !object.lodRequest) return object;
     if (object.lodTarget === tier && object.lodRequest) return object.lodRequest;
-    object.lodEpoch++; object.lodTarget = tier; var epoch = object.lodEpoch, perfEpoch = solarPerf.epoch;
+    object.lodEpoch++; object.lodTarget = tier; var epoch = object.lodEpoch, perfEpoch = solarPerf.epoch; object.lodPerfEpoch = perfEpoch;
     if (tier === 0) { object.lodRequest = null; solarSwapTier(object, 0); return object; }
     object.lodRequest = loadSolarMaps(id, tier).then(function (maps) {
       if (!solarLODRequestCurrent(object, epoch, id, tier, perfEpoch)) return object;
@@ -1913,7 +1942,7 @@
       var hitProxy = new THREE.Mesh(solarSphereLow, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
       hitProxy.scale.set(radius * 1.6, radius * 1.6, radius * 1.6); hitProxy.userData.solarId = body.id; lodGroup.add(hitProxy);
       var orbitLine = orbitPivot.children[0];
-      SOLAR_OBJECTS[body.id] = { body: body, orbitPivot: orbitPivot, positionNode: positionNode, tiltNode: tiltNode, spinNode: spinNode, lodGroup: lodGroup, hitProxy: hitProxy, orbitLine: orbitLine, mesh: mesh, lodMeshes: [mesh, lod1, lod2], lodTier: 0, lodTarget: 0, lodRequest: null, lodFade: null, lodEpoch: 0, lodFailed2: false, lodPoint: new THREE.Vector3(), specialty: {}, radius: radius, compressedPeriod: solarCompressedPeriod(body) };
+      SOLAR_OBJECTS[body.id] = { body: body, orbitPivot: orbitPivot, positionNode: positionNode, tiltNode: tiltNode, spinNode: spinNode, lodGroup: lodGroup, hitProxy: hitProxy, orbitLine: orbitLine, mesh: mesh, lodMeshes: [mesh, lod1, lod2], lodTier: 0, lodTarget: 0, lodRequest: null, lodFade: null, lodEpoch: 0, lodPerfEpoch: 0, lodFailed2: false, lodPoint: new THREE.Vector3(), specialty: {}, radius: radius, compressedPeriod: solarCompressedPeriod(body) };
       var object = SOLAR_OBJECTS[body.id];
       if (body.id === 'sun') {
         var corona = new THREE.Mesh(solarSphereMedium, solarCoronaMaterial); corona.scale.set(radius * 1.42, radius * 1.42, radius * 1.42); corona.userData.solarId = body.id; lodGroup.add(corona);
