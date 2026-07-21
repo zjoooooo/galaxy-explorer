@@ -541,15 +541,20 @@
       ok(typeof applySolarLOD === 'function', 'applySolarLOD missing');
       ok(typeof updateSolarLOD === 'function', 'updateSolarLOD missing');
       var oldActive2 = solarLOD.active2, oldQuality = solarLOD.quality, oldMobile = solarLOD.mobile, oldCache = solarLOD.cache, oldPending = solarLOD.pending, oldRequests = solarLOD.requests, oldWarned = solarLOD.warned, oldLoader = solarLOD.textureLoader, oldEarthFailed2 = SOLAR_OBJECTS.earth.lodFailed2;
+      var oldSelectedId = solarNav.selectedId, oldEarthVisible = SOLAR_OBJECTS.earth.lodGroup.visible, oldMarsVisible = SOLAR_OBJECTS.mars.lodGroup.visible, oldEarthTier = SOLAR_OBJECTS.earth.lodTier, oldEarthTarget = SOLAR_OBJECTS.earth.lodTarget, oldMarsTier = SOLAR_OBJECTS.mars.lodTier, oldEarthEpoch = SOLAR_OBJECTS.earth.lodEpoch;
+      var oldFades = solarLOD.fades.slice(), oldMeshes = {}, oldEarthSpecial = {};
+      SOLAR_BODIES.forEach(function (body) { oldMeshes[body.id] = SOLAR_OBJECTS[body.id].lodMeshes.map(function (mesh) { return { visible: mesh.visible, opacity: mesh.material.opacity, transparent: mesh.material.transparent, depthWrite: mesh.material.depthWrite, uniformOpacity: mesh.material.uniforms && mesh.material.uniforms.uOpacity ? mesh.material.uniforms.uOpacity.value : null }; }); });
+      Object.keys(SOLAR_OBJECTS.earth.specialty).forEach(function (key) { var layer = SOLAR_OBJECTS.earth.specialty[key]; oldEarthSpecial[key] = { visible: layer.visible, opacity: layer.material && layer.material.opacity, transparent: layer.material && layer.material.transparent, depthWrite: layer.material && layer.material.depthWrite, uniformOpacity: layer.material && layer.material.uniforms && layer.material.uniforms.uOpacity ? layer.material.uniforms.uOpacity.value : null }; });
       try {
         solarLOD.cache = {}; solarLOD.pending = {}; solarLOD.requests = {}; solarLOD.warned = {}; solarLOD.quality = 2; solarLOD.mobile = false; solarLOD.active2 = null;
         ok(solarTextureQuality() === (renderer.capabilities.maxTextureSize >= 4096 && perfScale >= 0.5 ? 2 : 1), 'desktop capability ceiling selected the wrong texture tier');
+        solarNav.selectedId = 'earth'; SOLAR_OBJECTS.earth.lodGroup.visible = true; SOLAR_OBJECTS.mars.lodGroup.visible = true;
         ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 42) === 2, 'desktop close Earth did not select LOD 2');
         ok(chooseSolarLOD('mars', SOLAR_OBJECTS.mars.radius * 42) === 1, 'only one body may select LOD 2');
-        solarLOD.active2 = 'earth';
+        solarLOD.active2 = 'earth'; SOLAR_OBJECTS.earth.lodTier = 2; SOLAR_OBJECTS.earth.lodTarget = 2;
         ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 55) === 2, 'LOD 2 left inside hysteresis band');
         ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 78) === 1, 'LOD 2 did not leave outside hysteresis band');
-        ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 145) === 0, 'far body did not select LOD 0');
+        ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 152) === 0, 'far body did not select LOD 0');
         solarLOD.active2 = null; solarLOD.mobile = true;
         ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 42) === 1, 'mobile ceiling allowed LOD 2');
         var calls = 0;
@@ -558,12 +563,33 @@
         ok(first === second, 'map load was not deduplicated');
         ok(calls === 1, 'failed map was retried continuously');
         ok(solarLOD.cache[SOLAR_BY_ID.earth.maps.albedo] === null, 'failed map did not cache a null fallback');
-        ok(solarFallbackTier(2, { albedo: null }) === 1, 'rejected LOD 2 map did not fall back to LOD 1');
+        ok(solarTierHasFailure('earth', 2, { albedo: {}, clouds: null, night: {} }), 'rejected non-albedo LOD 2 map was accepted');
         solarLOD.mobile = false; solarLOD.active2 = null; SOLAR_OBJECTS.earth.lodFailed2 = true;
         ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 42) === 1, 'failed close tier was selected again');
+        SOLAR_OBJECTS.earth.lodFailed2 = false; solarNav.selectedId = 'mars';
+        ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 4) !== 2, 'unselected close body owned LOD 2');
+        SOLAR_OBJECTS.mars.lodGroup.visible = false;
+        ok(chooseSolarLOD('mars', SOLAR_OBJECTS.mars.radius * 4) === 0, 'hidden selected body owned LOD 2');
+        SOLAR_OBJECTS.mars.lodGroup.visible = true; SOLAR_OBJECTS.earth.lodTier = 0;
+        ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 110) === 1, 'LOD 1 did not enter at its near threshold');
+        SOLAR_OBJECTS.earth.lodTier = 1;
+        ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 135) === 1 && chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 152) === 0, 'LOD 0/1 hysteresis is missing');
+        SOLAR_OBJECTS.earth.lodEpoch = 8; SOLAR_OBJECTS.earth.lodTarget = 2; solarNav.selectedId = 'mars';
+        ok(!solarLODRequestCurrent(SOLAR_OBJECTS.earth, 8, 'earth', 2), 'stale selection request remained current');
+        solarNav.selectedId = 'earth'; SOLAR_OBJECTS.earth.lodTier = 0; SOLAR_OBJECTS.earth.lodTarget = 0;
+        SOLAR_BODIES.forEach(function (body) { SOLAR_OBJECTS[body.id].lodMeshes[2].visible = false; });
+        solarSwapTier(SOLAR_OBJECTS.earth, 1); var firstFade = SOLAR_OBJECTS.earth.lodFade;
+        ok(firstFade && !firstFade.oldMesh.material.depthWrite && !firstFade.newMesh.material.depthWrite, 'cross-fade surfaces can depth-occlude each other');
+        solarSwapTier(SOLAR_OBJECTS.earth, 2);
+        ok(solarLOD.fades.filter(function (fade) { return fade.object === SOLAR_OBJECTS.earth; }).length === 1 && solarRenderedLOD2Count() === 1, 'interrupted fade left multiple tier-2 meshes rendered');
+        updateSolarLODFades(0.3);
+        ok(!SOLAR_OBJECTS.earth.lodFade && SOLAR_OBJECTS.sun.lodMeshes[2].material.uniforms.uOpacity, 'fade completion or Sun shader opacity is missing');
       } finally {
         solarLOD.active2 = oldActive2; solarLOD.quality = oldQuality; solarLOD.mobile = oldMobile; solarLOD.cache = oldCache; solarLOD.pending = oldPending; solarLOD.requests = oldRequests; solarLOD.warned = oldWarned; solarLOD.textureLoader = oldLoader;
-        SOLAR_OBJECTS.earth.lodFailed2 = oldEarthFailed2;
+        SOLAR_OBJECTS.earth.lodFailed2 = oldEarthFailed2; solarNav.selectedId = oldSelectedId; SOLAR_OBJECTS.earth.lodGroup.visible = oldEarthVisible; SOLAR_OBJECTS.mars.lodGroup.visible = oldMarsVisible; SOLAR_OBJECTS.earth.lodTier = oldEarthTier; SOLAR_OBJECTS.mars.lodTier = oldMarsTier; SOLAR_OBJECTS.earth.lodEpoch = oldEarthEpoch; SOLAR_OBJECTS.earth.lodTarget = oldEarthTarget;
+        solarLOD.fades = oldFades;
+        SOLAR_BODIES.forEach(function (body) { SOLAR_OBJECTS[body.id].lodMeshes.forEach(function (mesh, tier) { var oldMesh = oldMeshes[body.id][tier]; mesh.visible = oldMesh.visible; mesh.material.opacity = oldMesh.opacity; mesh.material.transparent = oldMesh.transparent; mesh.material.depthWrite = oldMesh.depthWrite; if (mesh.material.uniforms && mesh.material.uniforms.uOpacity && oldMesh.uniformOpacity != null) mesh.material.uniforms.uOpacity.value = oldMesh.uniformOpacity; }); });
+        Object.keys(oldEarthSpecial).forEach(function (key) { var layer = SOLAR_OBJECTS.earth.specialty[key], oldLayer = oldEarthSpecial[key]; layer.visible = oldLayer.visible; if (layer.material) { layer.material.opacity = oldLayer.opacity; layer.material.transparent = oldLayer.transparent; layer.material.depthWrite = oldLayer.depthWrite; if (layer.material.uniforms && layer.material.uniforms.uOpacity && oldLayer.uniformOpacity != null) layer.material.uniforms.uOpacity.value = oldLayer.uniformOpacity; } });
       }
     });
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
@@ -1317,22 +1343,22 @@
     solarBody({ id: 'sun', parent: null, kind: 'star', radiusKm: 695700, distanceAu: 0, periodDays: 0, rotationHours: 609.12, inclinationDeg: 7.25, eccentricity: 0, phase: 0, tiltDeg: 7.25, color: '#ffd36b', maps: { albedo: 'images/solar-system/sun.jpg' },
       distance: 'Centre of the Solar System', diameter: '1,391,400 km', orbit: 'Galactic orbit: ~230 million years', rotation: '25–35 days (differential)', temperature: '5,500 °C photosphere; ~15 million °C core', moons: '8 planets; 5 dwarf planets', gravity: '274 m/s²', feature: 'Contains 99.86% of Solar System mass', catalog: 'Sol / G2V',
       copy: { en: ['Sun', 'Star', 'The Sun is the G-type star whose light and gravity define our home system.'], hans: ['太阳', '恒星', '太阳是一颗 G 型恒星；它的光和引力塑造了我们的家园星系。'], hant: ['太陽', '恆星', '太陽是一顆 G 型恆星；它的光和引力塑造了我們的家園星系。'], ja: ['太陽', '恒星', '太陽は、光と重力で私たちの太陽系を形づくる G 型星です。'], ko: ['태양', '항성', '태양은 빛과 중력으로 우리 태양계를 이루는 G형 항성입니다.'] } }),
-    solarBody({ id: 'mercury', parent: null, kind: 'planet', radiusKm: 2439.7, distanceAu: 0.387, periodDays: 87.969, rotationHours: 1407.6, inclinationDeg: 7.005, eccentricity: 0.2056, phase: 0.35, tiltDeg: 0.034, color: '#b9a38c', maps: { albedo: 'images/solar-system/mercury.jpg' },
+    solarBody({ id: 'mercury', parent: null, kind: 'planet', radiusKm: 2439.7, distanceAu: 0.387, periodDays: 87.969, rotationHours: 1407.6, inclinationDeg: 7.005, eccentricity: 0.2056, phase: 0.35, tiltDeg: 0.034, color: '#b9a38c', maps: { albedo: 'images/solar-system/mercury.jpg', bump: 'images/solar-system/mercury-bump.jpg' },
       distance: '0.387 AU from the Sun', diameter: '4,879 km', orbit: '87.969 days', rotation: '1,407.6 hours', temperature: '−173 to 427 °C', moons: '0', gravity: '3.7 m/s²', feature: 'Smallest and innermost planet', catalog: 'Mercury',
       copy: { en: ['Mercury', 'Terrestrial planet', 'Mercury is a cratered, airless world and the fastest planet around the Sun.'], hans: ['水星', '类地行星', '水星是布满陨坑、几乎没有大气的世界，也是绕太阳运行最快的行星。'], hant: ['水星', '類地行星', '水星是布滿隕坑、幾乎沒有大氣的世界，也是繞太陽運行最快的行星。'], ja: ['水星', '地球型惑星', '水星はクレーターに覆われた大気の薄い世界で、太陽を最も速く回ります。'], ko: ['수성', '지구형 행성', '수성은 충돌구가 많은 대기 없는 세계이며 태양을 가장 빠르게 공전합니다.'] } }),
     solarBody({ id: 'venus', parent: null, kind: 'planet', radiusKm: 6051.8, distanceAu: 0.723, periodDays: 224.701, rotationHours: -5832.5, inclinationDeg: 3.3947, eccentricity: 0.0068, phase: 1.05, tiltDeg: 177.36, color: '#e7c17b', maps: { albedo: 'images/solar-system/venus.jpg' },
       distance: '0.723 AU from the Sun', diameter: '12,104 km', orbit: '224.701 days', rotation: '−5,832.5 hours (retrograde)', temperature: '464 °C average', moons: '0', gravity: '8.87 m/s²', feature: 'Runaway greenhouse atmosphere', catalog: 'Venus',
       copy: { en: ['Venus', 'Terrestrial planet', 'Venus is Earth-sized but wrapped in a dense carbon-dioxide atmosphere and sulfuric-acid clouds.'], hans: ['金星', '类地行星', '金星与地球大小相近，却被浓厚的二氧化碳大气和硫酸云层包裹。'], hant: ['金星', '類地行星', '金星與地球大小相近，卻被濃厚的二氧化碳大氣和硫酸雲層包裹。'], ja: ['金星', '地球型惑星', '金星は地球に近い大きさですが、濃い二酸化炭素大気と硫酸の雲に包まれています。'], ko: ['금성', '지구형 행성', '금성은 지구와 비슷한 크기지만 짙은 이산화탄소 대기와 황산 구름에 싸여 있습니다.'] } }),
-    solarBody({ id: 'earth', parent: null, kind: 'planet', radiusKm: 6371, distanceAu: 1, periodDays: 365.256, rotationHours: 23.934, inclinationDeg: 0, eccentricity: 0.0167, phase: 2.15, tiltDeg: 23.44, color: '#5b93db', maps: { albedo: 'images/solar-system/earth.jpg', clouds: 'images/solar-system/earth-clouds.png', night: 'images/solar-system/earth-night.jpg' },
+    solarBody({ id: 'earth', parent: null, kind: 'planet', radiusKm: 6371, distanceAu: 1, periodDays: 365.256, rotationHours: 23.934, inclinationDeg: 0, eccentricity: 0.0167, phase: 2.15, tiltDeg: 23.44, color: '#5b93db', maps: { albedo: 'images/solar-system/earth.jpg', clouds: 'images/solar-system/earth-clouds.png', night: 'images/solar-system/earth-night.jpg', normal: 'images/solar-system/earth-normal.jpg' },
       distance: '1 AU from the Sun', diameter: '12,742 km', orbit: '365.256 days', rotation: '23.934 hours', temperature: '15 °C average', moons: '1', gravity: '9.81 m/s²', feature: 'Only known world with life', catalog: 'Earth / Terra',
       copy: { en: ['Earth', 'Terrestrial planet', 'Earth is an ocean world with a nitrogen–oxygen atmosphere and the only known biosphere.'], hans: ['地球', '类地行星', '地球是一颗拥有海洋和氮氧大气的行星，也是目前唯一已知存在生物圈的世界。'], hant: ['地球', '類地行星', '地球是一顆擁有海洋和氮氧大氣的行星，也是目前唯一已知存在生物圈的世界。'], ja: ['地球', '地球型惑星', '地球は海と窒素・酸素の大気をもち、知られている唯一の生物圏を育む惑星です。'], ko: ['지구', '지구형 행성', '지구는 바다와 질소·산소 대기를 지닌 행성으로 알려진 유일한 생물권을 품고 있습니다.'] } }),
-    solarBody({ id: 'moon', parent: 'earth', kind: 'moon', radiusKm: 1737.4, distanceAu: 0.00257, periodDays: 27.322, rotationHours: 655.7, inclinationDeg: 5.145, eccentricity: 0.0549, phase: 0.75, tiltDeg: 6.68, color: '#c9c5bd', maps: { albedo: 'images/solar-system/moon.jpg' },
+    solarBody({ id: 'moon', parent: 'earth', kind: 'moon', radiusKm: 1737.4, distanceAu: 0.00257, periodDays: 27.322, rotationHours: 655.7, inclinationDeg: 5.145, eccentricity: 0.0549, phase: 0.75, tiltDeg: 6.68, color: '#c9c5bd', maps: { albedo: 'images/solar-system/moon.jpg', normal: 'images/solar-system/moon-normal.jpg' },
       distance: '384,400 km from Earth', diameter: '3,475 km', orbit: '27.322 days', rotation: '655.7 hours (synchronous)', temperature: '−173 to 127 °C', moons: '0', gravity: '1.62 m/s²', feature: 'Tidally locked to Earth', catalog: 'Moon / Luna',
       copy: { en: ['Moon', 'Natural satellite', 'Earth’s Moon is a tidally locked rocky companion that stabilizes Earth’s axial wobble and drives tides.'], hans: ['月球', '天然卫星', '月球是与地球潮汐锁定的岩石伙伴，帮助稳定地轴摆动并引发潮汐。'], hant: ['月球', '天然衛星', '月球是與地球潮汐鎖定的岩石夥伴，幫助穩定地軸擺動並引發潮汐。'], ja: ['月', '衛星', '月は地球と潮汐固定された岩石の伴星で、地軸の揺れを安定させ潮汐を起こします。'], ko: ['달', '자연위성', '달은 지구와 조석 고정된 암석 동반천체로 지축의 흔들림을 안정시키고 조석을 만듭니다.'] } }),
-    solarBody({ id: 'mars', parent: null, kind: 'planet', radiusKm: 3389.5, distanceAu: 1.524, periodDays: 686.98, rotationHours: 24.623, inclinationDeg: 1.85, eccentricity: 0.0934, phase: 3.12, tiltDeg: 25.19, color: '#cf7550', maps: { albedo: 'images/solar-system/mars.jpg' },
+    solarBody({ id: 'mars', parent: null, kind: 'planet', radiusKm: 3389.5, distanceAu: 1.524, periodDays: 686.98, rotationHours: 24.623, inclinationDeg: 1.85, eccentricity: 0.0934, phase: 3.12, tiltDeg: 25.19, color: '#cf7550', maps: { albedo: 'images/solar-system/mars.jpg', normal: 'images/solar-system/mars-normal.jpg', bump: 'images/solar-system/mars-bump.jpg' },
       distance: '1.524 AU from the Sun', diameter: '6,780 km', orbit: '686.98 days', rotation: '24.623 hours', temperature: '−63 °C average', moons: '2', gravity: '3.71 m/s²', feature: 'Olympus Mons and Valles Marineris', catalog: 'Mars',
       copy: { en: ['Mars', 'Terrestrial planet', 'Mars is a cold desert world whose iron-rich dust gives it its distinctive red colour.'], hans: ['火星', '类地行星', '火星是一颗寒冷的沙漠世界，富含铁的尘土赋予它独特的红色。'], hant: ['火星', '類地行星', '火星是一顆寒冷的沙漠世界，富含鐵的塵土賦予它獨特的紅色。'], ja: ['火星', '地球型惑星', '火星は鉄分の多い塵によって赤く見える、寒冷な砂漠の世界です。'], ko: ['화성', '지구형 행성', '화성은 철이 풍부한 먼지 때문에 붉게 보이는 차가운 사막 세계입니다.'] } }),
-    solarBody({ id: 'ceres', parent: null, kind: 'dwarf-planet', radiusKm: 469.7, distanceAu: 2.7675, periodDays: 1681.63, rotationHours: 9.074, inclinationDeg: 10.594, eccentricity: 0.0758, phase: 0.55, tiltDeg: 4, color: '#aaa59d', maps: { albedo: 'images/solar-system/ceres.jpg' },
+    solarBody({ id: 'ceres', parent: null, kind: 'dwarf-planet', radiusKm: 469.7, distanceAu: 2.7675, periodDays: 1681.63, rotationHours: 9.074, inclinationDeg: 10.594, eccentricity: 0.0758, phase: 0.55, tiltDeg: 4, color: '#aaa59d', maps: { albedo: 'images/solar-system/ceres.jpg', bump: 'images/solar-system/ceres-bump.jpg' },
       distance: '2.77 AU from the Sun', diameter: '939 km', orbit: '1,681.63 days', rotation: '9.074 hours', temperature: '−105 °C average', moons: '0', gravity: '0.27 m/s²', feature: 'Largest object in the asteroid belt', catalog: '1 Ceres',
       copy: { en: ['Ceres', 'Dwarf planet', 'Ceres is the largest body in the asteroid belt and the only dwarf planet in the inner Solar System.'], hans: ['谷神星', '矮行星', '谷神星是小行星带中最大的天体，也是内太阳系唯一的矮行星。'], hant: ['穀神星', '矮行星', '穀神星是小行星帶中最大的天體，也是內太陽系唯一的矮行星。'], ja: ['ケレス', '準惑星', 'ケレスは小惑星帯で最大の天体で、内太陽系で唯一の準惑星です。'], ko: ['세레스', '왜행성', '세레스는 소행성대에서 가장 큰 천체이며 내태양계의 유일한 왜행성입니다.'] } }),
     solarBody({ id: 'jupiter', parent: null, kind: 'planet', radiusKm: 69911, distanceAu: 5.203, periodDays: 4332.59, rotationHours: 9.925, inclinationDeg: 1.304, eccentricity: 0.0489, phase: 4.04, tiltDeg: 3.13, color: '#d8ac7a', maps: { albedo: 'images/solar-system/jupiter.jpg' },
@@ -1365,7 +1391,7 @@
     solarBody({ id: 'triton', parent: 'neptune', kind: 'moon', radiusKm: 1353.4, distanceAu: 0.00237, periodDays: 5.877, rotationHours: -141.0, inclinationDeg: 156.865, eccentricity: 0.000, phase: 2.45, tiltDeg: 0, color: '#c7bfd0', maps: { albedo: 'images/solar-system/triton.jpg' },
       distance: '354,759 km from Neptune', diameter: '2,707 km', orbit: '5.877 days (retrograde)', rotation: '−141.0 hours (synchronous)', temperature: '−235 °C average', moons: '0', gravity: '0.78 m/s²', feature: 'Likely captured Kuiper Belt object', catalog: 'Neptune I / Triton',
       copy: { en: ['Triton', 'Natural satellite', 'Triton orbits Neptune backwards and is probably a captured object from the Kuiper Belt.'], hans: ['海卫一', '天然卫星', '海卫一以逆行轨道绕海王星运行，可能是从柯伊伯带捕获的天体。'], hant: ['海衛一', '天然衛星', '海衛一以逆行軌道繞海王星運行，可能是從古柏帶捕獲的天體。'], ja: ['トリトン', '衛星', 'トリトンは海王星を逆行し、カイパーベルトから捕獲された天体の可能性があります。'], ko: ['트리톤', '자연위성', '트리톤은 해왕성을 역행하며 카이퍼대에서 포획된 천체일 가능성이 높습니다.'] } }),
-    solarBody({ id: 'pluto', parent: null, kind: 'dwarf-planet', radiusKm: 1188.3, distanceAu: 39.482, periodDays: 90560, rotationHours: -153.3, inclinationDeg: 17.16, eccentricity: 0.2488, phase: 3.4, tiltDeg: 119.6, color: '#c8aa94', maps: { albedo: 'images/solar-system/pluto.jpg' },
+    solarBody({ id: 'pluto', parent: null, kind: 'dwarf-planet', radiusKm: 1188.3, distanceAu: 39.482, periodDays: 90560, rotationHours: -153.3, inclinationDeg: 17.16, eccentricity: 0.2488, phase: 3.4, tiltDeg: 119.6, color: '#c8aa94', maps: { albedo: 'images/solar-system/pluto.jpg', normal: 'images/solar-system/pluto-normal.jpg' },
       distance: '39.48 AU from the Sun', diameter: '2,377 km', orbit: '90,560 days', rotation: '−153.3 hours (retrograde)', temperature: '−229 °C average', moons: '5', gravity: '0.62 m/s²', feature: 'Heart-shaped Tombaugh Regio', catalog: '134340 Pluto',
       copy: { en: ['Pluto', 'Dwarf planet', 'Pluto is a Kuiper Belt dwarf planet with a nitrogen-ice plain shaped like a bright heart.'], hans: ['冥王星', '矮行星', '冥王星是柯伊伯带中的一颗矮行星，表面有心形的氮冰平原。'], hant: ['冥王星', '矮行星', '冥王星是古柏帶中的一顆矮行星，表面有心形的氮冰平原。'], ja: ['冥王星', '準惑星', '冥王星はカイパーベルトの準惑星で、明るいハート形の窒素氷平原があります。'], ko: ['명왕성', '왜행성', '명왕성은 카이퍼대의 왜행성으로 밝은 하트 모양 질소 얼음 평원이 있습니다.'] } })
   ];
@@ -1428,10 +1454,10 @@
     sun: new THREE.MeshBasicMaterial({ color: 0xffd36b })
   };
   var solarCoronaMaterial = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0xffbf57) } },
+    uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(0xffbf57) } },
     transparent: true, depthWrite: false, side: THREE.BackSide,
     vertexShader: 'varying vec3 vNormal; void main(){ vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'uniform float uTime; uniform vec3 uColor; varying vec3 vNormal; void main(){ float edge = pow(1.0 - abs(vNormal.z), 2.0); float pulse = 0.72 + sin(uTime * 1.7) * 0.12; gl_FragColor = vec4(uColor, edge * pulse * 0.24); }'
+    fragmentShader: 'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; varying vec3 vNormal; void main(){ float edge = pow(1.0 - abs(vNormal.z), 2.0); float pulse = 0.72 + sin(uTime * 1.7) * 0.12; gl_FragColor = vec4(uColor, edge * pulse * 0.24 * uOpacity); }'
   });
   var solarGlowSprite = null;
 
@@ -1444,9 +1470,10 @@
   }
   function solarSunNoiseMaterial() {
     var material = new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0xffd36b) } },
+      uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(0xffd36b) } },
+      transparent: true,
       vertexShader: 'varying vec3 vNormal; void main(){ vNormal = normal; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: 'uniform float uTime; uniform vec3 uColor; varying vec3 vNormal; void main(){ float noise = sin(vNormal.x * 18.0 + uTime * 0.7) * sin(vNormal.y * 21.0 - uTime * 0.4); gl_FragColor = vec4(uColor * (0.9 + noise * 0.14), 1.0); }'
+      fragmentShader: 'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; varying vec3 vNormal; void main(){ float noise = sin(vNormal.x * 18.0 + uTime * 0.7) * sin(vNormal.y * 21.0 - uTime * 0.4); gl_FragColor = vec4(uColor * (0.9 + noise * 0.14), uOpacity); }'
     });
     solarAnimatedMaterials.push(material);
     return material;
@@ -1456,6 +1483,7 @@
     material.onBeforeCompile = function (shader) {
       shader.uniforms.uSolarTime = { value: solarShaderTime };
       material.userData.solarShader = shader;
+      shader.vertexShader = 'uniform float uSolarTime;\n' + shader.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = vec3(position); transformed += normal * sin(position.y * 8.0 + uSolarTime * 0.16) * 0.018;');
       shader.fragmentShader = 'uniform float uSolarTime;\n' + shader.fragmentShader.replace('#include <output_fragment>', 'outgoingLight += sin(vViewPosition.y * 7.0 + uSolarTime * 0.16) * 0.018;\n#include <output_fragment>');
     };
     solarAnimatedMaterials.push(material);
@@ -1468,6 +1496,7 @@
   }
   function solarMapKeys(body, tier) {
     if (tier < 1 || !body.maps) return [];
+    if (body.id === 'sun') return [];
     return tier === 1 ? ['albedo'] : Object.keys(body.maps);
   }
   function solarMapURLs(body, tier) {
@@ -1480,17 +1509,21 @@
     var maxTexture = renderer && renderer.capabilities ? renderer.capabilities.maxTextureSize : 0;
     return maxTexture >= 4096 && perfScale >= 0.5 ? 2 : 1;
   }
+  function solarSelectedId() { return typeof solarNav !== 'undefined' ? solarNav.selectedId : null; }
+  function solarBaseTier(object, ratio) {
+    var threshold = object.lodTier === 0 && object.lodTarget === 0 ? 112 : 148;
+    return ratio < threshold ? 1 : 0;
+  }
+  function solarCanUseLOD2(id) {
+    var object = SOLAR_OBJECTS[id];
+    return !!(object && object.lodGroup.visible && !object.lodFailed2 && !solarLOD.mobile && solarLOD.quality >= 2 && solarSelectedId() === id);
+  }
   function chooseSolarLOD(id, distance) {
     var object = SOLAR_OBJECTS[id], radius = object && object.radius ? object.radius : 1, ratio = Math.max(0, distance) / radius;
-    if (!object || solarLOD.quality < 1 || ratio >= 128) return 0;
-    if (object.lodFailed2) return 1;
-    if (solarLOD.quality < 2 || solarLOD.mobile || (solarLOD.active2 && solarLOD.active2 !== id)) return 1;
-    if (solarLOD.active2 === id) {
-      if (ratio < 72) return 2;
-      solarLOD.active2 = null; return 1;
-    }
-    if (ratio < 48) { solarLOD.active2 = id; return 2; }
-    return 1;
+    if (!object || !object.lodGroup.visible || solarLOD.quality < 1) return 0;
+    var baseTier = solarBaseTier(object, ratio);
+    if (baseTier === 0 || !solarCanUseLOD2(id) || (solarLOD.active2 && solarLOD.active2 !== id)) return baseTier;
+    return ratio < (object.lodTier === 2 || object.lodTarget === 2 ? 72 : 48) ? 2 : 1;
   }
   function solarLoadTexture(url, albedo) {
     if (Object.prototype.hasOwnProperty.call(solarLOD.cache, url)) return Promise.resolve(solarLOD.cache[url]);
@@ -1530,7 +1563,12 @@
   }
   function solarSetMeshOpacity(mesh, opacity) {
     if (!mesh || !mesh.material) return;
-    mesh.material.transparent = opacity < 1; mesh.material.opacity = opacity; mesh.material.needsUpdate = true;
+    var material = mesh.material, state = material.userData.solarFadeState;
+    if (!state) state = material.userData.solarFadeState = { transparent: material.transparent, depthWrite: material.depthWrite, opacity: material.opacity };
+    var transparent = arguments[2] ? true : state.transparent, depthWrite = arguments[2] ? false : state.depthWrite;
+    if (material.transparent !== transparent || material.depthWrite !== depthWrite) { material.transparent = transparent; material.depthWrite = depthWrite; material.needsUpdate = true; }
+    if (material.opacity !== opacity) material.opacity = opacity;
+    if (material.uniforms && material.uniforms.uOpacity && material.uniforms.uOpacity.value !== opacity) material.uniforms.uOpacity.value = opacity;
   }
   function solarApplyMaps(object, tier, maps) {
     var material = object.lodMeshes[tier].material;
@@ -1543,40 +1581,76 @@
     if (object.specialty.night && maps.night) { object.specialty.night.material.map = maps.night; object.specialty.night.material.needsUpdate = true; }
     if (object.specialty.detailedRings && maps.ring) { object.specialty.detailedRings.material.map = maps.ring; object.specialty.detailedRings.material.needsUpdate = true; }
   }
-  function solarSetSpecialty(object, tier) {
+  function solarSetSpecialty(object, tier, opacity, fading) {
     var special = object.specialty;
-    Object.keys(special).forEach(function (key) { special[key].visible = false; });
-    if (object.body.id === 'sun') { if (special.corona) special.corona.visible = tier >= 1; if (special.noise) special.noise.visible = tier >= 2; if (special.glow) special.glow.visible = true; }
-    if (object.body.id === 'earth' && tier >= 2) ['clouds', 'ocean', 'night', 'atmosphere'].forEach(function (key) { if (special[key]) special[key].visible = true; });
-    if (object.body.id === 'saturn' && tier >= 2 && special.detailedRings) special.detailedRings.visible = true;
+    opacity = opacity == null ? 1 : opacity;
+    Object.keys(special).forEach(function (key) { if (key !== 'noise' && key !== 'glow') special[key].visible = false; });
+    var names = [];
+    if (object.body.id === 'sun') { if (tier >= 1) names.push('corona'); if (special.glow) special.glow.visible = true; }
+    if (object.body.id === 'earth' && tier >= 2) names = names.concat(['clouds', 'ocean', 'night', 'atmosphere']);
+    if (object.body.id === 'saturn' && tier >= 2) names.push('detailedRings');
+    names.forEach(function (key) { var layer = special[key]; if (layer) { layer.visible = true; solarSetMeshOpacity(layer, opacity, fading); } });
   }
   function solarFinishFade(fade) {
-    fade.oldMesh.visible = false; solarSetMeshOpacity(fade.oldMesh, 1);
-    fade.newMesh.visible = true; solarSetMeshOpacity(fade.newMesh, 1);
+    fade.oldMesh.visible = false; solarSetMeshOpacity(fade.oldMesh, 1, false);
+    fade.newMesh.visible = true; solarSetMeshOpacity(fade.newMesh, 1, false); solarSetSpecialty(fade.object, fade.tier, 1, false);
+  }
+  function solarCancelFade(object) {
+    var fade = object.lodFade; if (!fade) return;
+    var index = solarLOD.fades.indexOf(fade); if (index !== -1) solarLOD.fades.splice(index, 1);
+    solarFinishFade(fade); object.lodFade = null;
   }
   function solarSwapTier(object, tier) {
     var oldTier = object.lodTier, oldMesh = object.lodMeshes[oldTier], newMesh = object.lodMeshes[tier];
-    if (oldTier === tier) { newMesh.visible = true; solarSetSpecialty(object, tier); return; }
-    if (object.lodFade) solarFinishFade(object.lodFade);
-    newMesh.visible = true; solarSetMeshOpacity(newMesh, 0); solarSetMeshOpacity(oldMesh, 1);
-    object.lodTier = tier; object.lodFade = { oldMesh: oldMesh, newMesh: newMesh, age: 0, duration: 0.22, object: object };
-    solarLOD.fades.push(object.lodFade); solarSetSpecialty(object, tier);
+    if (oldTier === tier) { newMesh.visible = true; solarSetSpecialty(object, tier, 1, false); return; }
+    solarCancelFade(object);
+    newMesh.visible = true; solarSetMeshOpacity(newMesh, 0, true); solarSetMeshOpacity(oldMesh, 1, true);
+    object.lodTier = tier; object.lodFade = { oldMesh: oldMesh, newMesh: newMesh, age: 0, duration: 0.22, object: object, tier: tier };
+    solarLOD.fades.push(object.lodFade); solarSetSpecialty(object, tier, 0, true);
   }
-  function solarFallbackTier(tier, maps) { return tier === 2 && maps.albedo === null ? 1 : tier; }
+  function solarTierHasFailure(id, tier, maps) {
+    var urls = solarMapURLs(SOLAR_BY_ID[id], tier), keys = Object.keys(urls);
+    return keys.some(function (key) { return maps[key] === null; });
+  }
+  function solarLODRequestCurrent(object, epoch, id, tier) {
+    if (object.lodEpoch !== epoch || object.lodTarget !== tier) return false;
+    return tier !== 2 || (solarLOD.active2 === id && solarCanUseLOD2(id));
+  }
+  function solarRenderedLOD2Count() {
+    var count = 0, list = solarLOD.bodyList || SOLAR_BODIES;
+    list.forEach(function (body) { var object = SOLAR_OBJECTS[body.id]; if (object && object.lodMeshes[2].visible) count++; });
+    return count;
+  }
+  function solarDemoteLOD2(object) {
+    if (!object) return;
+    object.lodEpoch++; object.lodRequest = null; solarCancelFade(object);
+    object.lodMeshes[2].visible = false; solarSetMeshOpacity(object.lodMeshes[2], 1, false);
+    var tier = object.lodGroup.visible ? 1 : 0;
+    object.lodMeshes.forEach(function (mesh, index) { mesh.visible = index === tier; if (index === tier) solarSetMeshOpacity(mesh, 1, false); });
+    object.lodTier = tier; object.lodTarget = tier; solarSetSpecialty(object, tier, 1, false);
+  }
   function applySolarLOD(id, tier) {
     var object = SOLAR_OBJECTS[id]; if (!object) return Promise.resolve(null);
     tier = Math.max(0, Math.min(2, tier | 0));
-    if (tier === 2 && solarLOD.active2 && solarLOD.active2 !== id) tier = 1;
+    if (tier === 2 && !solarCanUseLOD2(id)) tier = 1;
+    if (tier === 2 && solarLOD.active2 && solarLOD.active2 !== id) { solarDemoteLOD2(SOLAR_OBJECTS[solarLOD.active2]); solarLOD.active2 = null; }
     if (tier === 2) solarLOD.active2 = id;
-    else if (solarLOD.active2 === id) solarLOD.active2 = null;
+    else if (solarLOD.active2 === id) { solarDemoteLOD2(object); solarLOD.active2 = null; }
     if (object.lodTarget === tier && object.lodTier === tier && !object.lodRequest) return Promise.resolve(object);
     if (object.lodTarget === tier && object.lodRequest) return object.lodRequest;
-    object.lodTarget = tier;
+    object.lodEpoch++; object.lodTarget = tier; var epoch = object.lodEpoch;
+    if (tier === 0) { object.lodRequest = null; solarSwapTier(object, 0); return Promise.resolve(object); }
     object.lodRequest = loadSolarMaps(id, tier).then(function (maps) {
-      var actualTier = solarFallbackTier(tier, maps);
-      if (object.lodTarget !== tier) return object;
-      if (actualTier !== tier) { object.lodFailed2 = true; object.lodTarget = actualTier; if (solarLOD.active2 === id) solarLOD.active2 = null; }
-      solarApplyMaps(object, actualTier, maps); solarSwapTier(object, actualTier); object.lodRequest = null;
+      if (!solarLODRequestCurrent(object, epoch, id, tier)) return object;
+      if (tier === 2 && solarTierHasFailure(id, tier, maps)) {
+        object.lodFailed2 = true; if (solarLOD.active2 === id) solarLOD.active2 = null;
+        return loadSolarMaps(id, 1).then(function (fallbackMaps) {
+          if (object.lodEpoch !== epoch || object.lodTarget !== 2 || solarSelectedId() !== id || !object.lodGroup.visible) return object;
+          object.lodTarget = 1; solarApplyMaps(object, 1, fallbackMaps); solarSwapTier(object, 1); object.lodRequest = null;
+          return object;
+        });
+      }
+      solarApplyMaps(object, tier, maps); solarSwapTier(object, tier); object.lodRequest = null;
       return object;
     });
     return object.lodRequest;
@@ -1584,31 +1658,25 @@
   function updateSolarLODFades(dt) {
     for (var i = solarLOD.fades.length - 1; i >= 0; i--) {
       var fade = solarLOD.fades[i]; fade.age += dt;
+      if (fade.object.lodFade !== fade) { solarLOD.fades.splice(i, 1); continue; }
       var amount = Math.min(1, fade.age / fade.duration);
-      solarSetMeshOpacity(fade.newMesh, amount); solarSetMeshOpacity(fade.oldMesh, 1 - amount);
+      solarSetMeshOpacity(fade.newMesh, amount, true); solarSetMeshOpacity(fade.oldMesh, 1 - amount, true); solarSetSpecialty(fade.object, fade.tier, amount, true);
       if (amount === 1) { solarFinishFade(fade); fade.object.lodFade = null; solarLOD.fades.splice(i, 1); }
     }
   }
   function updateSolarLOD() {
-    if (!solarCamera || !Object.keys(SOLAR_OBJECTS).length) return;
+    if (!solarCamera || !solarLOD.bodyList || !solarLOD.bodyList.length) return;
     solarLOD.quality = solarTextureQuality();
-    var winner = null, winnerRatio = Infinity, active = solarLOD.active2 && SOLAR_OBJECTS[solarLOD.active2];
-    if (active && active.lodFailed2) active = null;
-    if (active) {
-      var activePoint = new THREE.Vector3(); active.mesh.getWorldPosition(activePoint);
-      if (solarCamera.position.distanceTo(activePoint) / active.radius >= 72) active = null;
+    var selectedId = solarSelectedId(), active = solarLOD.active2 && SOLAR_OBJECTS[solarLOD.active2];
+    if (active && (!solarCanUseLOD2(active.body.id) || active.body.id !== selectedId)) { solarDemoteLOD2(active); solarLOD.active2 = null; }
+    var selected = SOLAR_OBJECTS[selectedId];
+    if (selected) {
+      selected.mesh.getWorldPosition(selected.lodPoint);
+      if (chooseSolarLOD(selectedId, solarCamera.position.distanceTo(selected.lodPoint)) === 2) solarLOD.active2 = selectedId;
     }
-    if (!active && solarLOD.quality >= 2 && !solarLOD.mobile) {
-      SOLAR_BODIES.forEach(function (body) {
-        var object = SOLAR_OBJECTS[body.id], point = new THREE.Vector3(); object.mesh.getWorldPosition(point);
-        var ratio = solarCamera.position.distanceTo(point) / object.radius;
-        if (!object.lodFailed2 && ratio < 48 && ratio < winnerRatio) { winner = body.id; winnerRatio = ratio; }
-      });
-      solarLOD.active2 = winner;
-    } else solarLOD.active2 = active ? active.body.id : null;
-    SOLAR_BODIES.forEach(function (body) {
-      var object = SOLAR_OBJECTS[body.id], point = new THREE.Vector3(); object.mesh.getWorldPosition(point);
-      applySolarLOD(body.id, chooseSolarLOD(body.id, solarCamera.position.distanceTo(point)));
+    solarLOD.bodyList.forEach(function (body) {
+      var object = SOLAR_OBJECTS[body.id]; object.mesh.getWorldPosition(object.lodPoint);
+      applySolarLOD(body.id, chooseSolarLOD(body.id, solarCamera.position.distanceTo(object.lodPoint)));
     });
   }
   function solarOrbitDistance(body) {
@@ -1670,7 +1738,7 @@
       var hitProxy = new THREE.Mesh(solarSphereLow, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
       hitProxy.scale.set(radius * 1.6, radius * 1.6, radius * 1.6); hitProxy.userData.solarId = body.id; lodGroup.add(hitProxy);
       var orbitLine = orbitPivot.children[0];
-      SOLAR_OBJECTS[body.id] = { body: body, orbitPivot: orbitPivot, positionNode: positionNode, tiltNode: tiltNode, spinNode: spinNode, lodGroup: lodGroup, hitProxy: hitProxy, orbitLine: orbitLine, mesh: mesh, lodMeshes: [mesh, lod1, lod2], lodTier: 0, lodTarget: 0, lodRequest: null, lodFade: null, lodFailed2: false, specialty: {}, radius: radius, compressedPeriod: solarCompressedPeriod(body) };
+      SOLAR_OBJECTS[body.id] = { body: body, orbitPivot: orbitPivot, positionNode: positionNode, tiltNode: tiltNode, spinNode: spinNode, lodGroup: lodGroup, hitProxy: hitProxy, orbitLine: orbitLine, mesh: mesh, lodMeshes: [mesh, lod1, lod2], lodTier: 0, lodTarget: 0, lodRequest: null, lodFade: null, lodEpoch: 0, lodFailed2: false, lodPoint: new THREE.Vector3(), specialty: {}, radius: radius, compressedPeriod: solarCompressedPeriod(body) };
       var object = SOLAR_OBJECTS[body.id];
       if (body.id === 'sun') {
         var corona = new THREE.Mesh(solarSphereMedium, solarCoronaMaterial); corona.scale.set(radius * 1.42, radius * 1.42, radius * 1.42); corona.userData.solarId = body.id; lodGroup.add(corona);
@@ -1694,6 +1762,7 @@
         object.specialty.detailedRings = detailedRings;
       }
     });
+    solarLOD.bodyList = SOLAR_BODIES.slice();
     updateSolarMotion(0);
     return SOLAR_OBJECTS;
   }
