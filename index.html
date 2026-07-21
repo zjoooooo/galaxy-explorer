@@ -4059,7 +4059,8 @@
   var gestureDist = 0, gestureView = 'galaxy';
   function routeSolarGestureZoom(scale) {
     if (viewMode !== 'solar' || !scale) return false;
-    var d = Math.min(solarControls.maxDistance, Math.max(solarControls.minDistance, gestureDist / scale));
+    var baseDistance = gestureDist > 0 ? gestureDist : solarCamera.position.distanceTo(solarControls.target);
+    var d = Math.min(solarControls.maxDistance, Math.max(solarControls.minDistance, baseDistance / scale));
     var dir = solarCamera.position.clone().sub(solarControls.target).normalize();
     solarCamera.position.copy(solarControls.target).addScaledVector(dir, d);
     solarControls.update();
@@ -4078,7 +4079,7 @@
     var dir = camera.position.clone().sub(controls.target).normalize();
     camera.position.copy(controls.target).addScaledVector(dir, d);
   });
-  window.addEventListener('gestureend', function (e) { e.preventDefault(); });
+  window.addEventListener('gestureend', function (e) { e.preventDefault(); gestureDist = 0; });
 
   if (/[?&]solarTest=1/.test(location.search)) runSolarSelfTests();
 
