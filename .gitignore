@@ -13,3 +13,6 @@ audio/*.m4a
 Thumbs.db
 .idea/
 .vscode/
+
+# Isolated feature worktrees
+.worktrees/
