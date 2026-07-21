@@ -6,6 +6,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E">
 <title>Milky Way Galaxy</title>
 <style>
   :root { color-scheme: dark; }
@@ -448,10 +449,11 @@
         solarMotionOverride = true; refreshReducedMotion();
         ok(solarFlight && solarFlight.dur <= 120 && !skyControls.autoRotate, 'live reduced-motion preference did not shorten flights and stop sky rotation');
         stepSolarFlight(Infinity);
+        focusSolarBody('earth'); stepSolarFlight(Infinity);
         var framed = solarFrameSelectedBody(new THREE.Vector3(0, 0, 0), earth.radius);
         ok(framed.y < 0, 'compact framing did not move the selected body above the drawer');
-        var earthScreenPoint = new THREE.Vector3(); earth.mesh.getWorldPosition(earthScreenPoint); earthScreenPoint.project(solarCamera);
-        ok((-earthScreenPoint.y * 0.5 + 0.5) * window.innerHeight < window.innerHeight * 0.48, 'selected body remains behind the compact drawer');
+        var earthScreenPoint = new THREE.Vector3(); earth.mesh.getWorldPosition(earthScreenPoint); solarCamera.updateMatrixWorld(); earthScreenPoint.project(solarCamera);
+        ok(earthScreenPoint.z >= -1 && earthScreenPoint.z <= 1 && Math.abs(earthScreenPoint.x) <= 1 && earthScreenPoint.y <= 1 && (-earthScreenPoint.y * 0.5 + 0.5) * window.innerHeight < window.innerHeight * 0.48, 'selected body remains behind the compact drawer');
         gestureDist = solarCamera.position.distanceTo(solarControls.target);
         var pinchDistance = gestureDist;
         ok(routeSolarGestureZoom(2), 'Solar pinch was not routed to the Solar camera');
@@ -505,7 +507,7 @@
         if (viewMode !== 'solar') enterSolar();
         solarNav.selectedId = 'earth'; solarNav.level = 'focus'; solarNav.parentId = null; updateSolarVisibility();
         var earth = SOLAR_OBJECTS.earth, point = new THREE.Vector3(); earth.mesh.getWorldPosition(point);
-        solarCamera.position.copy(point).add(new THREE.Vector3(0, earth.radius * 8, earth.radius * 14)); solarControls.target.copy(solarFrameSelectedBody(point, earth.radius)); solarControls.update();
+        solarCamera.position.copy(point).add(new THREE.Vector3(0, earth.radius * 8, earth.radius * 14)); solarControls.target.copy(solarFrameSelectedBody(point, earth.radius)); solarControls.update(); solarCamera.updateMatrixWorld();
         point.project(solarCamera); var sx = (point.x * .5 + .5) * window.innerWidth, sy = (-point.y * .5 + .5) * window.innerHeight, drawerTop = window.innerHeight * .48;
         ok(point.z >= -1 && point.z <= 1 && sx >= 0 && sx <= window.innerWidth && sy >= 0 && sy < drawerTop, 'Earth is not framed in the visible compact viewport');
         applySolarPerformanceTier(0); var base = [solarAsteroidBelt.geometry.drawRange.count, solarBackdrop.geometry.drawRange.count, solarPerf.labelEvery, solarLOD.textureCeiling, solarPerf.specialty];
@@ -770,7 +772,7 @@
   solarControls.dampingFactor = 0.08;
   solarControls.minDistance = 2;
   solarControls.maxDistance = 420;
-  (function solarBackdrop() {
+  (function buildSolarBackdrop() {
     var N = 1400, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), c = new THREE.Color();
     for (var i = 0; i < N; i++) {
       var th = Math.random() * Math.PI * 2, y = Math.random() * 2 - 1, r = Math.sqrt(1 - y * y) * (520 + Math.random() * 280);
@@ -2300,12 +2302,12 @@
       if (!hidden) kept.push(candidate);
     });
   }
-  function solarFrameSelectedBody(target, radius) {
+  function solarFrameSelectedBody(target, radius, viewDistance) {
     var framed = target.clone();
     if (!solarIsCompact()) return framed;
     // The drawer occupies the lower half of a phone; looking slightly below the
     // selected body keeps it in the unobscured upper portion of the viewport.
-    framed.y -= Math.max(radius * 3, solarCamera.position.distanceTo(target) * 0.12);
+    framed.y -= Math.max(radius * 3, (viewDistance == null ? solarCamera.position.distanceTo(target) : viewDistance) * 0.12);
     return framed;
   }
   function frameSolarForViewport() {
@@ -2325,11 +2327,11 @@
   }
   function startSolarFlight(target, radius) {
     settleSolarFlight(performance.now());
-    target = solarFrameSelectedBody(target, radius);
+    var distance = Math.max(8, Math.min(110, radius * 11 + 8));
+    target = solarFrameSelectedBody(target, radius, distance);
     var direction = solarCamera.position.clone().sub(target);
     if (direction.lengthSq() < 0.0001) direction.set(0.65, 0.42, 1);
     direction.normalize();
-    var distance = Math.max(8, Math.min(110, radius * 11 + 8));
     solarFlight = { p0: solarCamera.position.clone(), p1: target.clone().addScaledVector(direction, distance), t0: solarControls.target.clone(), t1: target.clone(),
       start: performance.now(), dur: solarReducedMotion() ? 120 : 720, radius: radius };
     solarControls.enabled = false;
