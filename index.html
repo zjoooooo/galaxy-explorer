@@ -114,10 +114,10 @@
   #bp-img { display: block; width: 100%; height: 150px; object-fit: cover; border-radius: 8px;
     margin: 10px 0 3px; background: rgba(255,255,255,.04); }
   #bp-credit { font-size: 9px; line-height: 1.35; color: #5b6578; margin-bottom: 6px; }
-  #bp-solar-link, #bp-flyto { display: block; width: 100%; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(255,255,255,.07);
+  #bp-solar-link, #bp-earth-sky-link, #bp-flyto { display: block; width: 100%; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(255,255,255,.07);
     color: #9cc0ff; cursor: pointer; font-size: 13px; }
-  #bp-solar-link { font: inherit; text-align: left; background: transparent; }
-  #bp-solar-link:hover, #bp-flyto:hover { color: #cfe2ff; }
+  #bp-solar-link, #bp-earth-sky-link { font: inherit; text-align: left; background: transparent; }
+  #bp-solar-link:hover, #bp-earth-sky-link:hover, #bp-flyto:hover { color: #cfe2ff; }
   #return-mw { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 50; display: none;
     padding: 8px 16px; border-radius: 20px; cursor: pointer; background: rgba(20,26,40,.72);
     border: 1px solid rgba(255,255,255,.14); color: #cfe0ff; font-size: 13px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
@@ -255,6 +255,50 @@
       ok(document.getElementById('bp-solar-link'), 'bp-solar-link missing');
       ok(!document.getElementById('bp-zodiac-link'), 'bp-zodiac-link must not appear on the Solar System card');
     });
+    check('solar-card-rendering', function () {
+      var fields = ['distance', 'diameter', 'orbit', 'rotation', 'temperature', 'moons'];
+      SOLAR_BODIES.forEach(function (body) {
+        SOLAR_LANGS.forEach(function (L) {
+          var info = body.info[L];
+          renderSolarPanel(body.id, L);
+          ok(document.getElementById('bp-name').textContent === info.name, body.id + ' name did not render for ' + L);
+          ok(document.getElementById('bp-type').textContent === info.type, body.id + ' type did not render for ' + L);
+          fields.forEach(function (field) {
+            var row = bpBody.querySelector('[data-solar-field="' + field + '"]');
+            ok(row && row.textContent.indexOf(info[field]) !== -1, body.id + ' ' + field + ' row missing for ' + L);
+          });
+          ok(bpBody.querySelectorAll('[data-solar-fact]').length === info.facts.length, body.id + ' facts missing for ' + L);
+          ok(document.getElementById('bp-desc').textContent === info.desc, body.id + ' description missing for ' + L);
+          ok(document.getElementById('bp-cat').textContent === info.catalog, body.id + ' catalog missing for ' + L);
+          ok(!!document.getElementById('bp-earth-sky-link') === (body.id === 'earth'), body.id + ' Earth sky link mismatch for ' + L);
+        });
+      });
+      clearSolarCard();
+    });
+    check('earth-sky-return', function () {
+      ok(typeof enterSkyFromEarth === 'function', 'enterSkyFromEarth missing');
+      ok(typeof returnSkyToEarth === 'function', 'returnSkyToEarth missing');
+      var oldView = viewMode, oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
+      var oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice() };
+      var oldCardOpen = solarCardOpen, oldSkyReturn = skyReturnContext, oldPaused = solarPaused;
+      try {
+        if (viewMode !== 'solar') enterSolar();
+        focusSolarBody('earth'); stepSolarFlight(Infinity); renderSolarPanel('earth', beaconLang);
+        var earthPosition = solarCamera.position.clone(), earthTarget = solarControls.target.clone();
+        ok(enterSkyFromEarth(), 'Earth did not enter the sky view');
+        ok(viewMode === 'sky' && skyReturnContext && skyReturnContext.solar.panelOpen, 'Earth sky context did not retain its open card');
+        ok(returnSkyToEarth(), 'Earth sky return did not complete');
+        ok(viewMode === 'solar' && solarNav.selectedId === 'earth' && solarNav.parentId === null, 'Earth selection did not return');
+        ok(solarCamera.position.distanceTo(earthPosition) === 0 && solarControls.target.distanceTo(earthTarget) === 0, 'Earth camera did not return');
+        ok(solarCardOpen && bpEl.classList.contains('open') && document.getElementById('bp-earth-sky-link'), 'Earth card did not return');
+      } finally {
+        if (viewMode === 'sky') exitSky();
+        if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
+        solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
+        solarNav.level = oldNav.level; solarNav.selectedId = oldNav.selectedId; solarNav.parentId = oldNav.parentId; solarNav.cameraStack = oldNav.cameraStack;
+        solarCardOpen = oldCardOpen; skyReturnContext = oldSkyReturn; setSolarPaused(oldPaused);
+      }
+    });
     check('solar-transition', function () {
       var startPosition = camera.position.clone(), startTarget = controls.target.clone(), oldFly = flyState;
       var hadReturn = !!returnBtn, oldReturnDisplay = hadReturn ? returnBtn.style.display : '';
@@ -382,6 +426,11 @@
         ok(solarActiveProxies().every(function (proxy) { var body = SOLAR_BY_ID[proxy.userData.solarId]; return body.id === 'earth' || body.parent === 'earth'; }), 'Earth focus raycast escaped its local system');
         focusSolarBody('moon'); stepSolarFlight(Infinity);
         ok(solarNav.selectedId === 'moon' && solarNav.parentId === 'earth' && solarNav.cameraStack.length === 2 && solarPaused, 'Moon focus did not retain Earth or pause motion');
+        var oldLanguage = beaconLang, moonLanguage = oldLanguage === 'ja' ? 'ko' : 'ja', moonPosition = solarCamera.position.clone(), moonTarget = solarControls.target.clone();
+        setBeaconLang(moonLanguage);
+        ok(solarNav.selectedId === 'moon' && solarNav.parentId === 'earth', 'language change changed the Moon focus');
+        ok(solarCamera.position.distanceTo(moonPosition) === 0 && solarControls.target.distanceTo(moonTarget) === 0, 'language change moved the Moon camera');
+        setBeaconLang(oldLanguage);
         leaveSolarLevel();
         ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1 && solarPaused, 'Back did not restore Earth focus or retain pause');
         leaveSolarLevel();
@@ -784,14 +833,17 @@
       var t = BEACONS[i].t[lang] || BEACONS[i].t.en;
       BEACONS[i].el.querySelector('.b-label').innerHTML = t[0] + (t[1] ? '<small>' + t[1] + '</small>' : '');
     }
-    var sb = document.getElementById('skyback'), solb = document.getElementById('solarback');
-    if (sb) { var SB = { en: '← Back to Galaxy', hans: '← 返回银河系', hant: '← 返回銀河系', ja: '← 銀河に戻る', ko: '← 은하로 돌아가기' }; sb.textContent = SB[lang] || SB.en; if (solb) solb.textContent = SB[lang] || SB.en; }
+    if (typeof updateSolarNavigationText === 'function') updateSolarNavigationText();
     if (returnBtn && returnBtn.style.display === 'block') returnBtn.textContent = RET_TXT[lang] || RET_TXT.en;
     if (typeof selectedBeacon !== 'undefined' && selectedBeacon !== null && typeof renderPanel === 'function') renderPanel(selectedBeacon, lang);
     if (typeof paintSkyLabels === 'function' && typeof SKY_CONS !== 'undefined' && SKY_CONS.length) paintSkyLabels(lang);
     if (typeof skySelected !== 'undefined' && skySelected !== null && typeof renderConstellationPanel === 'function') renderConstellationPanel(skySelected, lang);
     if (typeof paintSkyGalLabels === 'function' && typeof SKY_GAL !== 'undefined' && SKY_GAL.length) paintSkyGalLabels(lang);
     if (typeof window.skyGalSelected !== 'undefined' && window.skyGalSelected !== null && typeof renderPanel === 'function') renderPanel(SKY_GAL[window.skyGalSelected].beaconIdx, lang);
+    if (typeof viewMode !== 'undefined' && viewMode === 'solar') {
+      if (typeof updateSolarLabels === 'function') updateSolarLabels();
+      if (typeof solarNav !== 'undefined' && solarNav && solarCardOpen && solarNav.selectedId && typeof renderSolarPanel === 'function') renderSolarPanel(solarNav.selectedId, lang);
+    }
   }
   (function buildBeacons() {
     var TAU = Math.PI * 2;
@@ -1426,6 +1478,33 @@
   }
   var bpEl = document.getElementById('beacon-panel'), bpBody = document.getElementById('bp-body');
   function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  function renderSolarPanel(id, lang) {
+    var body = SOLAR_BY_ID[id], L = body && body.info[lang] ? lang : 'en';
+    if (!body) return false;
+    var info = body.info[L], labels = {
+      en: ['Distance', 'Diameter', 'Orbit', 'Rotation', 'Temperature', 'Moons'],
+      hans: ['距离', '直径', '公转', '自转', '温度', '卫星'],
+      hant: ['距離', '直徑', '公轉', '自轉', '溫度', '衛星'],
+      ja: ['距離', '直径', '公転', '自転', '温度', '衛星'],
+      ko: ['거리', '지름', '공전', '자전', '온도', '위성']
+    }[L], fields = ['distance', 'diameter', 'orbit', 'rotation', 'temperature', 'moons'];
+    var rows = fields.map(function (field, i) {
+      return '<div class="bp-row" data-solar-field="' + field + '"><span class="k">' + esc(labels[i]) + '</span><span class="v">' + esc(info[field]) + '</span></div>';
+    });
+    info.facts.forEach(function (fact) {
+      rows.push('<div class="bp-row" data-solar-fact="true"><span class="k">' + esc(fact[0]) + '</span><span class="v">' + esc(fact[1]) + '</span></div>');
+    });
+    bpBody.innerHTML =
+      '<div id="bp-name" style="color:' + esc(body.color) + '">' + esc(info.name) + '</div>' +
+      '<span id="bp-type">' + esc(info.type) + '</span>' +
+      rows.join('') +
+      '<div id="bp-desc">' + esc(info.desc) + '</div>' +
+      (body.id === 'earth' ? '<button id="bp-earth-sky-link" type="button">' + esc({ en: 'Explore Earth\'s sky →', hans: '探索地球的天空 →', hant: '探索地球的天空 →', ja: '地球の空を探索する →', ko: '지구의 하늘 탐험하기 →' }[L]) + '</button>' : '') +
+      '<div id="bp-cat">' + esc(info.catalog) + '</div>';
+    solarCardOpen = true;
+    bpEl.classList.add('open');
+    return true;
+  }
   function renderPanel(i, lang) {
     var b = BEACONS[i], o = b.info[lang] || b.info.en, name = (b.t[lang] || b.t.en)[0], ac = getComputedStyle(b.el).getPropertyValue('--bc').trim() || '#8fc2ff';
     var RK = { en: ['Distance', 'Constellation'], hans: ['距离', '星座'], hant: ['距離', '星座'], ja: ['距離', '星座'], ko: ['거리', '별자리'] };
@@ -1464,6 +1543,7 @@
   bpEl.addEventListener('click', function (e) { e.stopPropagation(); }); // clicks inside the panel don't close it
   bpBody.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'bp-solar-link') enterSolar();
+    else if (e.target && e.target.id === 'bp-earth-sky-link' && viewMode === 'solar' && solarNav.selectedId === 'earth' && solarNav.parentId === null) enterSkyFromEarth();
     else if (e.target && e.target.id === 'bp-flyto' && selectedBeacon !== null) flyToBeacon(selectedBeacon);
   });
   // ── smooth camera fly-to (for galaxy beacons): ease camera + orbit target over to the
@@ -1498,7 +1578,7 @@
     if (k >= 1) { var done = flyState.onDone; flyState = null; controls.enabled = true; if (done) done(); }
     return true;
   }
-  window.addEventListener('keydown', function (e) { if ((e.key || '').toLowerCase() === 'escape' && selectedBeacon !== null) clearSelection(); });
+  window.addEventListener('keydown', function (e) { if ((e.key || '').toLowerCase() === 'escape' && selectedBeacon !== null) { clearSelection(); e.stopImmediatePropagation(); } });
   var beaconTmp = new THREE.Vector3();
   function updateBeacons() { // call AFTER render() — galaxyRoot/camera matrices are fresh then
     for (var i = 0; i < BEACONS.length; i++) {
@@ -1557,6 +1637,7 @@
   var viewMode = 'galaxy';
   var savedGalaxyView = null;
   var solarNav = { level: 'overview', selectedId: null, parentId: null, cameraStack: [], galaxySnapshot: null, skySnapshot: null };
+  var skyReturnContext = null;
   var solarFlight = null, solarCardOpen = false, solarLabelButtons = {}, solarRaycaster = new THREE.Raycaster();
   var solarPointer = { down: false, x: 0, y: 0, moved: false };
   var solarLabelPoint = new THREE.Vector3(), solarFocusPoint = new THREE.Vector3();
@@ -1572,6 +1653,8 @@
     if (snapshot.target) solarControls.target.copy(snapshot.target);
     solarControls.update();
     updateSolarVisibility();
+    updateSolarNavigationText();
+    if (viewMode === 'solar' && solarCardOpen && solarNav.selectedId) renderSolarPanel(solarNav.selectedId, beaconLang);
   }
   function solarLocalParent() { return solarNav.parentId || solarNav.selectedId; }
   function solarBodyIsActive(body) {
@@ -1662,15 +1745,13 @@
     if (k >= 1) {
       var radius = solarFlight.radius;
       solarFlight = null; solarControls.minDistance = Math.max(2, radius * 2.2); solarControls.maxDistance = Math.max(18, radius * 28 + 14);
-      solarControls.enabled = true; solarControls.update(); solarCardOpen = true;
+      solarControls.enabled = true; solarControls.update(); renderSolarPanel(solarNav.selectedId, beaconLang);
     }
     return true;
   }
-  function clearSolarCard() { solarCardOpen = false; }
+  function clearSolarCard() { solarCardOpen = false; bpEl.classList.remove('open'); bpBody.innerHTML = ''; }
   function enterSolarSky() {
-    if (solarNav.selectedId !== 'earth' || solarNav.parentId !== null) return false;
-    settleSolarFlight(performance.now()); solarNav.skySnapshot = solarSnapshot(); solarNav.level = 'sky'; updateSolarVisibility();
-    return true;
+    return enterSkyFromEarth();
   }
   function focusSolarBody(id) {
     var body = SOLAR_BY_ID[id], object = SOLAR_OBJECTS[id]; if (!body || !object) return false;
@@ -1686,7 +1767,7 @@
       if (solarNav.level === 'overview') solarNav.cameraStack.push(solarSnapshot());
       solarNav.level = 'focus'; solarNav.parentId = null; solarNav.selectedId = id;
     }
-    clearSolarCard(); setSolarPaused(true); updateSolarVisibility();
+    clearSolarCard(); setSolarPaused(true); updateSolarVisibility(); updateSolarNavigationText();
     object.mesh.getWorldPosition(solarFocusPoint); startSolarFlight(solarFocusPoint, object.radius);
     return true;
   }
@@ -1696,6 +1777,7 @@
       .filter(function (proxy) { return proxy.visible && proxy.userData.solarActive; });
   }
   function leaveSolarLevel() {
+    if (viewMode === 'sky' && skyReturnContext) return returnSkyToEarth();
     settleSolarFlight(performance.now());
     if (solarNav.level === 'sky' && solarNav.skySnapshot) {
       setSolarNavigation(solarNav.skySnapshot); solarNav.skySnapshot = null; return true;
@@ -1704,12 +1786,13 @@
     if (!snapshot) return false;
     setSolarNavigation(snapshot);
     if (solarNav.level === 'overview') setSolarPaused(false);
+    updateSolarNavigationText();
     return true;
   }
   function resetSolarNavigation() {
     solarFlight = null; solarCardOpen = false;
     solarNav.level = 'overview'; solarNav.selectedId = null; solarNav.parentId = null; solarNav.cameraStack = []; solarNav.skySnapshot = null;
-    updateSolarVisibility();
+    updateSolarVisibility(); updateSolarNavigationText();
   }
   function solarPointerPosition(e) {
     var rect = renderer.domElement.getBoundingClientRect();
@@ -1739,6 +1822,7 @@
     flyState = null; // cancel a partial galaxy fly before preserving the current view
     savedGalaxyView = { position: camera.position.clone(), target: controls.target.clone(), returnVisible: !!returnBtn && returnBtn.style.display === 'block' };
     resetSolarNavigation(); solarNav.galaxySnapshot = savedGalaxyView;
+    skyReturnContext = null;
     clearSelection();
     viewMode = 'solar';
     controls.enabled = false; skyControls.enabled = false; solarControls.enabled = true;
@@ -1748,12 +1832,14 @@
     document.getElementById('skyback').style.display = 'none';
     if (solarLabelsEl) solarLabelsEl.style.display = '';
     if (solarBackEl) solarBackEl.style.display = 'block';
+    updateSolarNavigationText();
     solarFrameLast = 0;
     solarControls.update();
   }
   function exitSolar() {
     if (viewMode !== 'solar') return;
     var galaxyView = savedGalaxyView;
+    clearSolarCard();
     viewMode = 'galaxy';
     solarControls.enabled = false; skyControls.enabled = false; controls.enabled = true;
     document.getElementById('beacons').style.display = '';
@@ -1766,6 +1852,7 @@
       savedGalaxyView = null;
     }
     resetSolarNavigation(); solarNav.galaxySnapshot = null; setSolarPaused(false);
+    skyReturnContext = null;
     controls.update();
     solarFrameLast = 0;
     perfLast = 0;
@@ -2336,30 +2423,82 @@
   });
   window.addEventListener('click', function () { if (viewMode === 'sky' && (skySelected != null || window.skyGalSelected != null)) clearSkySelection(); });
   var skybackEl = document.getElementById('skyback');
-  function enterSky() {
-    if (viewMode !== 'galaxy') return;
-    clearSelection();                          // close the beacon panel + ring
+  function updateSolarNavigationText() {
+    var L = typeof beaconLang === 'string' ? beaconLang : 'en';
+    var text = {
+      en: { galaxy: '← Back to Galaxy', solar: '← Back to Solar System', earth: '← Back to Earth' },
+      hans: { galaxy: '← 返回银河系', solar: '← 返回太阳系', earth: '← 返回地球' },
+      hant: { galaxy: '← 返回銀河系', solar: '← 返回太陽系', earth: '← 返回地球' },
+      ja: { galaxy: '← 銀河に戻る', solar: '← 太陽系に戻る', earth: '← 地球に戻る' },
+      ko: { galaxy: '← 은하로 돌아가기', solar: '← 태양계로 돌아가기', earth: '← 지구로 돌아가기' }
+    }[L] || { galaxy: '← Back to Galaxy', solar: '← Back to Solar System', earth: '← Back to Earth' };
+    var skyBack = document.getElementById('skyback'), solarBack = document.getElementById('solarback');
+    if (skyBack) skyBack.textContent = skyReturnContext ? text.earth : text.galaxy;
+    if (solarBack) solarBack.textContent = solarNav && solarNav.level === 'focus' ? text.solar : text.galaxy;
+  }
+  function enterSky(origin) {
+    if (origin === 'earth') {
+      if (viewMode !== 'solar') return false;
+    } else {
+      if (viewMode !== 'galaxy') return false;
+      skyReturnContext = null;
+      clearSelection();
+    }
     viewMode = 'sky';
-    controls.enabled = false; skyControls.enabled = true;
+    controls.enabled = false; solarControls.enabled = false; skyControls.enabled = true;
     document.getElementById('beacons').style.display = 'none';
     var sl = document.getElementById('skylabels'); if (sl) sl.style.display = '';
     skybackEl.style.display = 'block';
+    if (solarLabelsEl) solarLabelsEl.style.display = 'none';
+    if (solarBackEl) solarBackEl.style.display = 'none';
+    updateSolarNavigationText();
+    return true;
+  }
+  function enterSkyFromEarth() {
+    if (viewMode !== 'solar' || solarNav.selectedId !== 'earth' || solarNav.parentId !== null) return false;
+    settleSolarFlight(performance.now());
+    skyReturnContext = { solar: solarSnapshot(), paused: solarPaused };
+    clearSolarCard();
+    return enterSky('earth');
+  }
+  function returnSkyToEarth() {
+    if (viewMode !== 'sky' || !skyReturnContext) return false;
+    var context = skyReturnContext;
+    if (window.clearSkySelection) clearSkySelection();
+    viewMode = 'solar';
+    skyControls.enabled = false; controls.enabled = false; solarControls.enabled = true;
+    document.getElementById('beacons').style.display = 'none';
+    var labels = document.getElementById('skylabels'); if (labels) labels.style.display = 'none';
+    skybackEl.style.display = 'none';
+    if (solarLabelsEl) solarLabelsEl.style.display = '';
+    if (solarBackEl) solarBackEl.style.display = 'block';
+    skyReturnContext = null;
+    setSolarNavigation(context.solar);
+    setSolarPaused(context.paused);
+    updateSolarLabels();
+    if (context.solar.panelOpen) renderSolarPanel(context.solar.selectedId, beaconLang); else clearSolarCard();
+    updateSolarNavigationText();
+    solarFrameLast = 0; perfLast = 0;
+    return true;
   }
   function exitSky() {
     if (viewMode !== 'sky') return;
+    if (skyReturnContext) { returnSkyToEarth(); return; }
     if (window.clearSkySelection) clearSkySelection(); // close a sky card if open
     viewMode = 'galaxy';
     skyControls.enabled = false; controls.enabled = true;
     document.getElementById('beacons').style.display = '';
     var sl = document.getElementById('skylabels'); if (sl) sl.style.display = 'none';
     skybackEl.style.display = 'none';
+    updateSolarNavigationText();
     perfLast = 0;                              // don't feed the sky stint into the FPS watchdog
   }
   skybackEl.addEventListener('click', exitSky);
   window.addEventListener('keydown', function (e) {
     if ((e.key || '').toLowerCase() !== 'escape' || viewMode !== 'sky') return;
-    if (window.skySelected != null) return;    // the sky-card handler closes the card first
+    if (window.skySelected != null || window.skyGalSelected != null) return;
     exitSky();
+    e.stopImmediatePropagation();
   });
 
   // ── render loop (continuous while visible; drives spin + twinkle + breathe + fx) ──
