@@ -404,7 +404,7 @@
     });
     check('solar-adaptive-accessibility', function () {
       ok(typeof applySolarPerformanceTier === 'function', 'performance tier API missing');
-      ok(typeof solarPerformanceStage === 'function', 'ordered performance stage helper missing');
+      ok(typeof solarPerformanceStage === 'undefined', 'ambiguous performance stage converter remains public');
       ok(typeof sampleSolarPerformance === 'function', 'Solar frame watchdog missing');
       ok(typeof resetSolarPerformanceWatchdog === 'function', 'Solar watchdog reset missing');
       ok(typeof refreshSolarResponsiveState === 'function', 'responsive Solar refresh missing');
@@ -456,7 +456,7 @@
         var pinchDistance = gestureDist;
         ok(routeSolarGestureZoom(2), 'Solar pinch was not routed to the Solar camera');
         ok(solarCamera.position.distanceTo(solarControls.target) < pinchDistance, 'Solar pinch did not zoom the Solar camera');
-        applySolarPerformanceTier(0.25);
+        applySolarPerformanceTier(5);
         ok(earth.lodGroup.visible && earth.hitProxy.visible && earth.hitProxy.userData.solarActive, 'lowest tier hid the selected Earth or its proxy');
         ok(solarCardOpen === cardWasOpen, 'lowest tier closed the selected card');
         ok(solarAsteroidBelt.geometry.drawRange.count < solarAsteroidBelt.geometry.attributes.position.count, 'lowest tier did not reduce asteroid draw range');
@@ -475,7 +475,7 @@
       } finally {
         solarMotionOverride = oldMotionOverride;
         solarCompactOverride = oldCompactOverride;
-        applySolarPerformanceTier(oldScale);
+        applySolarPerformanceTier(oldPerf.stage);
         solarPerf.stage = oldPerf.stage; solarPerf.epoch = oldPerf.epoch; solarPerf.beltFraction = oldPerf.beltFraction; solarPerf.backgroundFraction = oldPerf.backgroundFraction; solarPerf.backgroundEvery = oldPerf.backgroundEvery; solarPerf.labelEvery = oldPerf.labelEvery; solarPerf.specialty = oldPerf.specialty; solarLOD.textureCeiling = oldPerf.textureCeiling;
         if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
         solarNav.level = oldNav.level; solarNav.selectedId = oldNav.selectedId; solarNav.parentId = oldNav.parentId; solarNav.cameraStack = oldNav.cameraStack; solarNav.galaxySnapshot = oldNav.galaxySnapshot; solarNav.skySnapshot = oldNav.skySnapshot;
@@ -640,7 +640,7 @@
       });
       try {
         solarLOD.cache = {}; solarLOD.pending = {}; solarLOD.requests = {}; solarLOD.warned = {}; solarLOD.quality = 2; solarLOD.mobile = false; solarLOD.active2 = null;
-        ok(solarTextureQuality() === (renderer.capabilities.maxTextureSize >= 4096 && perfScale >= 0.5 ? 2 : 1), 'desktop capability ceiling selected the wrong texture tier');
+        ok(solarTextureQuality() === (renderer.capabilities.maxTextureSize >= 2048 && solarLOD.textureCeiling >= 4096 ? 2 : 1), 'desktop capability ceiling selected the wrong texture tier');
         solarNav.selectedId = 'earth'; SOLAR_OBJECTS.earth.lodGroup.visible = true; SOLAR_OBJECTS.mars.lodGroup.visible = true;
         ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 42) === 2, 'desktop close Earth did not select LOD 2');
         ok(chooseSolarLOD('mars', SOLAR_OBJECTS.mars.radius * 42) === 1, 'only one body may select LOD 2');
@@ -649,7 +649,7 @@
         ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 78) === 1, 'LOD 2 did not leave outside hysteresis band');
         ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 152) === 0, 'far body did not select LOD 0');
         solarLOD.active2 = null; solarLOD.mobile = true;
-        ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 42) === 1, 'mobile ceiling allowed LOD 2');
+        ok(chooseSolarLOD('earth', SOLAR_OBJECTS.earth.radius * 42) === (renderer.capabilities.maxTextureSize >= 2048 ? 2 : 1), '2K-capable selected device lost LOD 2');
         var calls = 0;
         solarLOD.textureLoader = { load: function (url, success, progress, failure) { calls++; failure(new Error(url)); } };
         var first = loadSolarMaps('earth', 1), second = loadSolarMaps('earth', 1);
@@ -1555,12 +1555,6 @@
     if (solarMotionOverride !== null) return !!solarMotionOverride;
     return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
-  function solarPerformanceStage(value) {
-    value = Number(value);
-    if (!isFinite(value)) return 0;
-    if (value <= 1) return value >= 1 ? 0 : value >= 0.5 ? 3 : 5;
-    return Math.max(0, Math.min(5, Math.round(value)));
-  }
   function applySolarSpecialtyTier() {
     SOLAR_BODIES.forEach(function (body) {
       var object = SOLAR_OBJECTS[body.id]; if (!object) return;
@@ -1568,8 +1562,9 @@
       solarSetSpecialty(object, object.lodTier, 1, false);
     });
   }
-  function applySolarPerformanceTier(value) {
-    var stage = solarPerformanceStage(value), changed = stage !== solarPerf.stage;
+  function applySolarPerformanceTier(stage) {
+    stage = Math.max(0, Math.min(5, stage | 0));
+    var changed = stage !== solarPerf.stage;
     solarPerf.stage = stage;
     if (changed) solarPerf.epoch++;
     // Each numbered stage owns precisely one concern and is reversible.
@@ -1662,7 +1657,7 @@
   function solarTextureQuality() {
     if (solarLOD.mobile) return 1;
     var maxTexture = renderer && renderer.capabilities ? renderer.capabilities.maxTextureSize : 0;
-    return maxTexture >= 4096 && solarLOD.textureCeiling >= 4096 && perfScale >= 0.5 ? 2 : 1;
+    return maxTexture >= 2048 && solarLOD.textureCeiling >= 4096 ? 2 : 1;
   }
   function solarSelectedId() { return typeof solarNav !== 'undefined' ? solarNav.selectedId : null; }
   function solarBaseTier(object, ratio) {
@@ -1672,7 +1667,7 @@
   function solarCanUseLOD2(id) {
     var object = SOLAR_OBJECTS[id];
     var maxTexture = renderer && renderer.capabilities ? renderer.capabilities.maxTextureSize : 0;
-    return !!(object && object.lodGroup.visible && !object.lodFailed2 && solarSelectedId() === id && maxTexture >= 4096);
+    return !!(object && object.lodGroup.visible && !object.lodFailed2 && solarSelectedId() === id && maxTexture >= 2048);
   }
   function chooseSolarLOD(id, distance) {
     var object = SOLAR_OBJECTS[id], radius = object && object.radius ? object.radius : 1, ratio = Math.max(0, distance) / radius;
@@ -3096,26 +3091,28 @@
   function sampleSolarPerformance(now) {
     if (solarPerfLast) solarPerfEMA += (Math.min(now - solarPerfLast, 500) - solarPerfEMA) * 0.05;
     solarPerfLast = now;
-    if (now > solarPerfNextCheck && solarPerfEMA > 40 && solarPerf.stage < 5) {
+    if (now > solarPerfNextCheck) {
       solarPerfNextCheck = now + 10000;
+      if (solarPerfEMA > 40 && solarPerf.stage < 5) {
       applySolarPerformanceTier(solarPerf.stage + 1);
       setMsg('low frame rate — Solar System detail reduced');
       setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('Solar System detail') !== -1) setMsg(''); }, 2500);
+      }
     }
   }
   buildSolarBodies();
   buildAsteroidBelt(Math.max(400, Math.floor(2000 * perfScale)));
-  applySolarPerformanceTier(perfScale);
+  applySolarPerformanceTier(0);
   function frame() {
     rafId = null;
     if (document.hidden) return;
     var t = (performance.now() - t0) / 1000;
     if (viewMode === 'sky') {
-      if (skyTwinkleMat) skyTwinkleMat.uniforms.uTime.value = t;
-      for (var si = 0; si < SKY_CONS.length; si++) SKY_CONS[si].starMat.uniforms.uTime.value = t; // twinkle the constellation stars
+      if (skyTwinkleMat && !solarReducedMotion()) skyTwinkleMat.uniforms.uTime.value = t;
+      if (!solarReducedMotion()) for (var si = 0; si < SKY_CONS.length; si++) SKY_CONS[si].starMat.uniforms.uTime.value = t; // twinkle the constellation stars
       skyControls.update();
       if (skyComposer) skyComposer.render(); else renderer.render(skyScene, skyCamera);
-      updateSkyFx(performance.now());
+      if (!solarReducedMotion()) updateSkyFx(performance.now());
       if (window.updateSkyLabels) updateSkyLabels();
       rafId = requestAnimationFrame(frame);
       return;
@@ -3139,7 +3136,7 @@
       var L = galaxyLODs[li], dst = camera.position.distanceTo(L.center); L.dst = dst; // cached for the feature LOD gate below
       L.pts.geometry.setDrawRange(0, Math.max(400, Math.floor(L.maxN * Math.min(1, Math.max(0.14, L.refDist / dst)) * perfScale)));
       L.mat.uniforms.uSize.value = L.baseSize * Math.min(3.2, Math.max(0.8, dst / L.refDist)) * renderer.getPixelRatio();
-      L.pts.quaternion.copy(L.q0).premultiply(galSpinTmp.setFromAxisAngle(L.axis, t * L.spin)); // spins in its own disc plane
+      if (!solarReducedMotion()) L.pts.quaternion.copy(L.q0).premultiply(galSpinTmp.setFromAxisAngle(L.axis, t * L.spin)); // spins in its own disc plane
     }
     for (var ci = 0; ci < BEACONS.length; ci++) { // in-galaxy features: always on, but LOD-gated — hidden + not animated when sub-pixel at distance
       var cb = BEACONS[ci];
@@ -3156,7 +3153,7 @@
       cb.sp.material.opacity = cb.o * (1 + 0.16 * cbw); // halo brightness swings with the size
     }
     if (beaconRing.visible) { var rp = solarReducedMotion() ? 1 : 1 + 0.08 * Math.sin(t * 2.2); beaconRing.scale.set(46 * rp, 46 * rp, 1); }
-    updateFx(performance.now()); // meteors + supernovae scheduling (no-op when idle)
+    if (!solarReducedMotion()) updateFx(performance.now()); // meteors + supernovae scheduling (no-op when idle)
     var fnow = performance.now();
     if (perfLast) { perfEMA += (Math.min(fnow - perfLast, 500) - perfEMA) * 0.05; }
     perfLast = fnow;
