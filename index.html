@@ -45,7 +45,7 @@
   .skylabel.skygal.sel { color: #fff; }
   .solar-label { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
     font: inherit; font-size: 13px; letter-spacing: .08em; color: #ffe5a9; white-space: nowrap; text-align: center;
-    background: transparent; border: 0; padding: 2px 4px;
+    background: transparent; border: 0; min-width: 24px; min-height: 24px; padding: 2px 8px;
     text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(255,190,100,.45); transition: opacity .2s ease; }
 
   /* location beacons: borderless glow-dot + pulse rings + floating label (no boxes, no borders) */
@@ -129,11 +129,11 @@
   /* mobile: panel becomes a bottom drawer */
   @media (max-width: 640px) {
     #beacon-panel { top: auto; bottom: 0; right: 0; left: 0; width: auto; max-height: 52vh;
-      border-radius: 14px 14px 0 0; padding: 14px 16px 18px; }
+      border-radius: 14px 14px 0 0; padding: 14px max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
     #beacon-panel.open { animation: bpUp .2s ease; }
     @keyframes bpUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-    #skyback, #solarback { left: 12px; }
-    .solar-label { font-size: 11px; letter-spacing: .04em; }
+    #skyback, #solarback { left: max(12px, env(safe-area-inset-left)); top: max(64px, calc(env(safe-area-inset-top) + 52px)); }
+    .solar-label { font-size: 11px; letter-spacing: .04em; min-width: 44px; min-height: 44px; padding: 8px 12px; }
   }
 
   /* background-music control: speaker button + a hover popup listing tracks by name */
@@ -396,6 +396,7 @@
       }
     });
     check('solar-resize', function () {
+      camera.aspect = 1; skyCamera.aspect = 1; solarCamera.aspect = 1;
       window.dispatchEvent(new Event('resize'));
       ok(camera.aspect === window.innerWidth / window.innerHeight, 'resize did not update galaxy camera');
       ok(skyCamera.aspect === window.innerWidth / window.innerHeight, 'resize did not update sky camera');
@@ -403,6 +404,10 @@
     });
     check('solar-adaptive-accessibility', function () {
       ok(typeof applySolarPerformanceTier === 'function', 'performance tier API missing');
+      ok(typeof solarPerformanceStage === 'function', 'ordered performance stage helper missing');
+      ok(typeof sampleSolarPerformance === 'function', 'Solar frame watchdog missing');
+      ok(typeof resetSolarPerformanceWatchdog === 'function', 'Solar watchdog reset missing');
+      ok(typeof refreshSolarResponsiveState === 'function', 'responsive Solar refresh missing');
       ok(typeof solarReducedMotion === 'function', 'reduced-motion helper missing');
       ok(typeof solarFrameSelectedBody === 'function', 'mobile selected-body framing helper missing');
       ok(typeof routeSolarGestureZoom === 'function', 'Solar Safari pinch routing helper missing');
@@ -412,13 +417,19 @@
         ok(control.getAttribute('aria-label'), id + ' has no accessible name');
       });
       var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldFlight = solarFlight, oldCard = solarCardOpen, oldScale = perfScale, oldMotionOverride = solarMotionOverride, oldCompactOverride = solarCompactOverride, oldPaused = solarPaused;
-      var oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone(), oldGestureDist = gestureDist, oldPerf = { scale: solarPerf.scale, beltFraction: solarPerf.beltFraction, backgroundFraction: solarPerf.backgroundFraction, backgroundEvery: solarPerf.backgroundEvery, labelEvery: solarPerf.labelEvery, specialty: solarPerf.specialty, textureCeiling: solarLOD.textureCeiling };
-      var oldControls = { galaxy: controls.enabled, solar: solarControls.enabled, sky: skyControls.enabled }, oldPanel = { html: bpBody.innerHTML, open: bpEl.classList.contains('open') };
+      var oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone(), oldGestureDist = gestureDist, oldPerf = { stage: solarPerf.stage, epoch: solarPerf.epoch, beltFraction: solarPerf.beltFraction, backgroundFraction: solarPerf.backgroundFraction, backgroundEvery: solarPerf.backgroundEvery, labelEvery: solarPerf.labelEvery, specialty: solarPerf.specialty, textureCeiling: solarLOD.textureCeiling };
+      var oldControls = { galaxy: controls.enabled, solar: solarControls.enabled, sky: skyControls.enabled, skyAuto: skyControls.autoRotate }, oldPanel = { html: bpBody.innerHTML, open: bpEl.classList.contains('open') };
       try {
         solarMotionOverride = true;
         solarCompactOverride = true;
         renderPanel(0, beaconLang);
         ok(document.getElementById('bp-solar-link').getAttribute('aria-label'), 'Solar entry has no accessible name');
+        SOLAR_LANGS.forEach(function (L) {
+          renderPanel(0, L);
+          ok(document.getElementById('bp-solar-link').getAttribute('aria-label') === { en: 'Explore the Solar System →', hans: '探索太阳系 →', hant: '探索太陽系 →', ja: '太陽系を探索する →', ko: '태양계 탐험하기 →' }[L], 'Solar entry is not localized for ' + L);
+          renderSolarPanel('earth', L);
+          ok(document.getElementById('bp-earth-sky-link').getAttribute('aria-label') === document.getElementById('bp-earth-sky-link').textContent, 'Earth sky entry is not localized for ' + L);
+        });
         if (viewMode !== 'solar') enterSolar();
         updateSolarLabels();
         Object.keys(solarLabelButtons).forEach(function (id) {
@@ -433,8 +444,14 @@
         var reducedElapsed = solarElapsed, reducedSpin = earth.spinNode.rotation.y;
         setSolarPaused(false); updateSolarMotion(0.1);
         ok(solarElapsed === reducedElapsed && earth.spinNode.rotation.y === reducedSpin, 'reduced motion left decorative Solar rotation running');
+        solarMotionOverride = false; startSolarFlight(solarFocusPoint.set(0, 0, 0), earth.radius);
+        solarMotionOverride = true; refreshReducedMotion();
+        ok(solarFlight && solarFlight.dur <= 120 && !skyControls.autoRotate, 'live reduced-motion preference did not shorten flights and stop sky rotation');
+        stepSolarFlight(Infinity);
         var framed = solarFrameSelectedBody(new THREE.Vector3(0, 0, 0), earth.radius);
         ok(framed.y < 0, 'compact framing did not move the selected body above the drawer');
+        var earthScreenPoint = new THREE.Vector3(); earth.mesh.getWorldPosition(earthScreenPoint); earthScreenPoint.project(solarCamera);
+        ok((-earthScreenPoint.y * 0.5 + 0.5) * window.innerHeight < window.innerHeight * 0.48, 'selected body remains behind the compact drawer');
         gestureDist = solarCamera.position.distanceTo(solarControls.target);
         var pinchDistance = gestureDist;
         ok(routeSolarGestureZoom(2), 'Solar pinch was not routed to the Solar camera');
@@ -444,16 +461,27 @@
         ok(solarCardOpen === cardWasOpen, 'lowest tier closed the selected card');
         ok(solarAsteroidBelt.geometry.drawRange.count < solarAsteroidBelt.geometry.attributes.position.count, 'lowest tier did not reduce asteroid draw range');
         ok(solarLOD.textureCeiling === 2048, 'compact or low-performance maps exceeded the 2K ceiling');
+        solarSwapTier(earth, 2); solarLOD.active2 = 'earth';
+        [1, 2, 3, 4, 5].forEach(function (stage) {
+          applySolarPerformanceTier(stage);
+          ok(solarPerf.stage === stage, 'performance stage did not apply in order');
+        });
+        ok(earth.lodTier === 2 && earth.lodMeshes[2].visible, 'lowest stage downgraded the selected body detail');
+        ok(earth.specialty.clouds.visible && earth.specialty.ocean.visible && earth.specialty.night.visible && earth.specialty.atmosphere.visible, 'lowest stage removed selected Earth detail');
+        applySolarPerformanceTier(0);
+        ok(solarPerf.stage === 0 && solarLOD.textureCeiling === (solarIsCompact() ? 2048 : 4096), 'performance recovery was not reversible');
+        resetSolarPerformanceWatchdog(0); solarPerfEMA = 45; solarPerfNextCheck = 0; sampleSolarPerformance(1);
+        ok(solarPerf.stage === 1, 'Solar watchdog did not advance only the next degradation stage');
       } finally {
         solarMotionOverride = oldMotionOverride;
         solarCompactOverride = oldCompactOverride;
         applySolarPerformanceTier(oldScale);
-        solarPerf.scale = oldPerf.scale; solarPerf.beltFraction = oldPerf.beltFraction; solarPerf.backgroundFraction = oldPerf.backgroundFraction; solarPerf.backgroundEvery = oldPerf.backgroundEvery; solarPerf.labelEvery = oldPerf.labelEvery; solarPerf.specialty = oldPerf.specialty; solarLOD.textureCeiling = oldPerf.textureCeiling;
+        solarPerf.stage = oldPerf.stage; solarPerf.epoch = oldPerf.epoch; solarPerf.beltFraction = oldPerf.beltFraction; solarPerf.backgroundFraction = oldPerf.backgroundFraction; solarPerf.backgroundEvery = oldPerf.backgroundEvery; solarPerf.labelEvery = oldPerf.labelEvery; solarPerf.specialty = oldPerf.specialty; solarLOD.textureCeiling = oldPerf.textureCeiling;
         if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
         solarNav.level = oldNav.level; solarNav.selectedId = oldNav.selectedId; solarNav.parentId = oldNav.parentId; solarNav.cameraStack = oldNav.cameraStack; solarNav.galaxySnapshot = oldNav.galaxySnapshot; solarNav.skySnapshot = oldNav.skySnapshot;
         solarFlight = oldFlight; solarCardOpen = oldCard; setSolarPaused(oldPaused);
         solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update(); gestureDist = oldGestureDist;
-        controls.enabled = oldControls.galaxy; solarControls.enabled = oldControls.solar; skyControls.enabled = oldControls.sky;
+        controls.enabled = oldControls.galaxy; solarControls.enabled = oldControls.solar; skyControls.enabled = oldControls.sky; skyControls.autoRotate = oldControls.skyAuto;
         bpBody.innerHTML = oldPanel.html; bpEl.classList.toggle('open', oldPanel.open);
         viewMode = oldView;
       }
@@ -1520,28 +1548,44 @@
   var solarSphereHigh = new THREE.SphereGeometry(1, 48, 32);
   var solarRingGeometry = new THREE.RingGeometry(1, 2, 48, 1);
   var solarLOD = { active2: null, cache: {}, pending: {}, quality: 1, mobile: !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches), textureCeiling: 4096, maps: {}, requests: {}, fades: [], warned: {}, textureLoader: null };
-  var solarPerf = { scale: 1, beltFraction: 1, backgroundFraction: 1, backgroundEvery: 1, labelEvery: 1, specialty: true, labelFrame: 0, backgroundFrame: 0 };
+  var solarPerf = { stage: 0, epoch: 0, beltFraction: 1, backgroundFraction: 1, backgroundEvery: 1, labelEvery: 1, specialty: true, labelFrame: 0, backgroundFrame: 0 };
   var solarMotionOverride = null, solarCompactOverride = null;
   function solarIsCompact() { return solarCompactOverride !== null ? !!solarCompactOverride : window.innerWidth <= 640 || !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches); }
   function solarReducedMotion() {
     if (solarMotionOverride !== null) return !!solarMotionOverride;
     return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
-  function applySolarPerformanceTier(scale) {
-    scale = Math.max(0.25, Math.min(1, Number(scale) || 1));
-    solarPerf.scale = scale;
-    // Degrade in a stable order so presentation-critical selected content is last.
-    solarPerf.beltFraction = scale;
+  function solarPerformanceStage(value) {
+    value = Number(value);
+    if (!isFinite(value)) return 0;
+    if (value <= 1) return value >= 1 ? 0 : value >= 0.5 ? 3 : 5;
+    return Math.max(0, Math.min(5, Math.round(value)));
+  }
+  function applySolarSpecialtyTier() {
+    SOLAR_BODIES.forEach(function (body) {
+      var object = SOLAR_OBJECTS[body.id]; if (!object) return;
+      if (object.lodFade) solarCancelFade(object);
+      solarSetSpecialty(object, object.lodTier, 1, false);
+    });
+  }
+  function applySolarPerformanceTier(value) {
+    var stage = solarPerformanceStage(value), changed = stage !== solarPerf.stage;
+    solarPerf.stage = stage;
+    if (changed) solarPerf.epoch++;
+    // Each numbered stage owns precisely one concern and is reversible.
+    solarPerf.beltFraction = stage >= 1 ? 0.55 : 1;
     if (solarAsteroidBelt && solarAsteroidBelt.geometry && solarAsteroidBelt.geometry.attributes.position) {
       var beltCount = solarAsteroidBelt.geometry.attributes.position.count;
       solarAsteroidBelt.geometry.setDrawRange(0, Math.max(160, Math.floor(beltCount * solarPerf.beltFraction)));
     }
-    solarPerf.backgroundFraction = scale >= 0.5 ? 1 : 0.45;
-    solarPerf.backgroundEvery = scale >= 0.5 ? 1 : 3;
+    solarPerf.backgroundFraction = stage >= 2 ? 0.45 : 1;
+    solarPerf.backgroundEvery = stage >= 2 ? 3 : 1;
     if (solarBackdrop && solarBackdrop.geometry && solarBackdrop.geometry.attributes.position) solarBackdrop.geometry.setDrawRange(0, Math.max(120, Math.floor(solarBackdrop.geometry.attributes.position.count * solarPerf.backgroundFraction)));
-    solarPerf.labelEvery = scale >= 0.5 ? 1 : 3;
-    solarLOD.textureCeiling = (!solarIsCompact() && scale >= 0.5) ? 4096 : 2048;
-    solarPerf.specialty = scale > 0.25;
+    solarPerf.labelEvery = stage >= 3 ? 3 : 1;
+    solarLOD.textureCeiling = (!solarIsCompact() && stage < 4) ? 4096 : 2048;
+    solarPerf.specialty = stage < 5;
+    if (changed) SOLAR_BODIES.forEach(function (body) { var object = SOLAR_OBJECTS[body.id]; if (object) { object.lodEpoch++; object.lodRequest = null; } });
+    applySolarSpecialtyTier();
     if (typeof updateSolarLOD === 'function') updateSolarLOD();
     return solarPerf;
   }
@@ -1550,6 +1594,11 @@
     solarPerf.backgroundFrame++;
     if (solarPerf.backgroundFrame % solarPerf.backgroundEvery) return;
     solarBackdrop.rotation.y = solarReducedMotion() ? 0 : solarShaderTime * 0.006;
+  }
+  function refreshSolarResponsiveState() {
+    solarLOD.mobile = solarIsCompact();
+    applySolarPerformanceTier(solarPerf.stage);
+    if (viewMode === 'solar') { updateSolarLOD(); frameSolarForViewport(); }
   }
   var solarAnimatedMaterials = [];
   var solarMaterialBases = {
@@ -1622,7 +1671,8 @@
   }
   function solarCanUseLOD2(id) {
     var object = SOLAR_OBJECTS[id];
-    return !!(object && object.lodGroup.visible && !object.lodFailed2 && !solarLOD.mobile && solarLOD.quality >= 2 && solarSelectedId() === id);
+    var maxTexture = renderer && renderer.capabilities ? renderer.capabilities.maxTextureSize : 0;
+    return !!(object && object.lodGroup.visible && !object.lodFailed2 && solarSelectedId() === id && maxTexture >= 4096);
   }
   function chooseSolarLOD(id, distance) {
     var object = SOLAR_OBJECTS[id], radius = object && object.radius ? object.radius : 1, ratio = Math.max(0, distance) / radius;
@@ -1741,8 +1791,8 @@
     var urls = solarMapURLs(SOLAR_BY_ID[id], tier), keys = Object.keys(urls);
     return keys.some(function (key) { return maps[key] === null; });
   }
-  function solarLODRequestCurrent(object, epoch, id, tier) {
-    if (object.lodEpoch !== epoch || object.lodTarget !== tier) return false;
+  function solarLODRequestCurrent(object, epoch, id, tier, perfEpoch) {
+    if (object.lodEpoch !== epoch || object.lodTarget !== tier || (perfEpoch != null && solarPerf.epoch !== perfEpoch)) return false;
     return tier !== 2 || (solarLOD.active2 === id && solarCanUseLOD2(id));
   }
   function solarRenderedLOD2Count() {
@@ -1767,14 +1817,14 @@
     else if (solarLOD.active2 === id) { solarDemoteLOD2(object); solarLOD.active2 = null; }
     if (object.lodTarget === tier && object.lodTier === tier && !object.lodRequest) return object;
     if (object.lodTarget === tier && object.lodRequest) return object.lodRequest;
-    object.lodEpoch++; object.lodTarget = tier; var epoch = object.lodEpoch;
+    object.lodEpoch++; object.lodTarget = tier; var epoch = object.lodEpoch, perfEpoch = solarPerf.epoch;
     if (tier === 0) { object.lodRequest = null; solarSwapTier(object, 0); return object; }
     object.lodRequest = loadSolarMaps(id, tier).then(function (maps) {
-      if (!solarLODRequestCurrent(object, epoch, id, tier)) return object;
+      if (!solarLODRequestCurrent(object, epoch, id, tier, perfEpoch)) return object;
       if (tier === 2 && solarTierHasFailure(id, tier, maps)) {
         object.lodFailed2 = true; if (solarLOD.active2 === id) solarLOD.active2 = null;
         return loadSolarMaps(id, 1).then(function (fallbackMaps) {
-          if (object.lodEpoch !== epoch || object.lodTarget !== 2 || solarSelectedId() !== id || !object.lodGroup.visible) return object;
+          if (object.lodEpoch !== epoch || solarPerf.epoch !== perfEpoch || object.lodTarget !== 2 || solarSelectedId() !== id || !object.lodGroup.visible) return object;
           object.lodTarget = 1; solarApplyMaps(object, 1, fallbackMaps); solarSwapTier(object, 1); object.lodRequest = null;
           return object;
         });
@@ -2343,6 +2393,7 @@
     if (solarBackEl) solarBackEl.style.display = 'block';
     updateSolarNavigationText();
     solarFrameLast = 0;
+    resetSolarPerformanceWatchdog();
     solarControls.update();
   }
   function exitSolar() {
@@ -2364,6 +2415,7 @@
     skyReturnContext = null;
     controls.update();
     solarFrameLast = 0;
+    resetSolarPerformanceWatchdog();
     perfLast = 0;
   }
   solarBackEl.addEventListener('click', function () { if (!leaveSolarLevel()) exitSolar(); });
@@ -2385,8 +2437,23 @@
   skyControls.enablePan = false; skyControls.enableZoom = false;
   skyControls.enableDamping = true; skyControls.dampingFactor = 0.08;
   skyControls.rotateSpeed = -0.35;              // inverted: drag the SKY, not the camera
-  skyControls.autoRotate = true; skyControls.autoRotateSpeed = 0.12; // slow idle drift
+  skyControls.autoRotate = !solarReducedMotion(); skyControls.autoRotateSpeed = 0.12; // slow idle drift
   skyControls.enabled = false;                  // only active in sky view
+  var solarMotionMedia = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  function shortenActiveFlights() {
+    var now = performance.now();
+    if (solarFlight) { solarFlight.p0.copy(solarCamera.position); solarFlight.t0.copy(solarControls.target); solarFlight.start = now; solarFlight.dur = 120; }
+    if (flyState) { flyState.p0.copy(camera.position); flyState.t0.copy(controls.target); flyState.start = now; flyState.dur = 120; }
+  }
+  function refreshReducedMotion() {
+    var reduced = solarReducedMotion();
+    skyControls.autoRotate = !reduced;
+    if (reduced) shortenActiveFlights();
+  }
+  if (solarMotionMedia) {
+    if (solarMotionMedia.addEventListener) solarMotionMedia.addEventListener('change', refreshReducedMotion);
+    else if (solarMotionMedia.addListener) solarMotionMedia.addListener(refreshReducedMotion);
+  }
   var skyTwinkleMat = null;
   (function skyBackdrop() {
     // faint twinkling background stars
@@ -2990,7 +3057,7 @@
     updateSolarLabels();
     if (context.solar.panelOpen) renderSolarPanel(context.solar.selectedId, beaconLang); else clearSolarCard();
     updateSolarNavigationText();
-    solarFrameLast = 0; perfLast = 0;
+    solarFrameLast = 0; resetSolarPerformanceWatchdog(); perfLast = 0;
     return true;
   }
   function exitSky() {
@@ -3021,6 +3088,21 @@
   // panel sits at 33.3ms, safely below), halve perfScale (1 → .5 → .25 floor) and
   // rebuild the dust at the reduced density. Never scales back up (no oscillation).
   var perfScale = 1, perfEMA = 16.7, perfLast = 0, perfNextCheck = performance.now() + 12000;
+  var solarPerfEMA = 16.7, solarPerfLast = 0, solarPerfNextCheck = 0;
+  function resetSolarPerformanceWatchdog(now) {
+    now = now == null ? performance.now() : now;
+    solarPerfEMA = 16.7; solarPerfLast = 0; solarPerfNextCheck = now + 10000;
+  }
+  function sampleSolarPerformance(now) {
+    if (solarPerfLast) solarPerfEMA += (Math.min(now - solarPerfLast, 500) - solarPerfEMA) * 0.05;
+    solarPerfLast = now;
+    if (now > solarPerfNextCheck && solarPerfEMA > 40 && solarPerf.stage < 5) {
+      solarPerfNextCheck = now + 10000;
+      applySolarPerformanceTier(solarPerf.stage + 1);
+      setMsg('low frame rate — Solar System detail reduced');
+      setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('Solar System detail') !== -1) setMsg(''); }, 2500);
+    }
+  }
   buildSolarBodies();
   buildAsteroidBelt(Math.max(400, Math.floor(2000 * perfScale)));
   applySolarPerformanceTier(perfScale);
@@ -3048,6 +3130,7 @@
       renderer.render(solarScene, solarCamera);
       solarPerf.labelFrame++;
       if (solarPerf.labelFrame % solarPerf.labelEvery === 0) updateSolarLabels();
+      sampleSolarPerformance(solarNow);
       rafId = requestAnimationFrame(frame);
       return;
     }
@@ -3066,13 +3149,13 @@
       if (fvis && !solarReducedMotion()) cb.feature.update(t);
     }
     if (bgTwinkleMat && !solarReducedMotion()) bgTwinkleMat.uniforms.uTime.value = t; // background-star twinkle
-    var cbw = Math.sin(t * 0.32), cbr = 1 + 0.07 * cbw; // ~20s galactic-core breathe
+    var cbw = solarReducedMotion() ? 0 : Math.sin(t * 0.32), cbr = 1 + 0.07 * cbw; // ~20s galactic-core breathe
     for (var cbi = 0; cbi < coreBreath.length; cbi++) {
       var cb = coreBreath[cbi], cbs = cb.s * cbr;
       cb.sp.scale.set(cbs, cbs, 1);
       cb.sp.material.opacity = cb.o * (1 + 0.16 * cbw); // halo brightness swings with the size
     }
-    if (beaconRing.visible) { var rp = 1 + 0.08 * Math.sin(t * 2.2); beaconRing.scale.set(46 * rp, 46 * rp, 1); }
+    if (beaconRing.visible) { var rp = solarReducedMotion() ? 1 : 1 + 0.08 * Math.sin(t * 2.2); beaconRing.scale.set(46 * rp, 46 * rp, 1); }
     updateFx(performance.now()); // meteors + supernovae scheduling (no-op when idle)
     var fnow = performance.now();
     if (perfLast) { perfEMA += (Math.min(fnow - perfLast, 500) - perfEMA) * 0.05; }
@@ -3082,7 +3165,6 @@
       if (perfEMA > 40 && perfScale > 0.26) { // sustained < ~25fps → shed decorative dust
         perfScale *= 0.5;
         buildDust(dustFor());
-        applySolarPerformanceTier(perfScale);
         setMsg('low frame rate — dust density reduced');
         setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('dust density') !== -1) setMsg(''); }, 2500);
       }
@@ -3093,7 +3175,7 @@
     rafId = requestAnimationFrame(frame);
   }
   function startLoop() { if (rafId == null && !document.hidden) rafId = requestAnimationFrame(frame); }
-  document.addEventListener('visibilitychange', function () { perfLast = 0; solarFrameLast = 0; startLoop(); }); // reset frame clocks so resume gaps do not enter animation timing
+  document.addEventListener('visibilitychange', function () { perfLast = 0; solarFrameLast = 0; resetSolarPerformanceWatchdog(); startLoop(); }); // reset frame clocks so resume gaps do not enter animation timing
   window.addEventListener('resize', function () {
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
     skyCamera.aspect = window.innerWidth / window.innerHeight; skyCamera.updateProjectionMatrix();
@@ -3101,8 +3183,13 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     if (composer) composer.setSize(window.innerWidth, window.innerHeight);
     if (skyComposer) skyComposer.setSize(window.innerWidth, window.innerHeight);
-    frameSolarForViewport();
+    refreshSolarResponsiveState();
   });
+  var solarPointerMedia = window.matchMedia ? window.matchMedia('(pointer:coarse)') : null;
+  if (solarPointerMedia) {
+    if (solarPointerMedia.addEventListener) solarPointerMedia.addEventListener('change', refreshSolarResponsiveState);
+    else if (solarPointerMedia.addListener) solarPointerMedia.addListener(refreshSolarResponsiveState);
+  }
 
   // ── ambient effects: shooting stars + supernovae ────────────────────────────
   // A one-shot FX micro-system: short-lived sprites/points, updated by updateFx()
