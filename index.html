@@ -303,16 +303,43 @@
       solarRoot.traverse(function (o) { if (o instanceof THREE.Points) points++; });
       ok(solarAsteroidBelt instanceof THREE.Points, 'asteroid belt is not points');
       ok(points === 1, 'asteroid belt must use one points object');
+      var first = solarAsteroidBelt.geometry.attributes.position.array.slice(0), oldBelt = solarAsteroidBelt;
+      ok(first.length === 2000 * 3, 'asteroid belt must have 2,000 vertices');
+      buildAsteroidBelt(2000);
+      var second = solarAsteroidBelt.geometry.attributes.position.array;
+      ok(first.length === second.length && first.every(function (v, i) { return v === second[i]; }), 'asteroid belt positions are not deterministic');
+      ok(oldBelt.geometry.disposed && oldBelt.material.disposed, 'replaced belt resources were not disposed');
+      var ceres = SOLAR_OBJECTS.ceres, angle = solarBeltCenterAngle(ceres.body, ceres.body.phase + solarElapsed / ceres.compressedPeriod), gap = solarBeltClearance.angle;
+      for (var i = 0; i < second.length; i += 3) {
+        var x = second[i], z = second[i + 2], radius = Math.sqrt(x * x + z * z), beltAngle = Math.atan2(z, x) + solarAsteroidBelt.rotation.y;
+        if (Math.abs(Math.atan2(Math.sin(beltAngle - angle), Math.cos(beltAngle - angle))) < gap) ok(radius < solarBeltClearance.inner || radius > solarBeltClearance.outer, 'belt point enters Ceres clearance');
+      }
+    });
+    check('solar-orbit-forms', function () {
+      var pluto = SOLAR_OBJECTS.pluto, peri = new THREE.Vector3(), apo = new THREE.Vector3();
+      solarOrbitPoint(pluto.body, 0, peri); solarOrbitPoint(pluto.body, Math.PI, apo);
+      ok(Math.abs(peri.x) !== Math.abs(apo.x), 'Pluto orbit is circular');
+      ok(pluto.orbitPivot.rotation.x === pluto.body.inclinationDeg * Math.PI / 180, 'Pluto inclination is not applied');
+      var geometries = {};
+      SOLAR_BODIES.forEach(function (b) { geometries[SOLAR_OBJECTS[b.id].mesh.geometry.id] = true; });
+      ok(Object.keys(geometries).length === 2, 'body spheres do not share low and medium geometry');
     });
     check('solar-pause-clock', function () {
       ok(typeof updateSolarMotion === 'function' && typeof setSolarPaused === 'function', 'solar motion API missing');
-      var elapsed = solarElapsed, shaderTime = solarShaderTime, paused = solarPaused;
+      var elapsed = solarElapsed, shaderTime = solarShaderTime, paused = solarPaused, earth = SOLAR_OBJECTS.earth, x = earth.positionNode.position.x, z = earth.positionNode.position.z, spin = earth.spinNode.rotation.y;
       setSolarPaused(false); updateSolarMotion(0.25);
       ok(solarElapsed > elapsed, 'solar clock did not advance');
       elapsed = solarElapsed; shaderTime = solarShaderTime;
       setSolarPaused(true); updateSolarMotion(0.25);
       ok(solarElapsed === elapsed, 'paused solar clock advanced');
       ok(solarShaderTime > shaderTime, 'shader clock paused with solar clock');
+      ok(earth.positionNode.position.x !== x || earth.positionNode.position.z !== z || earth.spinNode.rotation.y !== spin, 'running transform did not advance');
+      x = earth.positionNode.position.x; z = earth.positionNode.position.z; spin = earth.spinNode.rotation.y;
+      updateSolarMotion(0.15);
+      ok(earth.positionNode.position.x === x && earth.positionNode.position.z === z && earth.spinNode.rotation.y === spin, 'paused transforms advanced');
+      setSolarPaused(false); updateSolarMotion(0.15);
+      var expected = new THREE.Vector3(); solarOrbitPoint(earth.body, earth.body.phase + solarElapsed / earth.compressedPeriod, expected);
+      ok(earth.positionNode.position.x === expected.x && earth.positionNode.position.z === expected.z, 'resume transformed Earth with a clock jump');
       setSolarPaused(paused);
     });
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
@@ -1159,6 +1186,7 @@
   // ── solar runtime: shared meshes, hierarchical orbits, and deterministic time ──
   var SOLAR_OBJECTS = {}, solarAsteroidBelt = null;
   var solarElapsed = 0, solarShaderTime = 0, solarPaused = false, solarFrameLast = 0;
+  var solarBeltClearance = { angle: 0.18, inner: 0, outer: 0 }, solarBeltPoint = new THREE.Vector3();
   var solarSphereLow = new THREE.SphereGeometry(1, 12, 8);
   var solarSphereMedium = new THREE.SphereGeometry(1, 24, 16);
   var solarRingGeometry = new THREE.RingGeometry(1, 2, 48, 1);
@@ -1196,6 +1224,10 @@
     var a = solarOrbitDistance(body), b = a * Math.sqrt(1 - body.eccentricity * body.eccentricity);
     target.set(Math.cos(angle) * a - body.eccentricity * a, 0, Math.sin(angle) * b);
     return target;
+  }
+  function solarBeltCenterAngle(body, angle) {
+    solarOrbitPoint(body, angle, solarBeltPoint);
+    return Math.atan2(solarBeltPoint.z * Math.cos(body.inclinationDeg * Math.PI / 180), solarBeltPoint.x);
   }
   function solarOrbitLine(body) {
     if (body.id === 'sun') return new THREE.Group();
@@ -1248,21 +1280,30 @@
     return SOLAR_OBJECTS;
   }
   function buildAsteroidBelt(count) {
-    if (solarAsteroidBelt) solarRoot.remove(solarAsteroidBelt);
-    count = count || 2000;
-    var randomState = 0x1a2b3c4d, positions = new Float32Array(count * 3), ceresAngle = SOLAR_BY_ID.ceres.phase, inner = solarOrbitRadius(1.9), outer = solarOrbitRadius(3.45);
+    if (solarAsteroidBelt) {
+      solarRoot.remove(solarAsteroidBelt);
+      solarAsteroidBelt.geometry.dispose(); solarAsteroidBelt.geometry.disposed = true;
+      solarAsteroidBelt.material.dispose(); solarAsteroidBelt.material.disposed = true;
+    }
+    count = Math.max(1, Math.floor(count || 2000));
+    var ceres = SOLAR_BY_ID.ceres, ceresRadius = solarOrbitDistance(ceres), clearance = 4;
+    solarBeltClearance.inner = ceresRadius * (1 - ceres.eccentricity) - clearance;
+    solarBeltClearance.outer = ceresRadius * (1 + ceres.eccentricity) + clearance;
+    var randomState = 0x1a2b3c4d, positions = new Float32Array(count * 3), inner = solarOrbitRadius(1.9), outer = solarOrbitRadius(3.45);
     function nextRandom() { randomState = (randomState + 0x6d2b79f5) | 0; var t = Math.imul(randomState ^ randomState >>> 15, 1 | randomState); t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
     for (var i = 0; i < count; i++) {
       var angle, radius, nearCeres;
       do {
         angle = nextRandom() * Math.PI * 2; radius = inner + (outer - inner) * Math.sqrt(nextRandom());
-        var angleGap = Math.abs(Math.atan2(Math.sin(angle - ceresAngle), Math.cos(angle - ceresAngle)));
-        nearCeres = angleGap < 0.13 && Math.abs(radius - solarOrbitRadius(SOLAR_BY_ID.ceres.distanceAu)) < 5;
+        var angleGap = Math.abs(Math.atan2(Math.sin(angle), Math.cos(angle)));
+        nearCeres = angleGap < solarBeltClearance.angle && radius >= solarBeltClearance.inner && radius <= solarBeltClearance.outer;
       } while (nearCeres);
       positions[i * 3] = Math.cos(angle) * radius; positions[i * 3 + 1] = (nextRandom() - 0.5) * 2.2; positions[i * 3 + 2] = Math.sin(angle) * radius;
     }
     var geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     solarAsteroidBelt = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xa7a29a, size: 0.62, transparent: true, opacity: 0.68, depthWrite: false, sizeAttenuation: true }));
+    var orbitAngle = ceres.phase + solarElapsed / solarCompressedPeriod(ceres);
+    solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceres, orbitAngle);
     solarAsteroidBelt.userData.solarId = 'asteroid-belt'; solarRoot.add(solarAsteroidBelt);
     return solarAsteroidBelt;
   }
@@ -1283,6 +1324,10 @@
       object.spinNode.rotation.y = solarElapsed / Math.max(0.3, Math.abs(body.rotationHours) / 120);
       if (body.rotationHours < 0) object.spinNode.rotation.y *= -1;
     });
+    if (solarAsteroidBelt) {
+      var ceresObject = SOLAR_OBJECTS.ceres;
+      solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceresObject.body, ceresObject.body.phase + solarElapsed / ceresObject.compressedPeriod);
+    }
   }
   var selectedBeacon = null;
   function selectBeacon(i) {
