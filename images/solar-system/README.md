@@ -1,66 +1,70 @@
 # Solar System texture sources
 
-This directory contains the browser-delivery texture set referenced by
-`SOLAR_BODIES[*].maps` in `index.html`. Every file is local: the application
-does not fetch a texture from a remote host at runtime.
+All files in this directory are browser-delivery assets referenced by
+`SOLAR_BODIES[*].maps`; the application does not request a remote texture at
+runtime. NASA 3D Resources states that its assets are free to download and use.
+NASA SVS states that its content is public domain unless otherwise noted. NASA
+material is subject to the [NASA media-usage guidance](https://www.nasa.gov/nasa-brand-center/images-and-media/).
 
-## Rights and redistribution
+## Inventory
 
-The NASA 3D Resources hub says: “All of these assets are free to download and
-use.” Its [media-usage guidance](https://www.nasa.gov/nasa-brand-center/images-and-media/)
-states that NASA content is generally not protected by U.S. copyright, except
-where a particular item says otherwise. The sources below are NASA, NASA/JPL,
-NASA/GSFC, NASA SVS, NASA Visible Earth, or NASA Image and Video Library
-records; no third-party texture-pack mirror was used. The SVS source carries
-the more explicit statement: “All of our content is in the public domain
-(unless otherwise noted).” Source-page credits are retained below.
+| Local file | Direct primary source and credit | Source → delivery transformation |
+| --- | --- | --- |
+| `mercury.jpg` | USGS Astrogeology, [Mercury MESSENGER MDIS DEM Global Color Shaded Relief 2km](https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_dem_global_color_shaded_relief_2km), based on MESSENGER MDIS; access constraints: none | 7664×3832 GeoTIFF → 2048×1024 JPEG. Global equirectangular map. |
+| `venus.jpg` | NASA/JPL, [Venus](https://science.nasa.gov/3d-resources/venus/), Magellan radar mosaic | 1440×720 JPEG → 2048×1024 JPEG. |
+| `earth.jpg` | NASA/JPL, [Earth (A)](https://science.nasa.gov/3d-resources/earth-a/) | 1440×720 JPEG → 2048×1024 JPEG. |
+| `earth-normal.png` | NASA SVS, [Blue Marble (ID 2915)](https://svs.gsfc.nasa.gov/2915/), whose topographic shading is based on the USGS GTOPO30 elevation model | `bluemarble-2048.png` → 1024×512 RGB tangent-space normal PNG. The normal is derived from the documented topographic-shading source, never from the Earth albedo texture. |
+| `earth-night.jpg` | NASA Earth Observatory, [Earth at Night (Black Marble) 2016 Color Maps](https://visibleearth.nasa.gov/images/144898/earth-at-night-black-marble-2016-color-maps/144957l), Joshua Stevens using Suomi NPP VIIRS data from Miguel Román, NASA GSFC | 3600×1800 JPEG → 2048×1024 JPEG. |
+| `earth-clouds.png` | NASA SVS, [Clouds frame listing](https://svs.gsfc.nasa.gov/vis/a000000/a003800/a003837/frames/2048x1024_2x1_30p/Clouds/); NASA GSFC | 2048×1024 TIFF → 2048×1024 RGBA PNG. RGB is white; processed source luminance is alpha. |
+| `moon.jpg` | NASA SVS, [CGI Moon Kit](https://svs.gsfc.nasa.gov/4720/), Ernie Wright; LROC camera and LOLA teams | `lroc_color_2k.jpg`, 2048×1024 JPEG copied at native size. Centered at 0° longitude. |
+| `moon-normal.png` | NASA SVS, [CGI Moon Kit (LOLA displacement map)](https://svs.gsfc.nasa.gov/4720/), LROC and LOLA teams | `ldem_4_uint.tif`, a 1440×720 unsigned 16-bit LOLA elevation/displacement map (half-metre units), → 1024×512 RGB tangent-space normal PNG. |
+| `mars.jpg` | NASA/JPL, [Mars](https://science.nasa.gov/3d-resources/mars/), Viking imagery processed at USGS | 1440×720 JPEG → 2048×1024 JPEG. |
+| `mars-normal.png` | USGS Astrogeology, [MGS MOLA Global DEM 463m](https://astrogeology.usgs.gov/search/map/mars_mgs_mola_dem_463m), Mars Global Surveyor MOLA | Official 1024×501 DEM browse raster → 1024×512 RGB tangent-space normal PNG. The source is an elevation product, not the Mars albedo map. |
+| `ceres.jpg` | USGS Astrogeology, [Ceres Dawn FC Global Mosaic 140m](https://astrogeology.usgs.gov/search/map/ceres_dawn_fc_global_mosaic_140m), Dawn FC global mosaic; source page marks it public-domain PDS data | Official 1024×512 browse mosaic copied at native size. Global simple-cylindrical map. |
+| `jupiter.jpg` | NASA/JPL, [Jupiter](https://science.nasa.gov/3d-resources/jupiter/), Voyager images | 720×360 JPEG → 2048×1024 JPEG. |
+| `io.jpg` | NASA/JPL, [Jupiter – Io (A)](https://science.nasa.gov/3d-resources/jupiter-io-a/), USGS/Voyager mosaic | 1440×720 JPEG → 2048×1024 JPEG. |
+| `europa.jpg` | NASA/JPL, [Jupiter – Europa](https://science.nasa.gov/3d-resources/jupiter-europa/), USGS/Voyager mosaic | 1440×720 JPEG → 2048×1024 JPEG. |
+| `ganymede.jpg` | NASA/JPL, [Jupiter – Ganymede](https://science.nasa.gov/3d-resources/jupiter-ganymede/), USGS/Voyager mosaic | 1440×720 JPEG → 2048×1024 JPEG. |
+| `callisto.jpg` | NASA/JPL, [Jupiter – Callisto](https://science.nasa.gov/3d-resources/jupiter-callisto/), USGS/Voyager mosaic | 1440×720 JPEG → 2048×1024 JPEG. |
+| `saturn.jpg` | NASA/JPL, [Saturn](https://science.nasa.gov/3d-resources/saturn/) | 720×360 JPEG → 2048×1024 JPEG. |
+| `saturn-rings.png` | NASA/JPL/Space Science Institute, [Panoramic Rings (PIA06175)](https://science.nasa.gov/resource/panoramic-rings/) | A central horizontal radial scanline of the 5890×1000 Cassini panorama is sampled into a centered 1024×1024 annulus. Pixels at radius 220–500 retain sampled RGB and luminance alpha; the center and outside are transparent. This matches `RingGeometry` UVs. |
+| `titan.jpg` | NASA/JPL, [Saturn – Titan](https://science.nasa.gov/3d-resources/saturn-titan/) | 720×360 JPEG → 2048×1024 JPEG. |
+| `uranus.jpg` | NASA/JPL, [Voyager 2 color observation PIA01391](https://images.nasa.gov/details-PIA01391) | 1024×512 seamless procedural visualization: the documented Voyager color supplies the cyan base; a small latitude-only sinusoid supplies subtle bands. It is not a surface mosaic and no crescent observation is wrapped. |
+| `neptune.jpg` | NASA/JPL, [Neptune](https://science.nasa.gov/3d-resources/neptune/), Don Davis & JPL/Caltech | 720×360 JPEG → 2048×1024 JPEG. |
+| `triton.jpg` | NASA/JPL, [Neptune – Triton](https://science.nasa.gov/3d-resources/neptune-triton/), USGS/Tammy Becker & JPL/Caltech | 1440×720 JPEG → 2048×1024 JPEG. |
+| `pluto.jpg` | NASA/JPL, [Pluto](https://science.nasa.gov/3d-resources/pluto/) | 720×360 JPEG → 2048×1024 JPEG. The source page identifies this as a fictional texture stitched by David Seal from a Pat Rawlings painting; it is retained only with that explicit credit. |
 
-## Source inventory and local files
+Earth, Moon, and Mars configure the three normal maps above. They are all generated
+from documented topography or elevation sources; the other bodies intentionally have
+no relief map rather than reinterpreting albedo as terrain.
 
-| Local files | Source page and original material | Agency / creator | Delivery transformation |
-| --- | --- | --- | --- |
-| `venus.jpg` | [Venus](https://science.nasa.gov/3d-resources/venus/) — `Venus.jpg`, Magellan radar mosaic | NASA/JPL Solar System Simulator; JPL/Caltech generated maps | Resampled 1440×720 JPEG to 2048×1024 JPEG (quality 85). |
-| `earth.jpg` | [Earth (A)](https://science.nasa.gov/3d-resources/earth-a/) — `Earth (A).jpg`, USGS land/ocean map | NASA/JPL Solar System Simulator | Resampled 1440×720 JPEG to 2048×1024 JPEG (quality 85). |
-| `earth-night.jpg` | [Earth at Night (Black Marble) 2016 Color Maps](https://visibleearth.nasa.gov/images/144898/earth-at-night-black-marble-2016-color-maps/144957l) — `BlackMarble_2016_01deg.jpg` | NASA Earth Observatory; Joshua Stevens using Suomi NPP VIIRS data from Miguel Román, NASA GSFC | Resampled 3600×1800 JPEG to 2048×1024 JPEG (quality 85). |
-| `earth-clouds.png` | [Clouds frame listing](https://svs.gsfc.nasa.gov/vis/a000000/a003800/a003837/frames/2048x1024_2x1_30p/Clouds/) — `clouds.0201.tif` | NASA SVS / NASA GSFC | Kept the 2048×1024 grid; converted TIFF to RGBA PNG and used its luminance as opacity. |
-| `earth-normal.jpg` | Derived from `earth.jpg` | NASA/JPL source above | 2048×1024 RGB normal approximation generated from adjacent-pixel luminance gradients; no new imagery. |
-| `moon.jpg` | [Moon – Lunar Color](https://science.nasa.gov/3d-resources/moon-lunar-color/) — `Moon - Lunar Color.jpg` | NASA/JPL Solar System Simulator; LRO/LOLA and mission imagery as credited by the source | Resampled the source texture to 2048×1024 JPEG (quality 85). |
-| `moon-normal.jpg` | Derived from `moon.jpg` | NASA/JPL source above | 2048×1024 RGB normal approximation generated from adjacent-pixel luminance gradients. |
-| `mars.jpg` | [Mars](https://science.nasa.gov/3d-resources/mars/) — `Mars.jpg`, Viking imagery processed at USGS | NASA/JPL Solar System Simulator; USGS / JPL-Caltech | Resampled 1440×720 JPEG to 2048×1024 JPEG (quality 85). |
-| `mars-normal.jpg`, `mars-bump.jpg` | Derived from `mars.jpg` | NASA/JPL / USGS source above | Normal: adjacent-pixel luminance gradients; bump: contrast-adjusted grayscale luminance. Both 2048×1024 JPEG. |
-| `mercury.jpg`, `mercury-bump.jpg` | [Mercury’s True Color is in the Eye of the Beholder](https://images.nasa.gov/details-PIA11364) — `PIA11364~orig.jpg` | NASA/JHUAPL/Carnegie Institution of Washington, MESSENGER | Observation converted to 2048×1024 JPEG as a documented source fallback; bump derived as contrast-adjusted grayscale luminance. A future equirectangular replacement can use the USGS [MESSENGER global mosaic](https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_global_mosaic_250m), which is public domain but too large for this delivery set. |
-| `ceres.jpg`, `ceres-bump.jpg` | [Ceres Cratered Landscape](https://images.nasa.gov/details-PIA20383) — `PIA20383~orig.jpg` | NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, Dawn | Observation converted to 2048×1024 JPEG as a documented source fallback; bump derived as contrast-adjusted grayscale luminance. The authoritative USGS [Ceres Dawn FC Global Mosaic 140m](https://astrogeology.usgs.gov/search/map/ceres_dawn_fc_global_mosaic_140m) is public-domain PDS data but 214 MB. |
-| `jupiter.jpg` | [Jupiter](https://science.nasa.gov/3d-resources/jupiter/) — `Jupiter.jpg`, Voyager images | NASA/JPL Solar System Simulator; JPL & Caltech | Resampled 720×360 JPEG to 2048×1024 JPEG (quality 85). |
-| `io.jpg` | [Jupiter – Io (A)](https://science.nasa.gov/3d-resources/jupiter-io-a/) — `Jupiter - Io (A).jpg`, Voyager mosaic | NASA/JPL Solar System Simulator; USGS / JPL-Caltech | Resampled 1440×720 JPEG to 2048×1024 JPEG (quality 85). |
-| `europa.jpg` | [Jupiter – Europa](https://science.nasa.gov/3d-resources/jupiter-europa/) — `Jupiter - Europa.jpg`, Voyager mosaic | NASA/JPL Solar System Simulator; USGS / JPL-Caltech | Resampled 1440×720 JPEG to 2048×1024 JPEG (quality 85). |
-| `ganymede.jpg` | [Jupiter – Ganymede](https://science.nasa.gov/3d-resources/jupiter-ganymede/) — `Jupiter - Ganymede.jpg`, Voyager mosaic | NASA/JPL Solar System Simulator; USGS / JPL-Caltech | Resampled 1440×720 JPEG to 2048×1024 JPEG (quality 85). |
-| `callisto.jpg` | [Jupiter – Callisto](https://science.nasa.gov/3d-resources/jupiter-callisto/) — `Jupiter - Callisto.jpg`, USGS/Voyager mosaic | NASA/JPL Solar System Simulator; USGS / JPL-Caltech | Resampled 1440×720 JPEG to 2048×1024 JPEG (quality 85). |
-| `saturn.jpg` | [Saturn](https://science.nasa.gov/3d-resources/saturn/) — `Saturn.jpg` | NASA/JPL Solar System Simulator; JPL/Caltech | Resampled 720×360 JPEG to 2048×1024 JPEG (quality 85). |
-| `saturn-rings.png` | [Panoramic Rings](https://science.nasa.gov/resource/panoramic-rings/) — `PIA06175~orig.jpg` | NASA/JPL/Space Science Institute, Cassini | Resampled 5890×1000 panorama to 2048×1024; converted to RGBA PNG with source luminance as opacity. The application maps it only onto ring geometry. |
-| `titan.jpg` | [Saturn – Titan](https://science.nasa.gov/3d-resources/saturn-titan/) — `Saturn - Titan.jpg` | NASA/JPL Solar System Simulator; JPL/Caltech | Resampled 720×360 JPEG to 2048×1024 JPEG (quality 85). |
-| `uranus.jpg` | [Uranus](https://images.nasa.gov/details-PIA01391) — `PIA01391~orig.jpg`, Voyager 2 color observation | NASA/JPL | Observation converted to 2048×1024 JPEG as a documented source fallback; the map has no external runtime dependency. |
-| `neptune.jpg` | [Neptune](https://science.nasa.gov/3d-resources/neptune/) — `Neptune.jpg` | NASA/JPL Solar System Simulator; Don Davis & JPL/Caltech | Resampled 720×360 JPEG to 2048×1024 JPEG (quality 85). |
-| `triton.jpg` | [Neptune – Triton](https://science.nasa.gov/3d-resources/neptune-triton/) — `Neptune - Triton.jpg`, limited Voyager imagery mosaic | NASA/JPL Solar System Simulator; USGS/Tammy Becker & JPL/Caltech | Resampled 1440×720 JPEG to 2048×1024 JPEG (quality 85). |
-| `pluto.jpg`, `pluto-normal.jpg` | [Pluto](https://science.nasa.gov/3d-resources/pluto/) — `Pluto.jpg` | NASA/JPL Solar System Simulator; David Seal & JPL/Caltech | Albedo resampled 720×360 to 2048×1024 JPEG (quality 85); normal derived from adjacent-pixel luminance gradients. |
+For each relief map, the builder rescales the elevation/topographic raster to
+1024×512 grayscale, takes centered finite differences, normalizes the vector
+`(dx, dy, 1)`, and stores the result as lossless RGB PNG. Longitude is treated
+cyclically by averaging the first and last normal-map columns after derivation;
+latitude is clamped at the poles. The strengths are deliberately modest (Earth
+0.020, Moon and Mars 0.035) so the close view reads as relief without becoming
+a displaced silhouette.
 
-## Reproducible normalization
+## Exact conversion commands
 
-The original downloads were saved outside the repository and transformed with
-macOS `sips` and FFmpeg. Opaque maps use JPEG; alpha-bearing cloud and ring
-maps use PNG. This is the essential command pattern (the concrete source URLs
-are identified above):
+Raw downloads were stored outside the repository. The following commands produced
+the exceptional local assets; the same `sips` command was applied to each
+source-to-delivery resize listed in the table.
 
 ```sh
 sips -s format jpeg -s formatOptions 85 -z 1024 2048 source.jpg --out target.jpg
-ffmpeg -i source.tif -filter_complex \
-  '[0]scale=2048:1024,format=rgb24[base];[0]scale=2048:1024,format=gray[alpha];[base][alpha]alphamerge' \
-  -frames:v 1 target.png
-ffmpeg -i albedo.jpg -vf "geq=r='128+32*(p(X+1,Y)-p(X-1,Y))':g='128+32*(p(X,Y+1)-p(X,Y-1))':b='255'" \
-  -frames:v 1 normal.jpg
+sips -s format jpeg -s formatOptions 85 -z 512 1024 ceres_dawn_fc_dlr_global_feb2016_1024.jpg --out ceres.jpg
+sips -s format jpeg -s formatOptions 85 -z 1024 2048 Mercury_Messenger_USGS_ClrShade_Global_2km.tif --out mercury.jpg
+ffmpeg -f lavfi -i 'color=c=0x80C8D8:s=1024x512:d=1' -vf "geq=r='126+3*sin(12*Y/512)':g='196+5*sin(12*Y/512)':b='210+6*sin(12*Y/512)'" -frames:v 1 uranus.jpg
+ffmpeg -f lavfi -i 'color=c=white:s=2048x1024:d=1' -i clouds.0201.tif -filter_complex '[1]scale=2048:1024,format=gray,eq=contrast=1.45:brightness=-0.18[a];[0][a]alphamerge' -frames:v 1 earth-clouds.png
+ffmpeg -i PIA06175~orig.jpg -filter_complex "[0]scale=1024:1024,format=rgb24,geq=r='p(sqrt((X-511.5)^2+(Y-511.5)^2),512)':g='p(sqrt((X-511.5)^2+(Y-511.5)^2),512)':b='p(sqrt((X-511.5)^2+(Y-511.5)^2),512)'[rgb];[0]scale=1024:1024,format=gray,geq=lum='if(between(sqrt((X-511.5)^2+(Y-511.5)^2),220,500),p(sqrt((X-511.5)^2+(Y-511.5)^2),512),0)'[a];[rgb][a]alphamerge" -frames:v 1 saturn-rings.png
+./images/solar-system/build-relief-maps.sh
 ```
 
-All 27 delivery files decode as 2048×1024 images. JPEGs are opaque; both PNGs
-are RGBA. The 2:1 equirectangular sources were visually checked at their seam
-after resizing. The three observation-derived fallback maps are explicitly
-called out above so that a future higher-fidelity global-map update is
-straightforward and preserves provenance.
+`build-relief-maps.sh` contains the exact source URLs and FFmpeg expression for
+the three lossless normal maps. It writes only `earth-normal.png`,
+`moon-normal.png`, and `mars-normal.png` in this directory.
+
+The seam and alpha checks, including quantitative edge statistics, are recorded
+in the task report.
