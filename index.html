@@ -33,7 +33,7 @@
   #skyback, #solarback { top: 64px; left: 18px; z-index: 6; display: none; cursor: pointer; font: inherit; font-size: 13px;
     color: #cbd5e1; background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 6px 12px; }
   #skyback:hover, #solarback:hover { border-color: #6366f1; color: #fff; }
-  #skyback:focus-visible, #solarback:focus-visible, .solar-label:focus-visible { outline: 2px solid #9cc0ff; outline-offset: 3px; }
+  button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid #9cc0ff; outline-offset: 3px; }
   #skylabels, #solarlabels { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
   .skylabel { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
     font-size: 13px; letter-spacing: .08em; color: #cfe0ff; white-space: nowrap; text-align: center;
@@ -93,6 +93,9 @@
     .b-mark { width: 11px; height: 11px; }
     .b-label { font-size: 10px; letter-spacing: .02em; }
     .b-label small { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
   }
   /* beacon info panel — desktop: fixed right side */
   #beacon-panel { top: 74px; right: 14px; width: 300px; max-height: calc(100vh - 96px); overflow-y: auto;
@@ -160,8 +163,8 @@
   <option value="ko">한국어</option>
 </select>
 
-<button id="skyback" class="overlay" type="button">← Back to Galaxy</button>
-<button id="solarback" class="overlay" type="button">← Back to Galaxy</button>
+<button id="skyback" class="overlay" type="button" aria-label="← Back to Galaxy">← Back to Galaxy</button>
+<button id="solarback" class="overlay" type="button" aria-label="← Back to Galaxy">← Back to Galaxy</button>
 <div id="solarlabels" aria-live="polite" style="display:none"></div>
 
 <div id="msg" class="overlay"></div>
@@ -173,7 +176,7 @@
 
 <div id="audio" class="overlay">
   <div id="audiolist"></div>
-  <div id="audiobtn" title="Background music — click to play / mute (M)">🔇</div>
+  <button id="audiobtn" type="button" title="Background music — click to play / mute (M)" aria-label="Background music">🔇</button>
 </div>
 
 <script src="vendor/three.min.js"></script>
@@ -394,7 +397,66 @@
     });
     check('solar-resize', function () {
       window.dispatchEvent(new Event('resize'));
+      ok(camera.aspect === window.innerWidth / window.innerHeight, 'resize did not update galaxy camera');
+      ok(skyCamera.aspect === window.innerWidth / window.innerHeight, 'resize did not update sky camera');
       ok(solarCamera.aspect === window.innerWidth / window.innerHeight, 'resize did not update solar camera');
+    });
+    check('solar-adaptive-accessibility', function () {
+      ok(typeof applySolarPerformanceTier === 'function', 'performance tier API missing');
+      ok(typeof solarReducedMotion === 'function', 'reduced-motion helper missing');
+      ok(typeof solarFrameSelectedBody === 'function', 'mobile selected-body framing helper missing');
+      ok(typeof routeSolarGestureZoom === 'function', 'Solar Safari pinch routing helper missing');
+      ['solarback', 'skyback', 'bp-close'].forEach(function (id) {
+        var control = document.getElementById(id);
+        ok(control && control.tagName === 'BUTTON', id + ' is not a button');
+        ok(control.getAttribute('aria-label'), id + ' has no accessible name');
+      });
+      var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldFlight = solarFlight, oldCard = solarCardOpen, oldScale = perfScale, oldMotionOverride = solarMotionOverride, oldCompactOverride = solarCompactOverride, oldPaused = solarPaused;
+      var oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone(), oldGestureDist = gestureDist, oldPerf = { scale: solarPerf.scale, beltFraction: solarPerf.beltFraction, backgroundFraction: solarPerf.backgroundFraction, backgroundEvery: solarPerf.backgroundEvery, labelEvery: solarPerf.labelEvery, specialty: solarPerf.specialty, textureCeiling: solarLOD.textureCeiling };
+      var oldControls = { galaxy: controls.enabled, solar: solarControls.enabled, sky: skyControls.enabled }, oldPanel = { html: bpBody.innerHTML, open: bpEl.classList.contains('open') };
+      try {
+        solarMotionOverride = true;
+        solarCompactOverride = true;
+        renderPanel(0, beaconLang);
+        ok(document.getElementById('bp-solar-link').getAttribute('aria-label'), 'Solar entry has no accessible name');
+        if (viewMode !== 'solar') enterSolar();
+        updateSolarLabels();
+        Object.keys(solarLabelButtons).forEach(function (id) {
+          var label = solarLabelButtons[id];
+          ok(label.tagName === 'BUTTON' && label.getAttribute('aria-label'), id + ' label is not an accessible button');
+        });
+        focusSolarBody('earth');
+        ok(solarFlight && solarFlight.dur <= 120, 'reduced motion did not shorten a body flight');
+        stepSolarFlight(Infinity);
+        var earth = SOLAR_OBJECTS.earth, cardWasOpen = solarCardOpen;
+        ok(document.getElementById('bp-earth-sky-link').getAttribute('aria-label'), 'Earth sky entry has no accessible name');
+        var reducedElapsed = solarElapsed, reducedSpin = earth.spinNode.rotation.y;
+        setSolarPaused(false); updateSolarMotion(0.1);
+        ok(solarElapsed === reducedElapsed && earth.spinNode.rotation.y === reducedSpin, 'reduced motion left decorative Solar rotation running');
+        var framed = solarFrameSelectedBody(new THREE.Vector3(0, 0, 0), earth.radius);
+        ok(framed.y < 0, 'compact framing did not move the selected body above the drawer');
+        gestureDist = solarCamera.position.distanceTo(solarControls.target);
+        var pinchDistance = gestureDist;
+        ok(routeSolarGestureZoom(2), 'Solar pinch was not routed to the Solar camera');
+        ok(solarCamera.position.distanceTo(solarControls.target) < pinchDistance, 'Solar pinch did not zoom the Solar camera');
+        applySolarPerformanceTier(0.25);
+        ok(earth.lodGroup.visible && earth.hitProxy.visible && earth.hitProxy.userData.solarActive, 'lowest tier hid the selected Earth or its proxy');
+        ok(solarCardOpen === cardWasOpen, 'lowest tier closed the selected card');
+        ok(solarAsteroidBelt.geometry.drawRange.count < solarAsteroidBelt.geometry.attributes.position.count, 'lowest tier did not reduce asteroid draw range');
+        ok(solarLOD.textureCeiling === 2048, 'compact or low-performance maps exceeded the 2K ceiling');
+      } finally {
+        solarMotionOverride = oldMotionOverride;
+        solarCompactOverride = oldCompactOverride;
+        applySolarPerformanceTier(oldScale);
+        solarPerf.scale = oldPerf.scale; solarPerf.beltFraction = oldPerf.beltFraction; solarPerf.backgroundFraction = oldPerf.backgroundFraction; solarPerf.backgroundEvery = oldPerf.backgroundEvery; solarPerf.labelEvery = oldPerf.labelEvery; solarPerf.specialty = oldPerf.specialty; solarLOD.textureCeiling = oldPerf.textureCeiling;
+        if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
+        solarNav.level = oldNav.level; solarNav.selectedId = oldNav.selectedId; solarNav.parentId = oldNav.parentId; solarNav.cameraStack = oldNav.cameraStack; solarNav.galaxySnapshot = oldNav.galaxySnapshot; solarNav.skySnapshot = oldNav.skySnapshot;
+        solarFlight = oldFlight; solarCardOpen = oldCard; setSolarPaused(oldPaused);
+        solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update(); gestureDist = oldGestureDist;
+        controls.enabled = oldControls.galaxy; solarControls.enabled = oldControls.solar; skyControls.enabled = oldControls.sky;
+        bpBody.innerHTML = oldPanel.html; bpEl.classList.toggle('open', oldPanel.open);
+        viewMode = oldView;
+      }
     });
     check('solar-runtime-objects', function () {
       ok(typeof buildSolarBodies === 'function', 'buildSolarBodies missing');
@@ -626,6 +688,7 @@
   // ── independent solar scene shell (bodies are added in the next task) ────────
   var solarScene = new THREE.Scene();
   var solarRoot = new THREE.Group(); solarScene.add(solarRoot);
+  var solarBackdrop = null;
   var solarCamera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.05, 1800);
   solarCamera.position.set(0, 105, 180);
   var solarControls = new THREE.OrbitControls(solarCamera, renderer.domElement);
@@ -646,7 +709,8 @@
     var g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    solarScene.add(new THREE.Points(g, new THREE.PointsMaterial({ size: 1.5, vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false })));
+    solarBackdrop = new THREE.Points(g, new THREE.PointsMaterial({ size: 1.5, vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false }));
+    solarScene.add(solarBackdrop);
   })();
   solarRoot.add(new THREE.AmbientLight(0x33445f, 0.55));
   var solarKey = new THREE.DirectionalLight(0xffe2a6, 1.1); solarKey.position.set(70, 110, 55); solarRoot.add(solarKey);
@@ -1455,7 +1519,38 @@
   var solarSphereMedium = new THREE.SphereGeometry(1, 24, 16);
   var solarSphereHigh = new THREE.SphereGeometry(1, 48, 32);
   var solarRingGeometry = new THREE.RingGeometry(1, 2, 48, 1);
-  var solarLOD = { active2: null, cache: {}, pending: {}, quality: 1, mobile: !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches), maps: {}, requests: {}, fades: [], warned: {}, textureLoader: null };
+  var solarLOD = { active2: null, cache: {}, pending: {}, quality: 1, mobile: !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches), textureCeiling: 4096, maps: {}, requests: {}, fades: [], warned: {}, textureLoader: null };
+  var solarPerf = { scale: 1, beltFraction: 1, backgroundFraction: 1, backgroundEvery: 1, labelEvery: 1, specialty: true, labelFrame: 0, backgroundFrame: 0 };
+  var solarMotionOverride = null, solarCompactOverride = null;
+  function solarIsCompact() { return solarCompactOverride !== null ? !!solarCompactOverride : window.innerWidth <= 640 || !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches); }
+  function solarReducedMotion() {
+    if (solarMotionOverride !== null) return !!solarMotionOverride;
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  function applySolarPerformanceTier(scale) {
+    scale = Math.max(0.25, Math.min(1, Number(scale) || 1));
+    solarPerf.scale = scale;
+    // Degrade in a stable order so presentation-critical selected content is last.
+    solarPerf.beltFraction = scale;
+    if (solarAsteroidBelt && solarAsteroidBelt.geometry && solarAsteroidBelt.geometry.attributes.position) {
+      var beltCount = solarAsteroidBelt.geometry.attributes.position.count;
+      solarAsteroidBelt.geometry.setDrawRange(0, Math.max(160, Math.floor(beltCount * solarPerf.beltFraction)));
+    }
+    solarPerf.backgroundFraction = scale >= 0.5 ? 1 : 0.45;
+    solarPerf.backgroundEvery = scale >= 0.5 ? 1 : 3;
+    if (solarBackdrop && solarBackdrop.geometry && solarBackdrop.geometry.attributes.position) solarBackdrop.geometry.setDrawRange(0, Math.max(120, Math.floor(solarBackdrop.geometry.attributes.position.count * solarPerf.backgroundFraction)));
+    solarPerf.labelEvery = scale >= 0.5 ? 1 : 3;
+    solarLOD.textureCeiling = (!solarIsCompact() && scale >= 0.5) ? 4096 : 2048;
+    solarPerf.specialty = scale > 0.25;
+    if (typeof updateSolarLOD === 'function') updateSolarLOD();
+    return solarPerf;
+  }
+  function updateSolarBackdrop() {
+    if (!solarBackdrop) return;
+    solarPerf.backgroundFrame++;
+    if (solarPerf.backgroundFrame % solarPerf.backgroundEvery) return;
+    solarBackdrop.rotation.y = solarReducedMotion() ? 0 : solarShaderTime * 0.006;
+  }
   var solarAnimatedMaterials = [];
   var solarMaterialBases = {
     terrestrial: new THREE.MeshPhongMaterial({ shininess: 12, specular: 0x222222 }),
@@ -1518,7 +1613,7 @@
   function solarTextureQuality() {
     if (solarLOD.mobile) return 1;
     var maxTexture = renderer && renderer.capabilities ? renderer.capabilities.maxTextureSize : 0;
-    return maxTexture >= 4096 && perfScale >= 0.5 ? 2 : 1;
+    return maxTexture >= 4096 && solarLOD.textureCeiling >= 4096 && perfScale >= 0.5 ? 2 : 1;
   }
   function solarSelectedId() { return typeof solarNav !== 'undefined' ? solarNav.selectedId : null; }
   function solarBaseTier(object, ratio) {
@@ -1598,9 +1693,10 @@
   }
   function solarSpecialtyNames(object, tier) {
     var names = [];
-    if (object.body.id === 'sun' && tier >= 1) names.push('corona');
-    if (object.body.id === 'earth' && tier >= 2) names = names.concat(['clouds', 'ocean', 'night', 'atmosphere']);
-    if (object.body.id === 'saturn' && tier >= 2) names.push('detailedRings');
+    var preserveSelected = object.body.id === solarSelectedId();
+    if (object.body.id === 'sun' && tier >= 1 && (solarPerf.specialty || preserveSelected)) names.push('corona');
+    if (object.body.id === 'earth' && tier >= 2 && (solarPerf.specialty || preserveSelected)) names = names.concat(['clouds', 'ocean', 'night', 'atmosphere']);
+    if (object.body.id === 'saturn' && tier >= 2 && (solarPerf.specialty || preserveSelected)) names.push('detailedRings');
     return names;
   }
   function solarSetSpecialty(object, tier, amount, fading) {
@@ -1831,18 +1927,20 @@
   function setSolarPaused(paused) { solarPaused = !!paused; }
   function updateSolarMotion(dt) {
     dt = Math.max(0, Math.min(Number(dt) || 0, 0.15));
-    solarShaderTime += dt;
-    solarCoronaMaterial.uniforms.uTime.value = solarShaderTime;
-    solarAnimatedMaterials.forEach(function (material) {
-      if (material.uniforms && material.uniforms.uTime) material.uniforms.uTime.value = solarShaderTime;
-      if (material.userData && material.userData.solarShader) material.userData.solarShader.uniforms.uSolarTime.value = solarShaderTime;
-    });
     updateSolarLODFades(dt);
-    if (solarGlowSprite) {
-      var glow = 1 + Math.sin(solarShaderTime * 1.7) * 0.06;
-      solarGlowSprite.scale.set(32 * glow, 32 * glow, 1);
+    if (!solarReducedMotion()) {
+      solarShaderTime += dt;
+      solarCoronaMaterial.uniforms.uTime.value = solarShaderTime;
+      solarAnimatedMaterials.forEach(function (material) {
+        if (material.uniforms && material.uniforms.uTime) material.uniforms.uTime.value = solarShaderTime;
+        if (material.userData && material.userData.solarShader) material.userData.solarShader.uniforms.uSolarTime.value = solarShaderTime;
+      });
+      if (solarGlowSprite) {
+        var glow = 1 + Math.sin(solarShaderTime * 1.7) * 0.06;
+        solarGlowSprite.scale.set(32 * glow, 32 * glow, 1);
+      }
     }
-    if (solarPaused) return;
+    if (solarPaused || solarReducedMotion()) return;
     solarElapsed += dt;
     SOLAR_BODIES.forEach(function (body) {
       var object = SOLAR_OBJECTS[body.id]; if (!object) return;
@@ -1894,7 +1992,7 @@
       '<span id="bp-type">' + esc(info.type) + '</span>' +
       rows.join('') +
       '<div id="bp-desc">' + esc(info.desc) + '</div>' +
-      (body.id === 'earth' ? '<button id="bp-earth-sky-link" type="button">' + esc({ en: 'Explore Earth\'s sky →', hans: '探索地球的天空 →', hant: '探索地球的天空 →', ja: '地球の空を探索する →', ko: '지구의 하늘 탐험하기 →' }[L]) + '</button>' : '') +
+      (body.id === 'earth' ? '<button id="bp-earth-sky-link" type="button" aria-label="' + esc({ en: 'Explore Earth\'s sky →', hans: '探索地球的天空 →', hant: '探索地球的天空 →', ja: '地球の空を探索する →', ko: '지구의 하늘 탐험하기 →' }[L]) + '">' + esc({ en: 'Explore Earth\'s sky →', hans: '探索地球的天空 →', hant: '探索地球的天空 →', ja: '地球の空を探索する →', ko: '지구의 하늘 탐험하기 →' }[L]) + '</button>' : '') +
       '<div id="bp-cat">' + esc(info.catalog) + '</div>';
     solarCardOpen = true;
     bpEl.classList.add('open');
@@ -1917,7 +2015,7 @@
       (o.catalog ? '<div id="bp-cat">' + esc(o.catalog) + '</div>' : '');
     if (i === 0) { // Solar System card → doorway to the solar view
       var sl = { en: 'Explore the Solar System →', hans: '探索太阳系 →', hant: '探索太陽系 →', ja: '太陽系を探索する →', ko: '태양계 탐험하기 →' };
-      bpBody.innerHTML += '<button id="bp-solar-link" type="button">' + (sl[lang] || sl.en) + '</button>';
+      bpBody.innerHTML += '<button id="bp-solar-link" type="button" aria-label="' + esc(sl[lang] || sl.en) + '">' + (sl[lang] || sl.en) + '</button>';
     }
     if (b.gal && viewMode !== 'sky') { // galaxy card → fly the camera over (galaxy view only; meaningless in the sky map)
       var fl = { en: '🚀 Fly to this galaxy →', hans: '🚀 飞跃到此星系 →', hant: '🚀 飛越到此星系 →', ja: '🚀 この銀河へ飛ぶ →', ko: '🚀 이 은하로 날아가기 →' };
@@ -2084,7 +2182,7 @@
   }
   function solarHitRadius(object, target) {
     var distance = solarCamera.position.distanceTo(target), worldPixels = 2 * Math.tan(solarCamera.fov * Math.PI / 360) * distance / Math.max(1, window.innerHeight);
-    return Math.max(object.radius * 1.6, worldPixels * 16);
+    return Math.max(object.radius * 1.6, worldPixels * (solarIsCompact() ? 24 : 16));
   }
   function updateSolarLabels() {
     if (!solarLabelsEl || viewMode !== 'solar') return;
@@ -2112,6 +2210,21 @@
       if (!hidden) kept.push(candidate);
     });
   }
+  function solarFrameSelectedBody(target, radius) {
+    var framed = target.clone();
+    if (!solarIsCompact()) return framed;
+    // The drawer occupies the lower half of a phone; looking slightly below the
+    // selected body keeps it in the unobscured upper portion of the viewport.
+    framed.y -= Math.max(radius * 3, solarCamera.position.distanceTo(target) * 0.12);
+    return framed;
+  }
+  function frameSolarForViewport() {
+    var object = SOLAR_OBJECTS[solarNav.selectedId];
+    if (viewMode !== 'solar' || !object || !solarCardOpen) return;
+    object.mesh.getWorldPosition(solarFocusPoint);
+    solarControls.target.copy(solarFrameSelectedBody(solarFocusPoint, object.radius));
+    solarControls.update();
+  }
   function settleSolarFlight(now) {
     if (!solarFlight) return;
     var k = Math.min(1, Math.max(0, (now - solarFlight.start) / solarFlight.dur));
@@ -2122,12 +2235,13 @@
   }
   function startSolarFlight(target, radius) {
     settleSolarFlight(performance.now());
+    target = solarFrameSelectedBody(target, radius);
     var direction = solarCamera.position.clone().sub(target);
     if (direction.lengthSq() < 0.0001) direction.set(0.65, 0.42, 1);
     direction.normalize();
     var distance = Math.max(8, Math.min(110, radius * 11 + 8));
     solarFlight = { p0: solarCamera.position.clone(), p1: target.clone().addScaledVector(direction, distance), t0: solarControls.target.clone(), t1: target.clone(),
-      start: performance.now(), dur: 720, radius: radius };
+      start: performance.now(), dur: solarReducedMotion() ? 120 : 720, radius: radius };
     solarControls.enabled = false;
   }
   function stepSolarFlight(now) {
@@ -2828,8 +2942,11 @@
       ko: { galaxy: '← 은하로 돌아가기', solar: '← 태양계로 돌아가기', earth: '← 지구로 돌아가기' }
     }[L] || { galaxy: '← Back to Galaxy', solar: '← Back to Solar System', earth: '← Back to Earth' };
     var skyBack = document.getElementById('skyback'), solarBack = document.getElementById('solarback');
-    if (skyBack) skyBack.textContent = skyReturnContext ? text.earth : text.galaxy;
-    if (solarBack) solarBack.textContent = solarNav && solarNav.level === 'focus' ? text.solar : text.galaxy;
+    if (skyBack) { skyBack.textContent = skyReturnContext ? text.earth : text.galaxy; skyBack.setAttribute('aria-label', skyBack.textContent); }
+    if (solarBack) { solarBack.textContent = solarNav && solarNav.level === 'focus' ? text.solar : text.galaxy; solarBack.setAttribute('aria-label', solarBack.textContent); }
+    var closeText = { en: 'Close', hans: '关闭', hant: '關閉', ja: '閉じる', ko: '닫기' }[L] || 'Close';
+    var closeButton = document.getElementById('bp-close');
+    if (closeButton) { closeButton.setAttribute('aria-label', closeText); closeButton.setAttribute('title', closeText); }
   }
   function enterSky(origin) {
     if (origin === 'earth') {
@@ -2906,6 +3023,7 @@
   var perfScale = 1, perfEMA = 16.7, perfLast = 0, perfNextCheck = performance.now() + 12000;
   buildSolarBodies();
   buildAsteroidBelt(Math.max(400, Math.floor(2000 * perfScale)));
+  applySolarPerformanceTier(perfScale);
   function frame() {
     rafId = null;
     if (document.hidden) return;
@@ -2926,12 +3044,14 @@
       updateSolarMotion(solarDt);
       if (!stepSolarFlight(solarNow)) solarControls.update();
       updateSolarLOD();
+      updateSolarBackdrop();
       renderer.render(solarScene, solarCamera);
-      updateSolarLabels();
+      solarPerf.labelFrame++;
+      if (solarPerf.labelFrame % solarPerf.labelEvery === 0) updateSolarLabels();
       rafId = requestAnimationFrame(frame);
       return;
     }
-    galaxyRoot.rotation.y = t * GALAXY_SPIN; // the whole galaxy slowly rotates
+    if (!solarReducedMotion()) galaxyRoot.rotation.y = t * GALAXY_SPIN; // the whole galaxy slowly rotates
     for (var li = 0; li < galaxyLODs.length; li++) { // per-galaxy LOD + self-rotation about the disc axis
       var L = galaxyLODs[li], dst = camera.position.distanceTo(L.center); L.dst = dst; // cached for the feature LOD gate below
       L.pts.geometry.setDrawRange(0, Math.max(400, Math.floor(L.maxN * Math.min(1, Math.max(0.14, L.refDist / dst)) * perfScale)));
@@ -2943,9 +3063,9 @@
       if (!cb.child || !cb.feature) continue;
       var fvis = !cb.lod || cb.lod.dst < cb.lod.refDist * 4;
       cb.feature.group.visible = fvis;
-      if (fvis) cb.feature.update(t);
+      if (fvis && !solarReducedMotion()) cb.feature.update(t);
     }
-    if (bgTwinkleMat) bgTwinkleMat.uniforms.uTime.value = t; // background-star twinkle
+    if (bgTwinkleMat && !solarReducedMotion()) bgTwinkleMat.uniforms.uTime.value = t; // background-star twinkle
     var cbw = Math.sin(t * 0.32), cbr = 1 + 0.07 * cbw; // ~20s galactic-core breathe
     for (var cbi = 0; cbi < coreBreath.length; cbi++) {
       var cb = coreBreath[cbi], cbs = cb.s * cbr;
@@ -2962,6 +3082,7 @@
       if (perfEMA > 40 && perfScale > 0.26) { // sustained < ~25fps → shed decorative dust
         perfScale *= 0.5;
         buildDust(dustFor());
+        applySolarPerformanceTier(perfScale);
         setMsg('low frame rate — dust density reduced');
         setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('dust density') !== -1) setMsg(''); }, 2500);
       }
@@ -2980,6 +3101,7 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     if (composer) composer.setSize(window.innerWidth, window.innerHeight);
     if (skyComposer) skyComposer.setSize(window.innerWidth, window.innerHeight);
+    frameSolarForViewport();
   });
 
   // ── ambient effects: shooting stars + supernovae ────────────────────────────
@@ -3803,13 +3925,23 @@
   // Safari trackpad pinch fires proprietary gesture events and zooms the PAGE,
   // which detaches the HTML overlays from the canvas. Capture it and dolly the
   // camera instead (in the sky view just swallow it — rotate-only there).
-  var gestureDist = 0;
+  var gestureDist = 0, gestureView = 'galaxy';
+  function routeSolarGestureZoom(scale) {
+    if (viewMode !== 'solar' || !scale) return false;
+    var d = Math.min(solarControls.maxDistance, Math.max(solarControls.minDistance, gestureDist / scale));
+    var dir = solarCamera.position.clone().sub(solarControls.target).normalize();
+    solarCamera.position.copy(solarControls.target).addScaledVector(dir, d);
+    solarControls.update();
+    return true;
+  }
   window.addEventListener('gesturestart', function (e) {
     e.preventDefault();
-    gestureDist = camera.position.distanceTo(controls.target);
+    gestureView = viewMode;
+    gestureDist = viewMode === 'solar' ? solarCamera.position.distanceTo(solarControls.target) : camera.position.distanceTo(controls.target);
   });
   window.addEventListener('gesturechange', function (e) {
     e.preventDefault();
+    if (gestureView === 'solar' && routeSolarGestureZoom(e.scale)) return;
     if (viewMode !== 'galaxy' || !e.scale) return;
     var d = Math.min(controls.maxDistance, Math.max(controls.minDistance, gestureDist / e.scale));
     var dir = camera.position.clone().sub(controls.target).normalize();
