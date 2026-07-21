@@ -294,14 +294,14 @@
       ok(typeof returnSkyToEarth === 'function', 'returnSkyToEarth missing');
       var oldView = viewMode, oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
       var oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot };
-      var oldCardOpen = solarCardOpen, oldSkyReturn = skyReturnContext, oldPaused = solarPaused, oldFlight = solarFlight, oldSavedGalaxy = savedGalaxyView;
+      var oldCardOpen = solarCardOpen, oldSkyReturn = skyReturnContext, oldPaused = solarPaused, oldSavedGalaxy = savedGalaxyView;
       var oldControls = { galaxy: controls.enabled, solar: solarControls.enabled, sky: skyControls.enabled, minDistance: solarControls.minDistance, maxDistance: solarControls.maxDistance };
       var oldTiming = { solarFrameLast: solarFrameLast, perfLast: perfLast };
       var oldPanel = { html: bpBody.innerHTML, open: bpEl.classList.contains('open') };
       var oldDisplay = { beacons: document.getElementById('beacons').style.display, skyLabels: document.getElementById('skylabels').style.display, skyBack: skybackEl.style.display, solarLabels: solarLabelsEl.style.display, solarBack: solarBackEl.style.display };
       try {
         if (viewMode !== 'solar') enterSolar();
-        focusSolarBody('earth'); stepSolarFlight(Infinity); renderSolarPanel('earth', beaconLang);
+        focusSolarBody('earth');
         var earthPosition = solarCamera.position.clone(), earthTarget = solarControls.target.clone();
         ok(enterSkyFromEarth(), 'Earth did not enter the sky view');
         ok(viewMode === 'sky' && skyReturnContext && skyReturnContext.solar.panelOpen, 'Earth sky context did not retain its open card');
@@ -314,7 +314,7 @@
         if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
         solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
         solarNav.level = oldNav.level; solarNav.selectedId = oldNav.selectedId; solarNav.parentId = oldNav.parentId; solarNav.cameraStack = oldNav.cameraStack; solarNav.galaxySnapshot = oldNav.galaxySnapshot; solarNav.skySnapshot = oldNav.skySnapshot;
-        solarFlight = oldFlight; savedGalaxyView = oldSavedGalaxy; solarCardOpen = oldCardOpen; skyReturnContext = oldSkyReturn; setSolarPaused(oldPaused); viewMode = oldView;
+        savedGalaxyView = oldSavedGalaxy; solarCardOpen = oldCardOpen; skyReturnContext = oldSkyReturn; setSolarPaused(oldPaused); viewMode = oldView;
         controls.enabled = oldControls.galaxy; solarControls.enabled = oldControls.solar; skyControls.enabled = oldControls.sky; solarControls.minDistance = oldControls.minDistance; solarControls.maxDistance = oldControls.maxDistance;
         solarFrameLast = oldTiming.solarFrameLast; perfLast = oldTiming.perfLast;
         document.getElementById('beacons').style.display = oldDisplay.beacons; document.getElementById('skylabels').style.display = oldDisplay.skyLabels; skybackEl.style.display = oldDisplay.skyBack; solarLabelsEl.style.display = oldDisplay.solarLabels; solarBackEl.style.display = oldDisplay.solarBack;
@@ -324,7 +324,7 @@
     check('solar-event-routes', function () {
       var oldView = viewMode, oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
       var oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot };
-      var oldCardOpen = solarCardOpen, oldSkyReturn = skyReturnContext, oldPaused = solarPaused, oldFlight = solarFlight, oldSavedGalaxy = savedGalaxyView;
+      var oldCardOpen = solarCardOpen, oldSkyReturn = skyReturnContext, oldPaused = solarPaused, oldSavedGalaxy = savedGalaxyView;
       var oldPanel = { html: bpBody.innerHTML, open: bpEl.classList.contains('open') };
       var oldControls = { galaxy: controls.enabled, solar: solarControls.enabled, sky: skyControls.enabled, minDistance: solarControls.minDistance, maxDistance: solarControls.maxDistance };
       var oldTiming = { solarFrameLast: solarFrameLast, perfLast: perfLast };
@@ -332,13 +332,13 @@
       var oldSkySelection = { constellation: window.skySelected, galaxy: window.skyGalSelected };
       try {
         if (viewMode !== 'solar') enterSolar();
-        focusSolarBody('mars'); stepSolarFlight(Infinity);
+        focusSolarBody('mars');
         ok(!document.getElementById('bp-earth-sky-link'), 'non-Earth card exposed a sky link');
         var forgedLink = document.createElement('button'); forgedLink.id = 'bp-earth-sky-link'; bpBody.appendChild(forgedLink);
         forgedLink.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         ok(viewMode === 'solar' && solarNav.selectedId === 'mars', 'non-Earth delegated click entered the sky');
         forgedLink.parentNode.removeChild(forgedLink);
-        focusSolarBody('earth'); stepSolarFlight(Infinity); renderSolarPanel('earth', beaconLang);
+        focusSolarBody('earth');
         var earthPosition = solarCamera.position.clone(), earthTarget = solarControls.target.clone();
         document.getElementById('bp-close').dispatchEvent(new MouseEvent('click', { bubbles: true }));
         ok(!solarCardOpen && !bpEl.classList.contains('open'), 'Solar System close button did not close the card');
@@ -358,7 +358,7 @@
         if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
         solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
         solarNav.level = oldNav.level; solarNav.selectedId = oldNav.selectedId; solarNav.parentId = oldNav.parentId; solarNav.cameraStack = oldNav.cameraStack; solarNav.galaxySnapshot = oldNav.galaxySnapshot; solarNav.skySnapshot = oldNav.skySnapshot;
-        solarFlight = oldFlight; savedGalaxyView = oldSavedGalaxy; solarCardOpen = oldCardOpen; skyReturnContext = oldSkyReturn; setSolarPaused(oldPaused); viewMode = oldView;
+        savedGalaxyView = oldSavedGalaxy; solarCardOpen = oldCardOpen; skyReturnContext = oldSkyReturn; setSolarPaused(oldPaused); viewMode = oldView;
         controls.enabled = oldControls.galaxy; solarControls.enabled = oldControls.solar; skyControls.enabled = oldControls.sky; solarControls.minDistance = oldControls.minDistance; solarControls.maxDistance = oldControls.maxDistance;
         solarFrameLast = oldTiming.solarFrameLast; perfLast = oldTiming.perfLast;
         document.getElementById('beacons').style.display = oldDisplay.beacons; document.getElementById('skylabels').style.display = oldDisplay.skyLabels; skybackEl.style.display = oldDisplay.skyBack; solarLabelsEl.style.display = oldDisplay.solarLabels; solarBackEl.style.display = oldDisplay.solarBack;
@@ -410,14 +410,14 @@
       ok(typeof resetSolarPerformanceWatchdog === 'function', 'Solar watchdog reset missing');
       ok(typeof refreshSolarResponsiveState === 'function', 'responsive Solar refresh missing');
       ok(typeof solarReducedMotion === 'function', 'reduced-motion helper missing');
-      ok(typeof solarFrameSelectedBody === 'function', 'mobile selected-body framing helper missing');
+      ok(typeof frameSolarForViewport === 'function', 'viewport framing guard missing');
       ok(typeof routeSolarGestureZoom === 'function', 'Solar Safari pinch routing helper missing');
       ['solarback', 'skyback', 'bp-close'].forEach(function (id) {
         var control = document.getElementById(id);
         ok(control && control.tagName === 'BUTTON', id + ' is not a button');
         ok(control.getAttribute('aria-label'), id + ' has no accessible name');
       });
-      var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldFlight = solarFlight, oldCard = solarCardOpen, oldScale = perfScale, oldMotionOverride = solarMotionOverride, oldCompactOverride = solarCompactOverride, oldPaused = solarPaused;
+      var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldCard = solarCardOpen, oldScale = perfScale, oldMotionOverride = solarMotionOverride, oldCompactOverride = solarCompactOverride, oldPaused = solarPaused;
       var oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone(), oldGestureDist = gestureDist, oldPerf = { stage: solarPerf.stage, epoch: solarPerf.epoch, beltFraction: solarPerf.beltFraction, backgroundFraction: solarPerf.backgroundFraction, backgroundEvery: solarPerf.backgroundEvery, labelEvery: solarPerf.labelEvery, specialty: solarPerf.specialty, textureCeiling: solarLOD.textureCeiling };
       var oldControls = { galaxy: controls.enabled, solar: solarControls.enabled, sky: skyControls.enabled, skyAuto: skyControls.autoRotate }, oldPanel = { html: bpBody.innerHTML, open: bpEl.classList.contains('open') };
       try {
@@ -438,22 +438,14 @@
           ok(label.tagName === 'BUTTON' && label.getAttribute('aria-label'), id + ' label is not an accessible button');
         });
         focusSolarBody('earth');
-        ok(solarFlight && solarFlight.dur <= 120, 'reduced motion did not shorten a body flight');
-        stepSolarFlight(Infinity);
         var earth = SOLAR_OBJECTS.earth, cardWasOpen = solarCardOpen;
         ok(document.getElementById('bp-earth-sky-link').getAttribute('aria-label'), 'Earth sky entry has no accessible name');
         var reducedElapsed = solarElapsed, reducedSpin = earth.spinNode.rotation.y;
         setSolarPaused(false); updateSolarMotion(0.1);
         ok(solarElapsed === reducedElapsed && earth.spinNode.rotation.y === reducedSpin, 'reduced motion left decorative Solar rotation running');
-        solarMotionOverride = false; startSolarFlight(solarFocusPoint.set(0, 0, 0), earth.radius);
-        solarMotionOverride = true; refreshReducedMotion();
-        ok(solarFlight && solarFlight.dur <= 120 && !skyControls.autoRotate, 'live reduced-motion preference did not shorten flights and stop sky rotation');
-        stepSolarFlight(Infinity);
-        focusSolarBody('earth'); stepSolarFlight(Infinity);
-        var framed = solarFrameSelectedBody(new THREE.Vector3(0, 0, 0), earth.radius);
-        ok(framed.y < 0, 'compact framing did not move the selected body above the drawer');
-        var earthScreenPoint = new THREE.Vector3(); earth.mesh.getWorldPosition(earthScreenPoint); solarCamera.updateMatrixWorld(); earthScreenPoint.project(solarCamera);
-        ok(earthScreenPoint.z >= -1 && earthScreenPoint.z <= 1 && Math.abs(earthScreenPoint.x) <= 1 && earthScreenPoint.y <= 1 && (-earthScreenPoint.y * 0.5 + 0.5) * window.innerHeight < window.innerHeight * 0.48, 'selected body remains behind the compact drawer');
+        var targetBeforeRefresh = solarControls.target.clone();
+        refreshSolarResponsiveState();
+        ok(frameSolarForViewport() === false && solarControls.target.distanceTo(targetBeforeRefresh) === 0, 'compact drawer reframed the selected body');
         gestureDist = solarCamera.position.distanceTo(solarControls.target);
         var pinchDistance = gestureDist;
         ok(routeSolarGestureZoom(2), 'Solar pinch was not routed to the Solar camera');
@@ -481,7 +473,7 @@
         solarPerf.stage = oldPerf.stage; solarPerf.epoch = oldPerf.epoch; solarPerf.beltFraction = oldPerf.beltFraction; solarPerf.backgroundFraction = oldPerf.backgroundFraction; solarPerf.backgroundEvery = oldPerf.backgroundEvery; solarPerf.labelEvery = oldPerf.labelEvery; solarPerf.specialty = oldPerf.specialty; solarLOD.textureCeiling = oldPerf.textureCeiling;
         if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
         solarNav.level = oldNav.level; solarNav.selectedId = oldNav.selectedId; solarNav.parentId = oldNav.parentId; solarNav.cameraStack = oldNav.cameraStack; solarNav.galaxySnapshot = oldNav.galaxySnapshot; solarNav.skySnapshot = oldNav.skySnapshot;
-        solarFlight = oldFlight; solarCardOpen = oldCard; setSolarPaused(oldPaused);
+        solarCardOpen = oldCard; setSolarPaused(oldPaused);
         solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update(); gestureDist = oldGestureDist;
         controls.enabled = oldControls.galaxy; solarControls.enabled = oldControls.solar; skyControls.enabled = oldControls.sky; skyControls.autoRotate = oldControls.skyAuto;
         bpBody.innerHTML = oldPanel.html; bpEl.classList.toggle('open', oldPanel.open);
@@ -496,7 +488,7 @@
       function restoreMaterial(material, state) { if (!material || !state) return; material.opacity = state.opacity; material.transparent = state.transparent; material.depthWrite = state.depthWrite; if (material.uniforms && material.uniforms.uOpacity && state.uniformOpacity != null) material.uniforms.uOpacity.value = state.uniformOpacity; if (state.fade) material.userData.solarFadeState = state.fade; else delete material.userData.solarFadeState; }
       var oldView = viewMode, oldCompact = solarCompactOverride, oldSavedGalaxy = savedGalaxyView, oldPanel = { html: bpBody.innerHTML, open: bpEl.classList.contains('open') }, oldDisplays = { beacons: document.getElementById('beacons').style.display, labels: solarLabelsEl.style.display, back: solarBackEl.style.display };
       var oldControls = { galaxy: controls.enabled, solar: solarControls.enabled, sky: skyControls.enabled, min: solarControls.minDistance, max: solarControls.maxDistance };
-      var oldPerf = own(solarPerf), oldLOD = own(solarLOD), oldTransient = { card: solarCardOpen, flight: solarFlight, paused: solarPaused, skyReturn: skyReturnContext, fly: flyState, selectedBeacon: selectedBeacon, ringVisible: beaconRing.visible, ringOpacity: beaconRing.material.opacity, solarFrameLast: solarFrameLast, returnDisplay: returnBtn && returnBtn.style.display };
+      var oldPerf = own(solarPerf), oldLOD = own(solarLOD), oldTransient = { card: solarCardOpen, paused: solarPaused, skyReturn: skyReturnContext, fly: flyState, selectedBeacon: selectedBeacon, ringVisible: beaconRing.visible, ringOpacity: beaconRing.material.opacity, solarFrameLast: solarFrameLast, returnDisplay: returnBtn && returnBtn.style.display };
       var oldContainers = { requests: entries(solarLOD.requests), pending: entries(solarLOD.pending), cache: entries(solarLOD.cache), maps: entries(solarLOD.maps), warned: entries(solarLOD.warned), fades: solarLOD.fades.slice() };
       var oldBelt = solarAsteroidBelt.geometry.drawRange.count, oldBackdrop = solarBackdrop.geometry.drawRange.count, oldLabels = solarPerf.labelEvery, oldWatch = [solarPerfEMA, solarPerfLast, solarPerfNextCheck];
       var oldNav = { selectedId: solarNav.selectedId, level: solarNav.level, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
@@ -507,9 +499,9 @@
         if (viewMode !== 'solar') enterSolar();
         solarNav.selectedId = 'earth'; solarNav.level = 'focus'; solarNav.parentId = null; updateSolarVisibility();
         var earth = SOLAR_OBJECTS.earth, point = new THREE.Vector3(); earth.mesh.getWorldPosition(point);
-        solarCamera.position.copy(point).add(new THREE.Vector3(0, earth.radius * 8, earth.radius * 14)); solarControls.target.copy(solarFrameSelectedBody(point, earth.radius)); solarControls.update(); solarCamera.updateMatrixWorld();
-        point.project(solarCamera); var sx = (point.x * .5 + .5) * window.innerWidth, sy = (-point.y * .5 + .5) * window.innerHeight, drawerTop = window.innerHeight * .48;
-        ok(point.z >= -1 && point.z <= 1 && sx >= 0 && sx <= window.innerWidth && sy >= 0 && sy < drawerTop, 'Earth is not framed in the visible compact viewport');
+        solarCamera.position.copy(point).add(new THREE.Vector3(0, earth.radius * 8, earth.radius * 14)); solarControls.target.copy(point); solarControls.update(); solarCamera.updateMatrixWorld();
+        var targetBeforeRefresh = solarControls.target.clone(); refreshSolarResponsiveState();
+        ok(frameSolarForViewport() === false && solarControls.target.distanceTo(targetBeforeRefresh) === 0, 'responsive refresh reframed Earth');
         applySolarPerformanceTier(0); var base = [solarAsteroidBelt.geometry.drawRange.count, solarBackdrop.geometry.drawRange.count, solarPerf.labelEvery, solarLOD.textureCeiling, solarPerf.specialty];
         applySolarPerformanceTier(1); ok(solarAsteroidBelt.geometry.drawRange.count < base[0] && solarBackdrop.geometry.drawRange.count === base[1] && solarPerf.labelEvery === base[2], 'stage 1 changed more than asteroid range');
         applySolarPerformanceTier(2); ok(solarBackdrop.geometry.drawRange.count < base[1] && solarPerf.labelEvery === base[2], 'stage 2 did not add only backdrop degradation');
@@ -531,7 +523,7 @@
         solarNav.selectedId = oldNav.selectedId; solarNav.level = oldNav.level; solarNav.parentId = oldNav.parentId; solarNav.cameraStack = oldNav.cameraStack; solarNav.galaxySnapshot = oldNav.galaxySnapshot; solarNav.skySnapshot = oldNav.skySnapshot; solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
         SOLAR_BODIES.forEach(function (body) { var o = SOLAR_OBJECTS[body.id], s = objects[body.id]; Object.keys(s.own).forEach(function (key) { o[key] = s.own[key]; }); o.lodGroup.visible = s.group; o.orbitLine.visible = s.orbit; o.hitProxy.visible = s.proxy; o.hitProxy.userData.solarActive = s.active; o.hitProxy.scale.copy(s.proxyScale); o.lodMeshes.forEach(function (m, i) { m.visible = s.meshes[i][0]; restoreMaterial(m.material, s.meshes[i][1]); }); s.special.forEach(function (x) { var m = o.specialty[x[0]]; m.visible = x[1]; restoreMaterial(m.material, x[2]); }); });
         solarCompactOverride = oldCompact; savedGalaxyView = oldSavedGalaxy; controls.enabled = oldControls.galaxy; solarControls.enabled = oldControls.solar; skyControls.enabled = oldControls.sky; solarControls.minDistance = oldControls.min; solarControls.maxDistance = oldControls.max; document.getElementById('beacons').style.display = oldDisplays.beacons; solarLabelsEl.style.display = oldDisplays.labels; solarBackEl.style.display = oldDisplays.back; bpBody.innerHTML = oldPanel.html; bpEl.classList.toggle('open', oldPanel.open); viewMode = oldView;
-        solarCardOpen = oldTransient.card; solarFlight = oldTransient.flight; solarPaused = oldTransient.paused; skyReturnContext = oldTransient.skyReturn; flyState = oldTransient.fly; selectedBeacon = oldTransient.selectedBeacon; beaconRing.visible = oldTransient.ringVisible; beaconRing.material.opacity = oldTransient.ringOpacity; solarFrameLast = oldTransient.solarFrameLast; if (returnBtn) returnBtn.style.display = oldTransient.returnDisplay;
+        solarCardOpen = oldTransient.card; solarPaused = oldTransient.paused; skyReturnContext = oldTransient.skyReturn; flyState = oldTransient.fly; selectedBeacon = oldTransient.selectedBeacon; beaconRing.visible = oldTransient.ringVisible; beaconRing.material.opacity = oldTransient.ringOpacity; solarFrameLast = oldTransient.solarFrameLast; if (returnBtn) returnBtn.style.display = oldTransient.returnDisplay;
         solarPerfEMA = oldWatch[0]; solarPerfLast = oldWatch[1]; solarPerfNextCheck = oldWatch[2];
         ok(viewMode === oldView && solarPerf.beltFraction === oldPerf.beltFraction && solarPerfEMA === oldWatch[0] && solarPerfLast === oldWatch[1] && solarPerfNextCheck === oldWatch[2] && Object.keys(solarLOD.requests).join(',') === Object.keys(oldContainers.requests).join(',') && solarLOD.fades.every(function (fade, i) { return fade === oldContainers.fades[i]; }), 'performance regression test did not restore its saved fixture state');
       }
@@ -556,7 +548,7 @@
       var second = solarAsteroidBelt.geometry.attributes.position.array;
       ok(first.length === second.length && first.every(function (v, i) { return v === second[i]; }), 'asteroid belt positions are not deterministic');
       ok(oldBelt.geometry.disposed && oldBelt.material.disposed, 'replaced belt resources were not disposed');
-      var ceres = SOLAR_OBJECTS.ceres, angle = solarBeltCenterAngle(ceres.body, ceres.body.phase + solarElapsed / ceres.compressedPeriod), gap = solarBeltClearance.angle;
+      var ceres = SOLAR_OBJECTS.ceres, angle = solarBeltCenterAngle(ceres.body, ceres.body.phase + solarElapsed * SOLAR_ORBIT_RATE / ceres.compressedPeriod), gap = solarBeltClearance.angle;
       for (var i = 0; i < second.length; i += 3) {
         var x = second[i], z = second[i + 2], radius = Math.sqrt(x * x + z * z), beltAngle = Math.atan2(z, x) + solarAsteroidBelt.rotation.y;
         if (Math.abs(Math.atan2(Math.sin(beltAngle - angle), Math.cos(beltAngle - angle))) < gap) ok(radius < solarBeltClearance.inner || radius > solarBeltClearance.outer, 'belt point enters Ceres clearance');
@@ -573,6 +565,8 @@
     });
     check('solar-pause-clock', function () {
       ok(typeof updateSolarMotion === 'function' && typeof setSolarPaused === 'function', 'solar motion API missing');
+      ok(typeof SOLAR_ORBIT_RATE === 'number' && SOLAR_ORBIT_RATE === 0.35, 'Solar orbit presentation rate is missing');
+      ok(typeof SOLAR_SPIN_RATE === 'number' && SOLAR_SPIN_RATE === 0.20, 'Solar spin presentation rate is missing');
       var elapsed = solarElapsed, shaderTime = solarShaderTime, paused = solarPaused, earth = SOLAR_OBJECTS.earth, x = earth.positionNode.position.x, z = earth.positionNode.position.z, spin = earth.spinNode.rotation.y;
       setSolarPaused(false); updateSolarMotion(0.25);
       ok(solarElapsed > elapsed, 'solar clock did not advance');
@@ -585,7 +579,7 @@
       updateSolarMotion(0.15);
       ok(earth.positionNode.position.x === x && earth.positionNode.position.z === z && earth.spinNode.rotation.y === spin, 'paused transforms advanced');
       setSolarPaused(false); updateSolarMotion(0.15);
-      var expected = new THREE.Vector3(); solarOrbitPoint(earth.body, earth.body.phase + solarElapsed / earth.compressedPeriod, expected);
+      var expected = new THREE.Vector3(); solarOrbitPoint(earth.body, earth.body.phase + solarElapsed * SOLAR_ORBIT_RATE / earth.compressedPeriod, expected);
       ok(earth.positionNode.position.x === expected.x && earth.positionNode.position.z === expected.z, 'resume transformed Earth with a clock jump');
       setSolarPaused(paused);
     });
@@ -596,9 +590,8 @@
       ok(typeof leaveSolarLevel === 'function', 'leaveSolarLevel missing');
       ok(typeof clearSolarCard === 'function', 'clearSolarCard missing');
       ok(typeof enterSolarSky === 'function', 'enterSolarSky missing');
-      ok(typeof stepSolarFlight === 'function', 'stepSolarFlight missing');
       ok(typeof solarActiveProxies === 'function', 'solarActiveProxies missing');
-      var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldFlight = solarFlight, oldPaused = solarPaused, oldCardOpen = solarCardOpen;
+      var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldPaused = solarPaused, oldCardOpen = solarCardOpen;
       var oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
       var oldElapsed = solarElapsed, oldShader = solarShaderTime, oldBelt = solarAsteroidBelt && solarAsteroidBelt.rotation.y, oldGalaxyView = savedGalaxyView;
       var oldControls = { enabled: solarControls.enabled, minDistance: solarControls.minDistance, maxDistance: solarControls.maxDistance, frameLast: solarFrameLast, perfLast: perfLast };
@@ -625,12 +618,22 @@
         ok(solarHitRadius(earthObject, earthPoint) >= expectedProxyRadius, 'Earth proxy is smaller than a 32 CSS-pixel target');
         ok(earthObject.hitProxy.scale.x >= expectedProxyRadius, 'Earth hit proxy did not receive its touch size');
         solarControls.minDistance = 3; solarControls.maxDistance = 333;
-        focusSolarBody('earth'); stepSolarFlight(Infinity);
-        ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1 && solarPaused, 'Earth focus did not retain overview or pause motion');
+        var cameraBefore = { position: solarCamera.position.clone(), quaternion: solarCamera.quaternion.clone(), target: solarControls.target.clone(), min: solarControls.minDistance, max: solarControls.maxDistance };
+        var elapsedBeforeSelection = solarElapsed;
+        focusSolarBody('earth');
+        ok(solarCardOpen && document.getElementById('bp-name').textContent === SOLAR_BY_ID.earth.info[beaconLang].name, 'Earth selection did not open its card immediately');
+        var earthPositionDelta = solarCamera.position.distanceTo(cameraBefore.position), earthQuaternionDelta = solarCamera.quaternion.angleTo(cameraBefore.quaternion), earthTargetDelta = solarControls.target.distanceTo(cameraBefore.target);
+        ok(earthPositionDelta === 0 && earthQuaternionDelta < 1e-7 && earthTargetDelta === 0, 'Earth selection changed the camera');
+        ok(solarControls.minDistance === cameraBefore.min && solarControls.maxDistance === cameraBefore.max, 'Earth selection changed zoom bounds');
+        updateSolarMotion(0.05);
+        ok(solarElapsed > elapsedBeforeSelection && !solarPaused, 'Earth selection stopped Solar motion');
+        ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1, 'Earth focus did not retain overview');
         ok(solarActiveProxies().every(function (proxy) { var body = SOLAR_BY_ID[proxy.userData.solarId]; return body.id === 'earth' || body.parent === 'earth'; }), 'Earth focus raycast escaped its local system');
-        var earthMinDistance = solarControls.minDistance, earthMaxDistance = solarControls.maxDistance;
-        focusSolarBody('moon'); stepSolarFlight(Infinity);
-        ok(solarNav.selectedId === 'moon' && solarNav.parentId === 'earth' && solarNav.cameraStack.length === 2 && solarPaused, 'Moon focus did not retain Earth or pause motion');
+        focusSolarBody('moon');
+        ok(solarCardOpen && document.getElementById('bp-name').textContent === SOLAR_BY_ID.moon.info[beaconLang].name, 'Moon selection did not open its card immediately');
+        ok(solarCamera.position.distanceTo(cameraBefore.position) === 0 && solarCamera.quaternion.angleTo(cameraBefore.quaternion) < 1e-7 && solarControls.target.distanceTo(cameraBefore.target) === 0, 'Moon selection changed the camera');
+        ok(solarControls.minDistance === cameraBefore.min && solarControls.maxDistance === cameraBefore.max, 'Moon selection changed zoom bounds');
+        ok(solarNav.selectedId === 'moon' && solarNav.parentId === 'earth' && solarNav.cameraStack.length === 2 && !solarPaused, 'Moon focus did not retain Earth or continued motion');
         var oldLanguage = beaconLang;
         ['en', 'hans', 'hant', 'ja', 'ko'].forEach(function (language) {
           setBeaconLang(language);
@@ -643,18 +646,18 @@
         ok(solarCamera.position.distanceTo(moonPosition) === 0 && solarControls.target.distanceTo(moonTarget) === 0, 'language change moved the Moon camera');
         setBeaconLang(oldLanguage);
         leaveSolarLevel();
-        ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1 && solarPaused, 'Back did not restore Earth focus or retain pause');
-        ok(solarControls.minDistance === earthMinDistance && solarControls.maxDistance === earthMaxDistance, 'Back restored the Earth camera without its control bounds');
+        ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1 && !solarPaused, 'Back did not restore Earth focus or continued motion');
+        ok(solarControls.minDistance === cameraBefore.min && solarControls.maxDistance === cameraBefore.max, 'Back restored the Earth camera without its control bounds');
         leaveSolarLevel();
         ok(solarNav.level === 'overview' && solarNav.selectedId === null && solarNav.cameraStack.length === 0 && !solarPaused, 'Back did not restore overview or resume motion');
         ok(solarControls.minDistance === 3 && solarControls.maxDistance === 333, 'overview Back did not restore its control bounds');
         ok(!solarCardOpen && !bpEl.classList.contains('open') && bpBody.innerHTML === '', 'panelOpen=false left stale card DOM visible');
         var resumedElapsed = solarElapsed; updateSolarMotion(0.05); ok(solarElapsed > resumedElapsed, 'overview motion did not resume');
-        focusSolarBody('earth'); stepSolarFlight(Infinity);
+        focusSolarBody('earth');
         ok(enterSolarSky(), 'Earth sky transition did not start');
         leaveSolarLevel();
         ok(solarNav.selectedId === 'earth' && solarNav.parentId === null, 'Sky return did not retain Earth focus');
-        focusSolarBody('earth'); stepSolarFlight(Infinity);
+        focusSolarBody('earth');
         var focusDepth = solarNav.cameraStack.length;
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
         ok(!solarCardOpen && solarNav.selectedId === 'earth' && solarNav.cameraStack.length === focusDepth, 'Escape did not close only the solar card');
@@ -664,7 +667,7 @@
         ok(solarNav.selectedId === null, 'closing a card changed the restored focus');
       } finally {
         if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
-        solarNav = oldNav; solarFlight = oldFlight; solarPaused = oldPaused; solarCardOpen = oldCardOpen; savedGalaxyView = oldGalaxyView;
+        solarNav = oldNav; solarPaused = oldPaused; solarCardOpen = oldCardOpen; savedGalaxyView = oldGalaxyView;
         solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
         solarControls.enabled = oldControls.enabled; solarControls.minDistance = oldControls.minDistance; solarControls.maxDistance = oldControls.maxDistance;
         solarElapsed = oldElapsed; solarShaderTime = oldShader; solarCoronaMaterial.uniforms.uTime.value = oldShader;
@@ -1603,6 +1606,7 @@
   // ── solar runtime: shared meshes, hierarchical orbits, and deterministic time ──
   var SOLAR_OBJECTS = {}, solarAsteroidBelt = null;
   var solarElapsed = 0, solarShaderTime = 0, solarPaused = false, solarFrameLast = 0;
+  var SOLAR_ORBIT_RATE = 0.35, SOLAR_SPIN_RATE = 0.20;
   var solarBeltClearance = { angle: 0.18, inner: 0, outer: 0 }, solarBeltPoint = new THREE.Vector3();
   var solarSphereLow = new THREE.SphereGeometry(1, 12, 8);
   var solarSphereMedium = new THREE.SphereGeometry(1, 24, 16);
@@ -2026,7 +2030,7 @@
     }
     var geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     solarAsteroidBelt = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xa7a29a, size: 0.62, transparent: true, opacity: 0.68, depthWrite: false, sizeAttenuation: true }));
-    var orbitAngle = ceres.phase + solarElapsed / solarCompressedPeriod(ceres);
+    var orbitAngle = ceres.phase + solarElapsed * SOLAR_ORBIT_RATE / solarCompressedPeriod(ceres);
     solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceres, orbitAngle);
     solarAsteroidBelt.userData.solarId = 'asteroid-belt'; solarRoot.add(solarAsteroidBelt);
     return solarAsteroidBelt;
@@ -2049,15 +2053,16 @@
     }
     if (solarPaused || solarReducedMotion()) return;
     solarElapsed += dt;
+    var orbitElapsed = solarElapsed * SOLAR_ORBIT_RATE;
     SOLAR_BODIES.forEach(function (body) {
       var object = SOLAR_OBJECTS[body.id]; if (!object) return;
-      if (body.id !== 'sun') solarOrbitPoint(body, body.phase + solarElapsed / object.compressedPeriod, object.positionNode.position);
-      object.spinNode.rotation.y = solarElapsed / Math.max(0.3, Math.abs(body.rotationHours) / 120);
+      if (body.id !== 'sun') solarOrbitPoint(body, body.phase + orbitElapsed / object.compressedPeriod, object.positionNode.position);
+      object.spinNode.rotation.y = solarElapsed * SOLAR_SPIN_RATE / Math.max(0.3, Math.abs(body.rotationHours) / 120);
       if (body.rotationHours < 0) object.spinNode.rotation.y *= -1;
     });
     if (solarAsteroidBelt) {
       var ceresObject = SOLAR_OBJECTS.ceres;
-      solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceresObject.body, ceresObject.body.phase + solarElapsed / ceresObject.compressedPeriod);
+      solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceresObject.body, ceresObject.body.phase + orbitElapsed / ceresObject.compressedPeriod);
     }
   }
   var selectedBeacon = null;
@@ -2238,9 +2243,9 @@
   var savedGalaxyView = null;
   var solarNav = { level: 'overview', selectedId: null, parentId: null, cameraStack: [], galaxySnapshot: null, skySnapshot: null };
   var skyReturnContext = null;
-  var solarFlight = null, solarCardOpen = false, solarLabelButtons = {}, solarRaycaster = new THREE.Raycaster();
+  var solarCardOpen = false, solarLabelButtons = {}, solarRaycaster = new THREE.Raycaster();
   var solarPointer = { down: false, x: 0, y: 0, moved: false };
-  var solarLabelPoint = new THREE.Vector3(), solarFocusPoint = new THREE.Vector3();
+  var solarLabelPoint = new THREE.Vector3();
 
   function solarSnapshot() {
     return { position: solarCamera.position.clone(), target: solarControls.target.clone(), level: solarNav.level,
@@ -2321,54 +2326,7 @@
       if (!hidden) kept.push(candidate);
     });
   }
-  function solarFrameSelectedBody(target, radius, viewDistance) {
-    var framed = target.clone();
-    if (!solarIsCompact()) return framed;
-    // The drawer occupies the lower half of a phone; looking slightly below the
-    // selected body keeps it in the unobscured upper portion of the viewport.
-    framed.y -= Math.max(radius * 3, (viewDistance == null ? solarCamera.position.distanceTo(target) : viewDistance) * 0.12);
-    return framed;
-  }
-  function frameSolarForViewport() {
-    var object = SOLAR_OBJECTS[solarNav.selectedId];
-    if (viewMode !== 'solar' || !object || !solarCardOpen) return;
-    object.mesh.getWorldPosition(solarFocusPoint);
-    solarControls.target.copy(solarFrameSelectedBody(solarFocusPoint, object.radius));
-    solarControls.update();
-  }
-  function settleSolarFlight(now) {
-    if (!solarFlight) return;
-    var k = Math.min(1, Math.max(0, (now - solarFlight.start) / solarFlight.dur));
-    var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-    solarCamera.position.lerpVectors(solarFlight.p0, solarFlight.p1, e);
-    solarControls.target.lerpVectors(solarFlight.t0, solarFlight.t1, e);
-    solarFlight = null; solarControls.enabled = true; solarControls.update();
-  }
-  function startSolarFlight(target, radius) {
-    settleSolarFlight(performance.now());
-    var distance = Math.max(8, Math.min(110, radius * 11 + 8));
-    target = solarFrameSelectedBody(target, radius, distance);
-    var direction = solarCamera.position.clone().sub(target);
-    if (direction.lengthSq() < 0.0001) direction.set(0.65, 0.42, 1);
-    direction.normalize();
-    solarFlight = { p0: solarCamera.position.clone(), p1: target.clone().addScaledVector(direction, distance), t0: solarControls.target.clone(), t1: target.clone(),
-      start: performance.now(), dur: solarReducedMotion() ? 120 : 720, radius: radius };
-    solarControls.enabled = false;
-  }
-  function stepSolarFlight(now) {
-    if (!solarFlight) return false;
-    var k = Math.min(1, Math.max(0, (now - solarFlight.start) / solarFlight.dur));
-    var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-    solarCamera.position.lerpVectors(solarFlight.p0, solarFlight.p1, e);
-    solarControls.target.lerpVectors(solarFlight.t0, solarFlight.t1, e);
-    solarCamera.lookAt(solarControls.target);
-    if (k >= 1) {
-      var radius = solarFlight.radius;
-      solarFlight = null; solarControls.minDistance = Math.max(2, radius * 2.2); solarControls.maxDistance = Math.max(18, radius * 28 + 14);
-      solarControls.enabled = true; solarControls.update(); renderSolarPanel(solarNav.selectedId, beaconLang);
-    }
-    return true;
-  }
+  function frameSolarForViewport() { return false; }
   function clearSolarCard() { solarCardOpen = false; bpEl.classList.remove('open'); bpBody.innerHTML = ''; }
   function enterSolarSky() {
     return enterSkyFromEarth();
@@ -2387,8 +2345,12 @@
       if (solarNav.level === 'overview') solarNav.cameraStack.push(solarSnapshot());
       solarNav.level = 'focus'; solarNav.parentId = null; solarNav.selectedId = id;
     }
-    clearSolarCard(); setSolarPaused(true); updateSolarVisibility(); updateSolarNavigationText();
-    object.mesh.getWorldPosition(solarFocusPoint); startSolarFlight(solarFocusPoint, object.radius);
+    clearSolarCard();
+    setSolarPaused(false);
+    updateSolarVisibility();
+    updateSolarNavigationText();
+    renderSolarPanel(id, beaconLang);
+    updateSolarLOD();
     return true;
   }
   function selectSolarBody(id) { return focusSolarBody(id); }
@@ -2398,7 +2360,6 @@
   }
   function leaveSolarLevel() {
     if (viewMode === 'sky' && skyReturnContext) return returnSkyToEarth();
-    settleSolarFlight(performance.now());
     if (solarNav.level === 'sky' && solarNav.skySnapshot) {
       setSolarNavigation(solarNav.skySnapshot); solarNav.skySnapshot = null; return true;
     }
@@ -2410,7 +2371,7 @@
     return true;
   }
   function resetSolarNavigation() {
-    solarFlight = null; solarCardOpen = false;
+    solarCardOpen = false;
     solarNav.level = 'overview'; solarNav.selectedId = null; solarNav.parentId = null; solarNav.cameraStack = []; solarNav.skySnapshot = null;
     updateSolarVisibility(); updateSolarNavigationText();
   }
@@ -2421,7 +2382,6 @@
   renderer.domElement.addEventListener('pointerdown', function (e) {
     if (viewMode !== 'solar') return;
     var point = solarPointerPosition(e); solarPointer.down = true; solarPointer.x = point.x; solarPointer.y = point.y; solarPointer.moved = false;
-    settleSolarFlight(performance.now());
   });
   renderer.domElement.addEventListener('pointermove', function (e) {
     if (!solarPointer.down || viewMode !== 'solar') return;
@@ -2503,7 +2463,6 @@
   var solarMotionMedia = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   function shortenActiveFlights() {
     var now = performance.now();
-    if (solarFlight) { solarFlight.p0.copy(solarCamera.position); solarFlight.t0.copy(solarControls.target); solarFlight.start = now; solarFlight.dur = 120; }
     if (flyState) { flyState.p0.copy(camera.position); flyState.t0.copy(controls.target); flyState.start = now; flyState.dur = 120; }
   }
   function refreshReducedMotion() {
@@ -3112,7 +3071,6 @@
   }
   function enterSkyFromEarth() {
     if (viewMode !== 'solar' || solarNav.selectedId !== 'earth' || solarNav.parentId !== null) return false;
-    settleSolarFlight(performance.now());
     skyReturnContext = { solar: solarSnapshot(), paused: solarPaused };
     clearSolarCard();
     return enterSky('earth');
@@ -3203,7 +3161,7 @@
       var solarNow = performance.now(), solarDt = solarFrameLast ? Math.min((solarNow - solarFrameLast) / 1000, 0.15) : 0;
       solarFrameLast = solarNow;
       updateSolarMotion(solarDt);
-      if (!stepSolarFlight(solarNow)) solarControls.update();
+      solarControls.update();
       updateSolarLOD();
       updateSolarBackdrop();
       renderer.render(solarScene, solarCamera);
