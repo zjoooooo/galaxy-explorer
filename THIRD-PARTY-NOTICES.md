@@ -4,6 +4,22 @@ This project bundles third-party software under `vendor/`. Their copyright and
 license notices are reproduced below. The project itself is under the
 [MIT License](LICENSE).
 
+## Solar-system textures (`images/solar-system/`)
+
+All local delivery textures in this directory are from redistributable NASA or
+USGS source records. NASA 3D Resources describes its assets as free to download
+and use; NASA SVS material is public domain unless otherwise noted. Processing
+details and the per-file inventory are in
+[`images/solar-system/README.md`](images/solar-system/README.md).
+
+| Local files | Source | Agency / creator | Status |
+| --- | --- | --- | --- |
+| `venus.jpg`, `earth.jpg`, `moon.jpg`, `mars.jpg`, `jupiter.jpg`, `io.jpg`, `europa.jpg`, `ganymede.jpg`, `callisto.jpg`, `saturn.jpg`, `titan.jpg`, `neptune.jpg`, `triton.jpg`, `pluto.jpg` | [NASA 3D Resources](https://science.nasa.gov/3d-resources/) individual texture records | NASA/JPL Solar System Simulator; source-page credits retained in the local inventory | Free to download and use; NASA media-usage guidance applies. |
+| `earth-night.jpg` | [Earth at Night (Black Marble) 2016](https://visibleearth.nasa.gov/images/144898/earth-at-night-black-marble-2016-color-maps/144957l) | NASA Earth Observatory / NASA GSFC | NASA material; attribution retained. |
+| `earth-clouds.png` | [NASA SVS Cloud frames](https://svs.gsfc.nasa.gov/vis/a000000/a003800/a003837/frames/2048x1024_2x1_30p/Clouds/) | NASA GSFC Scientific Visualization Studio | Public domain unless otherwise noted. |
+| `saturn-rings.png` | [Panoramic Rings (PIA06175)](https://science.nasa.gov/resource/panoramic-rings/) | NASA/JPL/Space Science Institute | NASA material; attribution retained. |
+| `mercury.jpg`, `ceres.jpg`, `uranus.jpg` and derivative `*-bump.jpg` / `*-normal.jpg` maps | [PIA11364](https://images.nasa.gov/details-PIA11364), [PIA20383](https://images.nasa.gov/details-PIA20383), [PIA01391](https://images.nasa.gov/details-PIA01391) | NASA/JHUAPL/Carnegie (Mercury); NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Ceres); NASA/JPL (Uranus) | NASA material; derived browser-delivery maps are documented locally. |
+
 ---
 
 ## three.js (r128) and example modules
