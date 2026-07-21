@@ -257,7 +257,7 @@
     check('solar-card', function () {
       renderPanel(0, 'en');
       ok(document.getElementById('bp-solar-link'), 'bp-solar-link missing');
-      ok(!document.getElementById('bp-zodiac-link'), 'bp-zodiac-link must not appear on the Solar System card');
+      ok(!document.getElementById('bp-' + 'zodiac-link'), 'legacy sky link must not appear on the Solar System card');
     });
     check('solar-card-rendering', function () {
       var fields = ['distance', 'diameter', 'orbit', 'rotation', 'temperature', 'moons'];

@@ -33,11 +33,21 @@ and supernovae are all math.
 - **Interactive beacons** — 15 clickable markers (the Solar System, Sagittarius
   A*, famous nebulae, clusters, stars and black holes) open detailed info cards
   with a glowing 3D ring on the selected object.
-- **Zodiac sky view** — open the Solar System card and "view the sky": an
-  Earth-centred rotatable star dome with the 12 zodiac constellations drawn
-  from 106 real stars (J2000 positions), each with its own card.
-- **Three languages** — beacon labels and cards switch between English,
-  Simplified and Traditional Chinese (top-right selector; choice remembered).
+- **Solar System guide** — follow the **Solar System** beacon to **Explore the
+  Solar System**, then freely orbit and zoom around the Sun, eight planets,
+  Pluto, Ceres, the asteroid belt and representative moons. Click a body to
+  focus it; from Earth, choose **Explore Earth's sky** for the star dome.
+  Display scale and starting positions are arranged for readability, not a
+  literal scale model or real-time ephemeris.
+- **Zodiac sky view** — from Earth's Solar System card, open an Earth-centred,
+  rotatable star dome with the 12 zodiac constellations drawn from 106 real
+  stars (J2000 positions), each with its own card.
+- **Five languages** — labels, cards and navigation switch between English,
+  Simplified Chinese, Traditional Chinese, Japanese and Korean (top-right
+  selector; choice remembered).
+- **Local texture detail** — Solar bodies use bundled local texture tiers that
+  adapt to focus, viewport and device capability; no runtime texture service is
+  required.
 - **Cinematic look** — selective bloom + ACES tone-mapping.
 - **Performance-aware** — an FPS watchdog automatically reduces dust density on
   weak GPUs so it stays smooth on laptops, TVs and kiosks.
@@ -81,8 +91,10 @@ nginx, or any web host. Just upload the folder — there is nothing to build.
 | Control | Effect |
 |---|---|
 | **drag** | orbit the camera |
-| **scroll** | zoom in / out |
-| **click a beacon** | open that object's info card |
+| **scroll / pinch** | zoom in / out |
+| **click a beacon or body** | open its card; click a Solar body to focus it |
+| **Back** | return one level: sky → Earth → Solar overview → galaxy |
+| **`Esc`** | staged return: close a card, then leave the current Solar level, then the Solar System |
 | **`F`** | cinema mode — hide all UI |
 | **`M`** | background music on / mute (optional, see below) |
 

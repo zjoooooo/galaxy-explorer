@@ -1,7 +1,7 @@
 # Solar System Planet Guide — Design Spec
 
 - **Date:** 2026-07-21
-- **Status:** Approved, implementation planned
+- **Status:** Implemented and verified
 - **Scope:** Add a free-exploration Solar System view to the existing single-file Three.js application, including the Sun, eight planets, selected moons, Pluto, Ceres, and a procedural asteroid belt.
 
 ## 1. Product goal
