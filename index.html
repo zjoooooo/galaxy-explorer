@@ -289,6 +289,32 @@
       window.dispatchEvent(new Event('resize'));
       ok(solarCamera.aspect === window.innerWidth / window.innerHeight, 'resize did not update solar camera');
     });
+    check('solar-runtime-objects', function () {
+      ok(typeof buildSolarBodies === 'function', 'buildSolarBodies missing');
+      ok(SOLAR_OBJECTS && Object.keys(SOLAR_OBJECTS).length === SOLAR_BODIES.length, 'runtime body count is wrong');
+      SOLAR_BODIES.forEach(function (b) {
+        var o = SOLAR_OBJECTS[b.id];
+        ok(o && o.orbitPivot && o.positionNode && o.tiltNode && o.spinNode && o.lodGroup && o.hitProxy && o.orbitLine, b.id + ' runtime chain missing');
+        if (b.parent) ok(o.orbitPivot.parent === SOLAR_OBJECTS[b.parent].positionNode, b.id + ' is not attached to its parent');
+      });
+    });
+    check('solar-asteroid-belt', function () {
+      var points = 0;
+      solarRoot.traverse(function (o) { if (o instanceof THREE.Points) points++; });
+      ok(solarAsteroidBelt instanceof THREE.Points, 'asteroid belt is not points');
+      ok(points === 1, 'asteroid belt must use one points object');
+    });
+    check('solar-pause-clock', function () {
+      ok(typeof updateSolarMotion === 'function' && typeof setSolarPaused === 'function', 'solar motion API missing');
+      var elapsed = solarElapsed, shaderTime = solarShaderTime, paused = solarPaused;
+      setSolarPaused(false); updateSolarMotion(0.25);
+      ok(solarElapsed > elapsed, 'solar clock did not advance');
+      elapsed = solarElapsed; shaderTime = solarShaderTime;
+      setSolarPaused(true); updateSolarMotion(0.25);
+      ok(solarElapsed === elapsed, 'paused solar clock advanced');
+      ok(solarShaderTime > shaderTime, 'shader clock paused with solar clock');
+      setSolarPaused(paused);
+    });
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
     if (/[?&]solarTest=1/.test(location.search)) setMsg(failures.length ? failures.join(' | ') : statusText());
     return window.__solarTestResult;
@@ -1129,6 +1155,135 @@
     return true;
   }
   assertSolarData();
+
+  // ── solar runtime: shared meshes, hierarchical orbits, and deterministic time ──
+  var SOLAR_OBJECTS = {}, solarAsteroidBelt = null;
+  var solarElapsed = 0, solarShaderTime = 0, solarPaused = false, solarFrameLast = 0;
+  var solarSphereLow = new THREE.SphereGeometry(1, 12, 8);
+  var solarSphereMedium = new THREE.SphereGeometry(1, 24, 16);
+  var solarRingGeometry = new THREE.RingGeometry(1, 2, 48, 1);
+  var solarMaterialBases = {
+    terrestrial: new THREE.MeshPhongMaterial({ shininess: 12, specular: 0x222222 }),
+    giant: new THREE.MeshPhongMaterial({ shininess: 18, specular: 0x443322 }),
+    moon: new THREE.MeshLambertMaterial(),
+    dwarf: new THREE.MeshLambertMaterial(),
+    sun: new THREE.MeshBasicMaterial({ color: 0xffd36b })
+  };
+  var solarCoronaMaterial = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0xffbf57) } },
+    transparent: true, depthWrite: false, side: THREE.BackSide,
+    vertexShader: 'varying vec3 vNormal; void main(){ vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform float uTime; uniform vec3 uColor; varying vec3 vNormal; void main(){ float edge = pow(1.0 - abs(vNormal.z), 2.0); float pulse = 0.72 + sin(uTime * 1.7) * 0.12; gl_FragColor = vec4(uColor, edge * pulse * 0.24); }'
+  });
+  var solarGlowSprite = null;
+
+  function solarMaterialFor(body) {
+    var key = body.kind === 'planet' ? (body.id === 'jupiter' || body.id === 'saturn' || body.id === 'uranus' || body.id === 'neptune' ? 'giant' : 'terrestrial') : body.kind === 'moon' ? 'moon' : body.kind === 'star' ? 'sun' : 'dwarf';
+    var material = solarMaterialBases[key].clone();
+    material.color.set(body.color);
+    if (key === 'sun') material.color.set(0xffd36b);
+    return material;
+  }
+  function solarOrbitDistance(body) {
+    if (!body.parent) return solarOrbitRadius(body.distanceAu);
+    return 6 + Math.sqrt(body.distanceAu / 0.002) * 5.5;
+  }
+  function solarCompressedPeriod(body) {
+    if (body.id === 'sun') return 1;
+    return body.parent ? 0.7 + Math.sqrt(body.periodDays) * 0.32 : 2.5 + Math.log(body.periodDays + 1) * 1.25;
+  }
+  function solarOrbitPoint(body, angle, target) {
+    var a = solarOrbitDistance(body), b = a * Math.sqrt(1 - body.eccentricity * body.eccentricity);
+    target.set(Math.cos(angle) * a - body.eccentricity * a, 0, Math.sin(angle) * b);
+    return target;
+  }
+  function solarOrbitLine(body) {
+    if (body.id === 'sun') return new THREE.Group();
+    var vertices = [], point = new THREE.Vector3(), steps = body.parent ? 28 : 80;
+    for (var i = 0; i < steps; i++) {
+      solarOrbitPoint(body, i / steps * Math.PI * 2, point);
+      vertices.push(point.x, point.y, point.z);
+    }
+    var geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    var line = new THREE.LineLoop(geometry, new THREE.LineBasicMaterial({ color: body.parent ? 0x78839a : 0x53637d, transparent: true, opacity: body.parent ? 0.12 : 0.3, depthWrite: false }));
+    line.visible = !body.parent;
+    return line;
+  }
+  function makeSolarGlow() {
+    var canvas = document.createElement('canvas'), context = canvas.getContext('2d');
+    canvas.width = canvas.height = 64;
+    var gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gradient.addColorStop(0, 'rgba(255,252,210,0.92)'); gradient.addColorStop(0.28, 'rgba(255,188,74,0.56)'); gradient.addColorStop(1, 'rgba(255,153,42,0)');
+    context.fillStyle = gradient; context.fillRect(0, 0, 64, 64);
+    var sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), color: 0xffc66f, transparent: true, depthWrite: false, opacity: 0.72, blending: THREE.AdditiveBlending }));
+    sprite.scale.set(32, 32, 1);
+    return sprite;
+  }
+  function buildSolarBodies() {
+    if (Object.keys(SOLAR_OBJECTS).length) return SOLAR_OBJECTS;
+    SOLAR_BODIES.forEach(function (body) {
+      var parent = body.parent ? SOLAR_OBJECTS[body.parent].positionNode : solarRoot;
+      var orbitPivot = new THREE.Group(), positionNode = new THREE.Group(), tiltNode = new THREE.Group(), spinNode = new THREE.Group(), lodGroup = new THREE.Group();
+      orbitPivot.rotation.x = body.inclinationDeg * Math.PI / 180;
+      tiltNode.rotation.z = body.tiltDeg * Math.PI / 180;
+      parent.add(orbitPivot); orbitPivot.add(solarOrbitLine(body)); orbitPivot.add(positionNode); positionNode.add(tiltNode); tiltNode.add(spinNode); spinNode.add(lodGroup);
+      var mesh = new THREE.Mesh((body.kind === 'moon' || body.kind === 'dwarf-planet') ? solarSphereLow : solarSphereMedium, solarMaterialFor(body));
+      var radius = body.id === 'sun' ? 9.5 : solarDisplayRadius(body.radiusKm);
+      mesh.scale.set(radius, radius, radius); mesh.userData.solarId = body.id; lodGroup.add(mesh);
+      var hitProxy = new THREE.Mesh(solarSphereLow, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+      hitProxy.scale.set(radius * 1.6, radius * 1.6, radius * 1.6); hitProxy.userData.solarId = body.id; lodGroup.add(hitProxy);
+      var orbitLine = orbitPivot.children[0];
+      SOLAR_OBJECTS[body.id] = { body: body, orbitPivot: orbitPivot, positionNode: positionNode, tiltNode: tiltNode, spinNode: spinNode, lodGroup: lodGroup, hitProxy: hitProxy, orbitLine: orbitLine, mesh: mesh, radius: radius, compressedPeriod: solarCompressedPeriod(body) };
+      if (body.id === 'sun') {
+        var corona = new THREE.Mesh(solarSphereMedium, solarCoronaMaterial); corona.scale.set(radius * 1.42, radius * 1.42, radius * 1.42); corona.userData.solarId = body.id; lodGroup.add(corona);
+        solarGlowSprite = makeSolarGlow(); solarGlowSprite.userData.solarId = body.id; lodGroup.add(solarGlowSprite);
+      }
+      if (body.id === 'saturn') {
+        var rings = new THREE.Mesh(solarRingGeometry, new THREE.MeshBasicMaterial({ color: 0xdcc58b, transparent: true, opacity: 0.54, side: THREE.DoubleSide, depthWrite: false }));
+        rings.rotation.x = Math.PI / 2; rings.scale.set(radius * 1.35, radius * 1.35, 1); rings.userData.solarId = body.id; spinNode.add(rings);
+      }
+    });
+    updateSolarMotion(0);
+    return SOLAR_OBJECTS;
+  }
+  function buildAsteroidBelt(count) {
+    if (solarAsteroidBelt) solarRoot.remove(solarAsteroidBelt);
+    count = count || 2000;
+    var randomState = 0x1a2b3c4d, positions = new Float32Array(count * 3), ceresAngle = SOLAR_BY_ID.ceres.phase, inner = solarOrbitRadius(1.9), outer = solarOrbitRadius(3.45);
+    function nextRandom() { randomState = (randomState + 0x6d2b79f5) | 0; var t = Math.imul(randomState ^ randomState >>> 15, 1 | randomState); t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+    for (var i = 0; i < count; i++) {
+      var angle, radius, nearCeres;
+      do {
+        angle = nextRandom() * Math.PI * 2; radius = inner + (outer - inner) * Math.sqrt(nextRandom());
+        var angleGap = Math.abs(Math.atan2(Math.sin(angle - ceresAngle), Math.cos(angle - ceresAngle)));
+        nearCeres = angleGap < 0.13 && Math.abs(radius - solarOrbitRadius(SOLAR_BY_ID.ceres.distanceAu)) < 5;
+      } while (nearCeres);
+      positions[i * 3] = Math.cos(angle) * radius; positions[i * 3 + 1] = (nextRandom() - 0.5) * 2.2; positions[i * 3 + 2] = Math.sin(angle) * radius;
+    }
+    var geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    solarAsteroidBelt = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xa7a29a, size: 0.62, transparent: true, opacity: 0.68, depthWrite: false, sizeAttenuation: true }));
+    solarAsteroidBelt.userData.solarId = 'asteroid-belt'; solarRoot.add(solarAsteroidBelt);
+    return solarAsteroidBelt;
+  }
+  function setSolarPaused(paused) { solarPaused = !!paused; }
+  function updateSolarMotion(dt) {
+    dt = Math.max(0, Math.min(Number(dt) || 0, 0.15));
+    solarShaderTime += dt;
+    solarCoronaMaterial.uniforms.uTime.value = solarShaderTime;
+    if (solarGlowSprite) {
+      var glow = 1 + Math.sin(solarShaderTime * 1.7) * 0.06;
+      solarGlowSprite.scale.set(32 * glow, 32 * glow, 1);
+    }
+    if (solarPaused) return;
+    solarElapsed += dt;
+    SOLAR_BODIES.forEach(function (body) {
+      var object = SOLAR_OBJECTS[body.id]; if (!object) return;
+      if (body.id !== 'sun') solarOrbitPoint(body, body.phase + solarElapsed / object.compressedPeriod, object.positionNode.position);
+      object.spinNode.rotation.y = solarElapsed / Math.max(0.3, Math.abs(body.rotationHours) / 120);
+      if (body.rotationHours < 0) object.spinNode.rotation.y *= -1;
+    });
+  }
   var selectedBeacon = null;
   function selectBeacon(i) {
     if (i === selectedBeacon) { clearSelection(); return; }
@@ -1292,6 +1447,7 @@
     document.getElementById('skyback').style.display = 'none';
     if (solarLabelsEl) solarLabelsEl.style.display = '';
     if (solarBackEl) solarBackEl.style.display = 'block';
+    solarFrameLast = 0;
     solarControls.update();
   }
   function exitSolar() {
@@ -1309,6 +1465,7 @@
       savedGalaxyView = null;
     }
     controls.update();
+    solarFrameLast = 0;
     perfLast = 0;
   }
   solarBackEl.addEventListener('click', exitSolar);
@@ -1910,6 +2067,8 @@
   // panel sits at 33.3ms, safely below), halve perfScale (1 → .5 → .25 floor) and
   // rebuild the dust at the reduced density. Never scales back up (no oscillation).
   var perfScale = 1, perfEMA = 16.7, perfLast = 0, perfNextCheck = performance.now() + 12000;
+  buildSolarBodies();
+  buildAsteroidBelt(Math.max(400, Math.floor(2000 * perfScale)));
   function frame() {
     rafId = null;
     if (document.hidden) return;
@@ -1925,6 +2084,9 @@
       return;
     }
     if (viewMode === 'solar') {
+      var solarNow = performance.now(), solarDt = solarFrameLast ? Math.min((solarNow - solarFrameLast) / 1000, 0.15) : 0;
+      solarFrameLast = solarNow;
+      updateSolarMotion(solarDt);
       solarControls.update();
       renderer.render(solarScene, solarCamera);
       updateSolarLabels();
@@ -1972,7 +2134,7 @@
     rafId = requestAnimationFrame(frame);
   }
   function startLoop() { if (rafId == null && !document.hidden) rafId = requestAnimationFrame(frame); }
-  document.addEventListener('visibilitychange', function () { perfLast = 0; startLoop(); }); // perfLast reset: the resume gap must not enter the FPS EMA
+  document.addEventListener('visibilitychange', function () { perfLast = 0; solarFrameLast = 0; startLoop(); }); // reset frame clocks so resume gaps do not enter animation timing
   window.addEventListener('resize', function () {
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
     skyCamera.aspect = window.innerWidth / window.innerHeight; skyCamera.updateProjectionMatrix();
