@@ -514,7 +514,10 @@
         applySolarPerformanceTier(1); ok(solarAsteroidBelt.geometry.drawRange.count < base[0] && solarBackdrop.geometry.drawRange.count === base[1] && solarPerf.labelEvery === base[2], 'stage 1 changed more than asteroid range');
         applySolarPerformanceTier(2); ok(solarBackdrop.geometry.drawRange.count < base[1] && solarPerf.labelEvery === base[2], 'stage 2 did not add only backdrop degradation');
         applySolarPerformanceTier(3); ok(solarPerf.labelEvery > base[2], 'stage 3 did not add label cadence');
-        applySolarPerformanceTier(4); ok(solarLOD.textureCeiling === 2048, 'stage 4 did not add nonselected texture ceiling');
+        solarLOD.active2 = 'earth'; earth.lodTier = 2; earth.lodTarget = 2; earth.lodMeshes.forEach(function (mesh, tier) { mesh.visible = tier === 2; });
+        var mars = SOLAR_OBJECTS.mars; mars.lodTier = 1; mars.lodTarget = 1; mars.lodMeshes.forEach(function (mesh, tier) { mesh.visible = tier === 1; });
+        applySolarPerformanceTier(4);
+        ok(solarLOD.textureCeiling === 2048 && earth.lodTier === 2 && earth.lodMeshes[2].visible && mars.lodTier === 0 && mars.lodMeshes[0].visible, 'stage 4 did not demote nonselected textured meshes while preserving selected detail');
         applySolarPerformanceTier(5); ok(!solarPerf.specialty, 'stage 5 did not add specialty reduction');
         var epoch = solarPerf.epoch; applySolarPerformanceTier(5); ok(solarPerf.epoch === epoch, 'repeated stage call was not idempotent');
         applySolarPerformanceTier(0); ok(solarAsteroidBelt.geometry.drawRange.count === base[0] && solarBackdrop.geometry.drawRange.count === base[1] && solarPerf.labelEvery === base[2] && solarPerf.specialty === base[4], 'stage recovery did not restore fields');
@@ -621,20 +624,31 @@
         var expectedProxyRadius = 2 * Math.tan(solarCamera.fov * Math.PI / 360) * solarCamera.position.distanceTo(earthPoint) / window.innerHeight * 16;
         ok(solarHitRadius(earthObject, earthPoint) >= expectedProxyRadius, 'Earth proxy is smaller than a 32 CSS-pixel target');
         ok(earthObject.hitProxy.scale.x >= expectedProxyRadius, 'Earth hit proxy did not receive its touch size');
+        solarControls.minDistance = 3; solarControls.maxDistance = 333;
         focusSolarBody('earth'); stepSolarFlight(Infinity);
         ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1 && solarPaused, 'Earth focus did not retain overview or pause motion');
         ok(solarActiveProxies().every(function (proxy) { var body = SOLAR_BY_ID[proxy.userData.solarId]; return body.id === 'earth' || body.parent === 'earth'; }), 'Earth focus raycast escaped its local system');
+        var earthMinDistance = solarControls.minDistance, earthMaxDistance = solarControls.maxDistance;
         focusSolarBody('moon'); stepSolarFlight(Infinity);
         ok(solarNav.selectedId === 'moon' && solarNav.parentId === 'earth' && solarNav.cameraStack.length === 2 && solarPaused, 'Moon focus did not retain Earth or pause motion');
-        var oldLanguage = beaconLang, moonLanguage = oldLanguage === 'ja' ? 'ko' : 'ja', moonPosition = solarCamera.position.clone(), moonTarget = solarControls.target.clone();
+        var oldLanguage = beaconLang;
+        ['en', 'hans', 'hant', 'ja', 'ko'].forEach(function (language) {
+          setBeaconLang(language);
+          var parentName = (SOLAR_BY_ID.earth.info[language] || SOLAR_BY_ID.earth.info.en).name;
+          ok(solarBackEl.textContent.indexOf(parentName) !== -1 && solarBackEl.getAttribute('aria-label') === solarBackEl.textContent, language + ' moon Back did not name its parent');
+        });
+        var moonLanguage = oldLanguage === 'ja' ? 'ko' : 'ja', moonPosition = solarCamera.position.clone(), moonTarget = solarControls.target.clone();
         setBeaconLang(moonLanguage);
         ok(solarNav.selectedId === 'moon' && solarNav.parentId === 'earth', 'language change changed the Moon focus');
         ok(solarCamera.position.distanceTo(moonPosition) === 0 && solarControls.target.distanceTo(moonTarget) === 0, 'language change moved the Moon camera');
         setBeaconLang(oldLanguage);
         leaveSolarLevel();
         ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1 && solarPaused, 'Back did not restore Earth focus or retain pause');
+        ok(solarControls.minDistance === earthMinDistance && solarControls.maxDistance === earthMaxDistance, 'Back restored the Earth camera without its control bounds');
         leaveSolarLevel();
         ok(solarNav.level === 'overview' && solarNav.selectedId === null && solarNav.cameraStack.length === 0 && !solarPaused, 'Back did not restore overview or resume motion');
+        ok(solarControls.minDistance === 3 && solarControls.maxDistance === 333, 'overview Back did not restore its control bounds');
+        ok(!solarCardOpen && !bpEl.classList.contains('open') && bpBody.innerHTML === '', 'panelOpen=false left stale card DOM visible');
         var resumedElapsed = solarElapsed; updateSolarMotion(0.05); ok(solarElapsed > resumedElapsed, 'overview motion did not resume');
         focusSolarBody('earth'); stepSolarFlight(Infinity);
         ok(enterSolarSky(), 'Earth sky transition did not start');
@@ -1719,6 +1733,7 @@
   function chooseSolarLOD(id, distance) {
     var object = SOLAR_OBJECTS[id], radius = object && object.radius ? object.radius : 1, ratio = Math.max(0, distance) / radius;
     if (!object || !object.lodGroup.visible || solarLOD.quality < 1) return 0;
+    if (solarPerf.stage >= 4 && id !== solarSelectedId()) return 0;
     var baseTier = solarBaseTier(object, ratio);
     if (baseTier === 0 || !solarCanUseLOD2(id) || (solarLOD.active2 && solarLOD.active2 !== id)) return baseTier;
     return ratio < (object.lodTier === 2 || object.lodTarget === 2 ? 72 : 48) ? 2 : 1;
@@ -2229,11 +2244,15 @@
 
   function solarSnapshot() {
     return { position: solarCamera.position.clone(), target: solarControls.target.clone(), level: solarNav.level,
-      selectedId: solarNav.selectedId, parentId: solarNav.parentId, panelOpen: solarCardOpen };
+      selectedId: solarNav.selectedId, parentId: solarNav.parentId, panelOpen: solarCardOpen,
+      minDistance: solarControls.minDistance, maxDistance: solarControls.maxDistance };
   }
   function setSolarNavigation(snapshot) {
     solarNav.level = snapshot.level; solarNav.selectedId = snapshot.selectedId; solarNav.parentId = snapshot.parentId;
     solarCardOpen = !!snapshot.panelOpen;
+    if (!solarCardOpen) clearSolarCard();
+    if (typeof snapshot.minDistance === 'number') solarControls.minDistance = snapshot.minDistance;
+    if (typeof snapshot.maxDistance === 'number') solarControls.maxDistance = snapshot.maxDistance;
     if (snapshot.position) solarCamera.position.copy(snapshot.position);
     if (snapshot.target) solarControls.target.copy(snapshot.target);
     solarControls.update();
@@ -3052,7 +3071,23 @@
     }[L] || { galaxy: '← Back to Galaxy', solar: '← Back to Solar System', earth: '← Back to Earth' };
     var skyBack = document.getElementById('skyback'), solarBack = document.getElementById('solarback');
     if (skyBack) { skyBack.textContent = skyReturnContext ? text.earth : text.galaxy; skyBack.setAttribute('aria-label', skyBack.textContent); }
-    if (solarBack) { solarBack.textContent = solarNav && solarNav.level === 'focus' ? text.solar : text.galaxy; solarBack.setAttribute('aria-label', solarBack.textContent); }
+    if (solarBack) {
+      var backText = solarNav && solarNav.level === 'focus' ? text.solar : text.galaxy;
+      if (solarNav && solarNav.level === 'focus' && solarNav.parentId) {
+        var parent = SOLAR_BY_ID[solarNav.parentId], parentName = parent && (parent.info[L] || parent.info.en).name;
+        if (parentName) {
+          var lastCode = parentName.charCodeAt(parentName.length - 1), jong = lastCode >= 0xac00 && lastCode <= 0xd7a3 ? (lastCode - 0xac00) % 28 : 0;
+          backText = {
+            en: '← Back to ' + parentName,
+            hans: '← 返回' + parentName,
+            hant: '← 返回' + parentName,
+            ja: '← ' + parentName + 'に戻る',
+            ko: '← ' + parentName + (jong && jong !== 8 ? '으로' : '로') + ' 돌아가기'
+          }[L] || '← Back to ' + parentName;
+        }
+      }
+      solarBack.textContent = backText; solarBack.setAttribute('aria-label', backText);
+    }
     var closeText = { en: 'Close', hans: '关闭', hant: '關閉', ja: '閉じる', ko: '닫기' }[L] || 'Close';
     var closeButton = document.getElementById('bp-close');
     if (closeButton) { closeButton.setAttribute('aria-label', closeText); closeButton.setAttribute('title', closeText); }
