@@ -6,25 +6,28 @@ license notices are reproduced below. The project itself is under the
 
 ## Solar-system textures (`images/solar-system/`)
 
-All local delivery textures in this directory are from redistributable NASA or
-USGS source records. NASA 3D Resources describes its assets as free to download
-and use; NASA SVS material is public domain unless otherwise noted. Processing
-details and the per-file inventory are in
+All local delivery textures in this directory are from NASA or USGS source
+records. NASA 3D Resources describes its assets as free to download and use;
+NASA SVS material is public domain unless otherwise noted. For USGS products,
+the [USGS data-licensing policy](https://www.usgs.gov/data-management/data-licensing)
+and each product record determine status: Mars MOLA is explicitly CC0; Mercury
+and Ceres are credited under their exact **Access Constraints: None; Use
+Constraints: Please cite authors** terms and are not labeled CC0 or public
+domain. Processing details and the per-file inventory are in
 [`images/solar-system/README.md`](images/solar-system/README.md).
 
 | Local files | Exact source page | Agency / creator | Status and local transformation |
 | --- | --- | --- | --- |
-| `mercury.jpg` | [MESSENGER MDIS DEM Global Color Shaded Relief 2km](https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_dem_global_color_shaded_relief_2km) | USGS Astrogeology / MESSENGER MDIS | Publicly accessible USGS raster; 7664×3832 global GeoTIFF resampled to 2048×1024 JPEG. |
+| `mercury.jpg` | [USGS Astro Web Maps](https://www.usgs.gov/tools/astro-web-maps), layer `MESSENGER`; [MDIS Basemap BDR Global Mosaic 166m](https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_global_basemap_bdr_166m) | Applied Coherent Technology Corporation; NASA/JHU APL/Arizona State University/Carnegie Science; USGS Astrogeology | 0°–360° WMS derivative of the global 750-nm reflectance mosaic, 2048×1024 JPEG. Source terms: **Access Constraints: None; Use Constraints: Please cite authors**. |
 | `venus.jpg`, `earth.jpg`, `mars.jpg`, `jupiter.jpg`, `saturn.jpg`, `neptune.jpg`, `pluto.jpg` | [Venus](https://science.nasa.gov/3d-resources/venus/), [Earth (A)](https://science.nasa.gov/3d-resources/earth-a/), [Mars](https://science.nasa.gov/3d-resources/mars/), [Jupiter](https://science.nasa.gov/3d-resources/jupiter/), [Saturn](https://science.nasa.gov/3d-resources/saturn/), [Neptune](https://science.nasa.gov/3d-resources/neptune/), [Pluto](https://science.nasa.gov/3d-resources/pluto/) | NASA/JPL Solar System Simulator; individual credits on each page | Free to download and use; JPEG delivery resamples documented in the local inventory. Pluto source is fictional: Pat Rawlings painting stitched by David Seal/JPL. |
-| `earth-normal.png` | [NASA SVS Blue Marble (ID 2915)](https://svs.gsfc.nasa.gov/2915/) | NASA SVS; USGS GTOPO30 elevation basis | NASA material; 1024×512 lossless tangent-space normal derived from the documented topographic-shading source, not the Earth albedo map. |
-| `moon.jpg` | [CGI Moon Kit](https://svs.gsfc.nasa.gov/4720/) | NASA SVS, Ernie Wright; LROC and LOLA teams | Public domain unless noted; native 2048×1024 `lroc_color_2k.jpg`. |
-| `moon-normal.png` | [CGI Moon Kit (LOLA displacement map)](https://svs.gsfc.nasa.gov/4720/) | NASA SVS; LROC and LOLA teams | Public domain unless noted; 1024×512 lossless tangent-space normal generated from `ldem_4_uint.tif`, a LOLA elevation/displacement map. |
-| `mars-normal.png` | [MGS MOLA Global DEM 463m](https://astrogeology.usgs.gov/search/map/mars_mgs_mola_dem_463m) | USGS Astrogeology / Mars Global Surveyor MOLA | Publicly accessible USGS elevation product; official browse raster transformed into a 1024×512 lossless tangent-space normal. |
+| `moon.jpg` | [CGI Moon Kit](https://svs.gsfc.nasa.gov/4720/) | NASA SVS; visualizer Ernie Wright (USRA), scientist Noah Petro (NASA/GSFC); LROC and LOLA teams | Public domain unless noted; native 2048×1024 `lroc_color_2k.jpg`. |
+| `moon-normal.png` | [CGI Moon Kit (LOLA displacement map)](https://svs.gsfc.nasa.gov/4720/) | NASA SVS; Ernie Wright (USRA), Noah Petro (NASA/GSFC), LOLA team | Public domain unless noted; 1024×512 lossless tangent-space normal generated from `ldem_4_uint.tif`, a LOLA elevation/displacement map. |
+| `mars-normal.png` | [MGS MOLA Global DEM 463m](https://astrogeology.usgs.gov/search/map/mars_mgs_mola_dem_463m) | MOLA Team, NASA GSFC, USGS Astrogeology | Source metadata explicitly says **CC0 (public domain)**; official DEM browse raster transformed into a 1024×512 lossless tangent-space normal. |
 | `earth-night.jpg` | [Earth at Night (Black Marble) 2016 Color Maps](https://visibleearth.nasa.gov/images/144898/earth-at-night-black-marble-2016-color-maps/144957l) | NASA Earth Observatory; Joshua Stevens, Suomi NPP VIIRS / Miguel Román, NASA GSFC | NASA material; 3600×1800 JPEG resampled to 2048×1024. |
 | `earth-clouds.png` | [NASA SVS Clouds frames](https://svs.gsfc.nasa.gov/vis/a000000/a003800/a003837/frames/2048x1024_2x1_30p/Clouds/) | NASA GSFC Scientific Visualization Studio | Public domain unless noted; white RGB with processed source-luminance alpha. |
-| `ceres.jpg` | [Ceres Dawn FC Global Mosaic 140m](https://astrogeology.usgs.gov/search/map/ceres_dawn_fc_global_mosaic_140m) | USGS Astrogeology; NASA/JPL-Caltech/UCLA/MPS/DLR/IDA Dawn | Public-domain PDS data; native 1024×512 official browse mosaic. |
+| `ceres.jpg` | [Ceres Dawn FC Global Mosaic 140m](https://astrogeology.usgs.gov/search/map/ceres_dawn_fc_global_mosaic_140m) | USGS Astrogeology; NASA/JPL-Caltech/UCLA/MPS/DLR/IDA Dawn | Native 1024×512 official browse mosaic. Source terms: **Access Constraints: None; Use Constraints: Please cite authors**. |
 | `io.jpg`, `europa.jpg`, `ganymede.jpg`, `callisto.jpg` | [Io](https://science.nasa.gov/3d-resources/jupiter-io-a/), [Europa](https://science.nasa.gov/3d-resources/jupiter-europa/), [Ganymede](https://science.nasa.gov/3d-resources/jupiter-ganymede/), [Callisto](https://science.nasa.gov/3d-resources/jupiter-callisto/) | NASA/JPL Solar System Simulator; USGS/Voyager mosaics | Free to download and use; local JPEG resamples documented in the inventory. |
-| `saturn-rings.png` | [Panoramic Rings (PIA06175)](https://science.nasa.gov/resource/panoramic-rings/) | NASA/JPL/Space Science Institute, Cassini | NASA material; source radial scanline transformed into centered annular RGBA profile with transparent center/outside. |
+| `saturn-rings.png` | [Panoramic Rings (PIA06175)](https://science.nasa.gov/resource/panoramic-rings/) | NASA/JPL/Space Science Institute, Cassini | NASA material; full central scanline remapped across the 256–512-pixel annulus sampled by `RingGeometry(1, 2)`, with transparent center/outside. |
 | `titan.jpg`, `triton.jpg` | [Titan](https://science.nasa.gov/3d-resources/saturn-titan/), [Triton](https://science.nasa.gov/3d-resources/neptune-triton/) | NASA/JPL Solar System Simulator; Triton credit USGS/Tammy Becker & JPL/Caltech | Free to download and use; local JPEG resamples documented in the inventory. |
 | `uranus.jpg` | [Voyager 2 color observation PIA01391](https://images.nasa.gov/details-PIA01391) | NASA/JPL | NASA material; seamless procedural cyan/banded visualization derived from observed color, not a surface mosaic. |
 
