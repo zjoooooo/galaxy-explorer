@@ -218,8 +218,18 @@
         SOLAR_LANGS.forEach(function (L) {
           if (L === 'en') return;
           fields.forEach(function (f) { ok(b.info[L][f] !== b.info.en[f], b.id + ' ' + f + ' is not localized for ' + L); });
-          ok(b.info[L].facts[1][1] === b.info[L].desc, b.id + ' feature fact is not localized for ' + L);
+          ok(b.info[L].facts[1][1] !== b.info.en.facts[1][1], b.id + ' feature fact is not localized for ' + L);
+          ok(b.info[L].facts[1][1] !== b.info[L].desc, b.id + ' feature fact duplicates the description for ' + L);
         });
+      });
+    });
+    check('curated-cards', function () {
+      var sunBodies = { en: 'Planets / dwarf planets: 8 / 5', hans: '行星 / 矮行星：8 / 5', hant: '行星 / 矮行星：8 / 5', ja: '惑星 / 準惑星：8 / 5', ko: '행성 / 왜행성: 8 / 5' };
+      var jupiterFeatures = { en: 'Great Red Spot storm', hans: '大红斑风暴', hant: '大紅斑風暴', ja: '大赤斑の嵐', ko: '대적점 폭풍' };
+      SOLAR_LANGS.forEach(function (L) {
+        ok(SOLAR_BY_ID.sun.info[L].moons === sunBodies[L], 'sun body count is not curated for ' + L);
+        ok(SOLAR_BY_ID.sun.info[L].catalog.indexOf('Sol / G2V') !== -1, 'sun catalog is not preserved for ' + L);
+        ok(SOLAR_BY_ID.jupiter.info[L].facts[1][1] === jupiterFeatures[L], 'jupiter feature is not curated for ' + L);
       });
     });
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
@@ -869,12 +879,44 @@
     ja: ['表面重力', '特徴'], ko: ['표면 중력', '주요 특징']
   };
   var SOLAR_CARD_LABELS = {
-    en: { distance: 'Mean distance: ', diameter: 'Diameter: ', orbit: 'Orbital period: ', rotation: 'Rotation: ', temperature: 'Temperature: ', moons: 'Known moons: ', catalog: 'Catalog: ' },
-    hans: { distance: '平均距离：', diameter: '直径：', orbit: '公转周期：', rotation: '自转周期：', temperature: '温度：', moons: '已知卫星：', catalog: '星表：' },
-    hant: { distance: '平均距離：', diameter: '直徑：', orbit: '公轉週期：', rotation: '自轉週期：', temperature: '溫度：', moons: '已知衛星：', catalog: '星表：' },
-    ja: { distance: '平均距離：', diameter: '直径：', orbit: '公転周期：', rotation: '自転周期：', temperature: '温度：', moons: '確認済みの衛星：', catalog: 'カタログ：' },
-    ko: { distance: '평균 거리: ', diameter: '지름: ', orbit: '공전 주기: ', rotation: '자전 주기: ', temperature: '온도: ', moons: '확인된 위성: ', catalog: '목록: ' }
+    en: { distance: 'Mean distance: ', diameter: 'Diameter: ', orbit: 'Orbital period: ', rotation: 'Rotation: ', temperature: 'Temperature: ', moons: 'Known moons: ', sunBodies: 'Planets / dwarf planets: 8 / 5', catalog: 'Catalog: ' },
+    hans: { distance: '平均距离：', diameter: '直径：', orbit: '公转周期：', rotation: '自转周期：', temperature: '温度：', moons: '已知卫星：', sunBodies: '行星 / 矮行星：8 / 5', catalog: '星表：' },
+    hant: { distance: '平均距離：', diameter: '直徑：', orbit: '公轉週期：', rotation: '自轉週期：', temperature: '溫度：', moons: '已知衛星：', sunBodies: '行星 / 矮行星：8 / 5', catalog: '星表：' },
+    ja: { distance: '平均距離：', diameter: '直径：', orbit: '公転周期：', rotation: '自転周期：', temperature: '温度：', moons: '確認済みの衛星：', sunBodies: '惑星 / 準惑星：8 / 5', catalog: 'カタログ：' },
+    ko: { distance: '평균 거리: ', diameter: '지름: ', orbit: '공전 주기: ', rotation: '자전 주기: ', temperature: '온도: ', moons: '확인된 위성: ', sunBodies: '행성 / 왜행성: 8 / 5', catalog: '목록: ' }
   };
+  var SOLAR_CATALOG_NAMES = {
+    en: { Mercury: 'Mercury', Venus: 'Venus', Earth: 'Earth', Moon: 'Moon', Mars: 'Mars', Ceres: 'Ceres', Jupiter: 'Jupiter', Io: 'Io', Europa: 'Europa', Ganymede: 'Ganymede', Callisto: 'Callisto', Saturn: 'Saturn', Titan: 'Titan', Uranus: 'Uranus', Neptune: 'Neptune', Triton: 'Triton', Pluto: 'Pluto' },
+    hans: { Mercury: '水星', Venus: '金星', Earth: '地球', Moon: '月球', Mars: '火星', Ceres: '谷神星', Jupiter: '木星', Io: '木卫一', Europa: '木卫二', Ganymede: '木卫三', Callisto: '木卫四', Saturn: '土星', Titan: '土卫六', Uranus: '天王星', Neptune: '海王星', Triton: '海卫一', Pluto: '冥王星' },
+    hant: { Mercury: '水星', Venus: '金星', Earth: '地球', Moon: '月球', Mars: '火星', Ceres: '穀神星', Jupiter: '木星', Io: '木衛一', Europa: '木衛二', Ganymede: '木衛三', Callisto: '木衛四', Saturn: '土星', Titan: '土衛六', Uranus: '天王星', Neptune: '海王星', Triton: '海衛一', Pluto: '冥王星' },
+    ja: { Mercury: '水星', Venus: '金星', Earth: '地球', Moon: '月', Mars: '火星', Ceres: 'ケレス', Jupiter: '木星', Io: 'イオ', Europa: 'エウロパ', Ganymede: 'ガニメデ', Callisto: 'カリスト', Saturn: '土星', Titan: 'タイタン', Uranus: '天王星', Neptune: '海王星', Triton: 'トリトン', Pluto: '冥王星' },
+    ko: { Mercury: '수성', Venus: '금성', Earth: '지구', Moon: '달', Mars: '화성', Ceres: '세레스', Jupiter: '목성', Io: '이오', Europa: '유로파', Ganymede: '가니메데', Callisto: '칼리스토', Saturn: '토성', Titan: '타이탄', Uranus: '천왕성', Neptune: '해왕성', Triton: '트리톤', Pluto: '명왕성' }
+  };
+  var SOLAR_FEATURES = {
+    sun: { en: 'Contains 99.86% of Solar System mass', hans: '占太阳系质量的 99.86%', hant: '占太陽系質量的 99.86%', ja: '太陽系全質量の 99.86% を占める', ko: '태양계 질량의 99.86%를 차지' },
+    mercury: { en: 'Smallest and innermost planet', hans: '最小、最靠近太阳的行星', hant: '最小、最靠近太陽的行星', ja: '最小かつ最も内側の惑星', ko: '가장 작고 안쪽에 있는 행성' },
+    venus: { en: 'Runaway greenhouse atmosphere', hans: '失控温室效应大气', hant: '失控溫室效應大氣', ja: '暴走温室効果の大気', ko: '폭주 온실효과 대기' },
+    earth: { en: 'Only known world with life', hans: '唯一已知存在生命的世界', hant: '唯一已知存在生命的世界', ja: '生命が確認されている唯一の世界', ko: '생명체가 알려진 유일한 세계' },
+    moon: { en: 'Tidally locked to Earth', hans: '与地球潮汐锁定', hant: '與地球潮汐鎖定', ja: '地球と潮汐固定', ko: '지구와 조석 고정' },
+    mars: { en: 'Olympus Mons and Valles Marineris', hans: '奥林帕斯山与水手峡谷', hant: '奧林帕斯山與水手峽谷', ja: 'オリンポス山とマリネリス峡谷', ko: '올림푸스산과 매리너리스 협곡' },
+    ceres: { en: 'Largest object in the asteroid belt', hans: '小行星带最大的天体', hant: '小行星帶最大的天體', ja: '小惑星帯で最大の天体', ko: '소행성대에서 가장 큰 천체' },
+    jupiter: { en: 'Great Red Spot storm', hans: '大红斑风暴', hant: '大紅斑風暴', ja: '大赤斑の嵐', ko: '대적점 폭풍' },
+    io: { en: 'Most volcanically active world', hans: '火山活动最活跃的世界', hant: '火山活動最活躍的世界', ja: '最も火山活動が活発な世界', ko: '화산 활동이 가장 활발한 세계' },
+    europa: { en: 'Global ocean beneath ice', hans: '冰层下的全球海洋', hant: '冰層下的全球海洋', ja: '氷の下にある全球的な海', ko: '얼음 아래의 전 지구적 바다' },
+    ganymede: { en: 'Largest moon; intrinsic magnetic field', hans: '最大卫星；拥有自身磁场', hant: '最大衛星；擁有自身磁場', ja: '最大の衛星；固有磁場をもつ', ko: '가장 큰 위성; 자체 자기장 보유' },
+    callisto: { en: 'Ancient heavily cratered surface', hans: '古老、布满陨坑的表面', hant: '古老、布滿隕坑的表面', ja: '古くクレーターに覆われた表面', ko: '오래되고 충돌구가 빽빽한 표면' },
+    saturn: { en: 'Bright rings made of ice and rock', hans: '由冰和岩石组成的明亮光环', hant: '由冰和岩石組成的明亮光環', ja: '氷と岩石でできた明るい環', ko: '얼음과 암석으로 된 밝은 고리' },
+    titan: { en: 'Dense nitrogen atmosphere and methane seas', hans: '浓厚氮气大气与甲烷海洋', hant: '濃厚氮氣大氣與甲烷海洋', ja: '濃い窒素大気とメタンの海', ko: '짙은 질소 대기와 메탄 바다' },
+    uranus: { en: 'Rotates on its side', hans: '侧躺着自转', hant: '側躺著自轉', ja: '横倒しで自転する', ko: '옆으로 누워 자전' },
+    neptune: { en: 'Fastest winds in the Solar System', hans: '太阳系最快的风', hant: '太陽系最快的風', ja: '太陽系最速の風', ko: '태양계에서 가장 빠른 바람' },
+    triton: { en: 'Likely captured Kuiper Belt object', hans: '可能被捕获的柯伊伯带天体', hant: '可能被捕獲的古柏帶天體', ja: 'カイパーベルトから捕獲された可能性', ko: '카이퍼대에서 포획됐을 가능성' },
+    pluto: { en: 'Heart-shaped Tombaugh Regio', hans: '心形汤博区', hant: '心形湯博區', ja: 'ハート形のトンボー地域', ko: '하트 모양의 톰보 지역' }
+  };
+  function solarLocalizedCatalog(s, L) {
+    var text = s.catalog, names = SOLAR_CATALOG_NAMES[L];
+    Object.keys(SOLAR_CATALOG_NAMES.en).forEach(function (name) { text = text.split(name).join(names[name]); });
+    return SOLAR_CARD_LABELS[L].catalog + text;
+  }
   function solarCardMeasurements(s, L) {
     var label = SOLAR_CARD_LABELS[L], temperature = s.id === 'sun' ? '5,500 °C / ~15,000,000 °C' : s.temperature.replace(' average', '').replace(' cloud tops', '').replace(' to ', '–');
     return {
@@ -883,7 +925,7 @@
       orbit: label.orbit + (s.id === 'sun' ? '~230 Myr' : s.periodDays + ' d'),
       rotation: label.rotation + (s.id === 'sun' ? '25–35 d' : s.rotationHours + ' h'),
       temperature: label.temperature + temperature,
-      moons: label.moons + (s.id === 'sun' ? '8 + 5' : s.moons.replace(' confirmed', ''))
+      moons: s.id === 'sun' ? label.sunBodies : label.moons + s.moons.replace(' confirmed', '')
     };
   }
   function solarBody(s) {
@@ -893,8 +935,8 @@
       info[L] = {
         name: c[0], type: c[1], distance: m.distance, diameter: m.diameter, orbit: m.orbit,
         rotation: m.rotation, temperature: m.temperature, moons: m.moons,
-        facts: [[SOLAR_FACT_LABELS[L][0], s.gravity], [SOLAR_FACT_LABELS[L][1], c[2]]],
-        desc: c[2], catalog: SOLAR_CARD_LABELS[L].catalog + c[0]
+        facts: [[SOLAR_FACT_LABELS[L][0], s.gravity], [SOLAR_FACT_LABELS[L][1], SOLAR_FEATURES[s.id][L]]],
+        desc: c[2], catalog: solarLocalizedCatalog(s, L)
       };
     });
     return {
