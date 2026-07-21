@@ -342,6 +342,44 @@
       ok(earth.positionNode.position.x === expected.x && earth.positionNode.position.z === expected.z, 'resume transformed Earth with a clock jump');
       setSolarPaused(paused);
     });
+    check('solar-navigation', function () {
+      ok(typeof solarNav !== 'undefined', 'solarNav missing');
+      ok(typeof selectSolarBody === 'function', 'selectSolarBody missing');
+      ok(typeof focusSolarBody === 'function', 'focusSolarBody missing');
+      ok(typeof leaveSolarLevel === 'function', 'leaveSolarLevel missing');
+      ok(typeof clearSolarCard === 'function', 'clearSolarCard missing');
+      ok(typeof enterSolarSky === 'function', 'enterSolarSky missing');
+      ok(typeof stepSolarFlight === 'function', 'stepSolarFlight missing');
+      var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldFlight = solarFlight, oldPaused = solarPaused, oldCardOpen = solarCardOpen;
+      var oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
+      var oldElapsed = solarElapsed, oldShader = solarShaderTime, oldBelt = solarAsteroidBelt && solarAsteroidBelt.rotation.y, oldGalaxyView = savedGalaxyView;
+      var oldControls = { enabled: solarControls.enabled, minDistance: solarControls.minDistance, maxDistance: solarControls.maxDistance, frameLast: solarFrameLast, perfLast: perfLast };
+      try {
+        if (viewMode !== 'solar') enterSolar();
+        focusSolarBody('earth'); stepSolarFlight(Infinity);
+        ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1, 'Earth focus did not retain overview');
+        focusSolarBody('moon'); stepSolarFlight(Infinity);
+        ok(solarNav.selectedId === 'moon' && solarNav.parentId === 'earth' && solarNav.cameraStack.length === 2, 'Moon focus did not retain Earth');
+        leaveSolarLevel();
+        ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1, 'Back did not restore Earth focus');
+        leaveSolarLevel();
+        ok(solarNav.level === 'overview' && solarNav.selectedId === null && solarNav.cameraStack.length === 0, 'Back did not restore overview');
+        focusSolarBody('earth'); stepSolarFlight(Infinity);
+        ok(enterSolarSky(), 'Earth sky transition did not start');
+        leaveSolarLevel();
+        ok(solarNav.selectedId === 'earth' && solarNav.parentId === null, 'Sky return did not retain Earth focus');
+        clearSolarCard();
+        ok(solarNav.selectedId === 'earth', 'Closing a card changed focus');
+      } finally {
+        if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
+        solarNav = oldNav; solarFlight = oldFlight; solarPaused = oldPaused; solarCardOpen = oldCardOpen; savedGalaxyView = oldGalaxyView;
+        solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
+        solarControls.enabled = oldControls.enabled; solarControls.minDistance = oldControls.minDistance; solarControls.maxDistance = oldControls.maxDistance;
+        solarElapsed = oldElapsed; solarShaderTime = oldShader; solarCoronaMaterial.uniforms.uTime.value = oldShader;
+        if (solarAsteroidBelt) solarAsteroidBelt.rotation.y = oldBelt;
+        solarFrameLast = oldControls.frameLast; perfLast = oldControls.perfLast; viewMode = oldView; updateSolarVisibility();
+      }
+    });
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
     if (/[?&]solarTest=1/.test(location.search)) setMsg(failures.length ? failures.join(' | ') : statusText());
     return window.__solarTestResult;
@@ -1379,7 +1417,7 @@
     beaconRing.visible = true; beaconRing.material.opacity = 0.9;
   };
   window.closeBeaconExtras = function () { bpEl.classList.remove('open'); beaconRing.visible = false; beaconRing.material.opacity = 0; };
-  document.getElementById('bp-close').addEventListener('click', function (e) { e.stopPropagation(); if (viewMode === 'sky') clearSkySelection(); else clearSelection(); });
+  document.getElementById('bp-close').addEventListener('click', function (e) { e.stopPropagation(); if (viewMode === 'sky') clearSkySelection(); else if (viewMode === 'solar') clearSolarCard(); else clearSelection(); });
   window.addEventListener('click', function () { if (selectedBeacon !== null) clearSelection(); }); // outside click closes
   bpEl.addEventListener('click', function (e) { e.stopPropagation(); }); // clicks inside the panel don't close it
   bpBody.addEventListener('click', function (e) {
@@ -1476,13 +1514,183 @@
   // ── celestial sky view: an Earth-centred rotatable star dome ────────────────
   var viewMode = 'galaxy';
   var savedGalaxyView = null;
-  function updateSolarLabels() {
-    // The shell deliberately has no body labels until solar bodies are built.
+  var solarNav = { level: 'overview', selectedId: null, parentId: null, cameraStack: [], galaxySnapshot: null, skySnapshot: null };
+  var solarFlight = null, solarCardOpen = false, solarLabelButtons = {}, solarRaycaster = new THREE.Raycaster();
+  var solarPointer = { down: false, x: 0, y: 0, moved: false };
+  var solarLabelPoint = new THREE.Vector3(), solarFocusPoint = new THREE.Vector3();
+
+  function solarSnapshot() {
+    return { position: solarCamera.position.clone(), target: solarControls.target.clone(), level: solarNav.level,
+      selectedId: solarNav.selectedId, parentId: solarNav.parentId, panelOpen: solarCardOpen };
   }
+  function setSolarNavigation(snapshot) {
+    solarNav.level = snapshot.level; solarNav.selectedId = snapshot.selectedId; solarNav.parentId = snapshot.parentId;
+    solarCardOpen = !!snapshot.panelOpen;
+    if (snapshot.position) solarCamera.position.copy(snapshot.position);
+    if (snapshot.target) solarControls.target.copy(snapshot.target);
+    solarControls.update();
+    updateSolarVisibility();
+  }
+  function solarLocalParent() { return solarNav.parentId || solarNav.selectedId; }
+  function solarBodyIsActive(body) {
+    if (solarNav.level === 'sky') return false;
+    if (solarNav.level === 'overview') return !body.parent;
+    var parentId = solarLocalParent();
+    return body.id === parentId || body.parent === parentId;
+  }
+  function updateSolarVisibility() {
+    SOLAR_BODIES.forEach(function (body) {
+      var object = SOLAR_OBJECTS[body.id]; if (!object) return;
+      var active = solarBodyIsActive(body), moonVisible = !body.parent || body.parent === solarLocalParent();
+      object.lodGroup.visible = moonVisible;
+      object.orbitLine.visible = moonVisible;
+      object.hitProxy.visible = active;
+      object.hitProxy.userData.solarActive = active;
+    });
+  }
+  function solarLabelText(body) {
+    var L = typeof beaconLang === 'string' ? beaconLang : 'en';
+    if (!body.copy[L]) L = 'en';
+    return body.copy[L][0];
+  }
+  function solarLabelFor(body) {
+    var label = solarLabelButtons[body.id];
+    if (label) return label;
+    label = document.createElement('button'); label.type = 'button'; label.className = 'solar-label';
+    label.setAttribute('aria-label', solarLabelText(body)); label.dataset.solarId = body.id;
+    label.addEventListener('click', function (e) { e.stopPropagation(); selectSolarBody(body.id); });
+    solarLabelsEl.appendChild(label); solarLabelButtons[body.id] = label;
+    return label;
+  }
+  function solarHitRadius(object, target) {
+    var distance = solarCamera.position.distanceTo(target), worldPixels = 2 * Math.tan(solarCamera.fov * Math.PI / 360) * distance / Math.max(1, window.innerHeight);
+    return Math.max(object.radius * 1.6, worldPixels * 16);
+  }
+  function updateSolarLabels() {
+    if (!solarLabelsEl || viewMode !== 'solar') return;
+    solarCamera.updateMatrixWorld(); solarRoot.updateMatrixWorld(true);
+    var candidates = [];
+    SOLAR_BODIES.forEach(function (body) {
+      var object = SOLAR_OBJECTS[body.id], label = solarLabelFor(body);
+      label.textContent = solarLabelText(body); label.setAttribute('aria-label', solarLabelText(body));
+      if (!object || !solarBodyIsActive(body)) { label.style.display = 'none'; return; }
+      object.mesh.getWorldPosition(solarLabelPoint);
+      object.hitProxy.scale.setScalar(solarHitRadius(object, solarLabelPoint));
+      var projected = solarLabelPoint.clone().project(solarCamera);
+      if (projected.z < -1 || projected.z > 1 || projected.x < -1 || projected.x > 1 || projected.y < -1 || projected.y > 1) { label.style.display = 'none'; return; }
+      candidates.push({ body: body, label: label, x: (projected.x * 0.5 + 0.5) * window.innerWidth, y: (-projected.y * 0.5 + 0.5) * window.innerHeight,
+        priority: body.id === solarNav.selectedId ? 0 : (body.id === solarLocalParent() || body.parent === solarLocalParent() ? 1 : (body.kind === 'planet' ? 2 : 3)) });
+    });
+    candidates.sort(function (a, b) { return a.priority - b.priority; });
+    var kept = [];
+    candidates.forEach(function (candidate) {
+      var hidden = false;
+      for (var i = 0; i < kept.length; i++) if (Math.abs(candidate.x - kept[i].x) < 108 && Math.abs(candidate.y - kept[i].y) < 28) { hidden = true; break; }
+      candidate.label.style.display = hidden ? 'none' : '';
+      candidate.label.classList.toggle('sel', candidate.body.id === solarNav.selectedId);
+      candidate.label.style.left = candidate.x + 'px'; candidate.label.style.top = candidate.y + 'px';
+      if (!hidden) kept.push(candidate);
+    });
+  }
+  function settleSolarFlight(now) {
+    if (!solarFlight) return;
+    var k = Math.min(1, Math.max(0, (now - solarFlight.start) / solarFlight.dur));
+    var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    solarCamera.position.lerpVectors(solarFlight.p0, solarFlight.p1, e);
+    solarControls.target.lerpVectors(solarFlight.t0, solarFlight.t1, e);
+    solarFlight = null; solarControls.enabled = true; solarControls.update();
+  }
+  function startSolarFlight(target, radius) {
+    settleSolarFlight(performance.now());
+    var direction = solarCamera.position.clone().sub(target);
+    if (direction.lengthSq() < 0.0001) direction.set(0.65, 0.42, 1);
+    direction.normalize();
+    var distance = Math.max(8, Math.min(110, radius * 11 + 8));
+    solarFlight = { p0: solarCamera.position.clone(), p1: target.clone().addScaledVector(direction, distance), t0: solarControls.target.clone(), t1: target.clone(),
+      start: performance.now(), dur: 720, radius: radius };
+    solarControls.enabled = false;
+  }
+  function stepSolarFlight(now) {
+    if (!solarFlight) return false;
+    var k = Math.min(1, Math.max(0, (now - solarFlight.start) / solarFlight.dur));
+    var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    solarCamera.position.lerpVectors(solarFlight.p0, solarFlight.p1, e);
+    solarControls.target.lerpVectors(solarFlight.t0, solarFlight.t1, e);
+    solarCamera.lookAt(solarControls.target);
+    if (k >= 1) {
+      var radius = solarFlight.radius;
+      solarFlight = null; solarControls.minDistance = Math.max(2, radius * 2.2); solarControls.maxDistance = Math.max(18, radius * 28 + 14);
+      solarControls.enabled = true; solarControls.update(); solarCardOpen = true;
+    }
+    return true;
+  }
+  function clearSolarCard() { solarCardOpen = false; }
+  function enterSolarSky() {
+    if (solarNav.selectedId !== 'earth' || solarNav.parentId !== null) return false;
+    settleSolarFlight(performance.now()); solarNav.skySnapshot = solarSnapshot(); solarNav.level = 'sky'; updateSolarVisibility();
+    return true;
+  }
+  function focusSolarBody(id) {
+    var body = SOLAR_BY_ID[id], object = SOLAR_OBJECTS[id]; if (!body || !object) return false;
+    var localParent = solarLocalParent();
+    if (body.parent && localParent !== body.parent) {
+      if (solarNav.level !== 'overview' || solarNav.selectedId !== body.parent) return focusSolarBody(body.parent);
+    }
+    if (body.parent) {
+      if (solarNav.parentId !== body.parent) solarNav.cameraStack.push(solarSnapshot());
+      solarNav.level = 'focus'; solarNav.parentId = body.parent; solarNav.selectedId = id;
+    } else {
+      if (solarNav.parentId === id) { leaveSolarLevel(); return true; }
+      if (solarNav.level === 'overview') solarNav.cameraStack.push(solarSnapshot());
+      solarNav.level = 'focus'; solarNav.parentId = null; solarNav.selectedId = id;
+    }
+    clearSolarCard(); setSolarPaused(true); updateSolarVisibility();
+    object.mesh.getWorldPosition(solarFocusPoint); startSolarFlight(solarFocusPoint, object.radius);
+    return true;
+  }
+  function selectSolarBody(id) { return focusSolarBody(id); }
+  function leaveSolarLevel() {
+    settleSolarFlight(performance.now());
+    if (solarNav.level === 'sky' && solarNav.skySnapshot) {
+      setSolarNavigation(solarNav.skySnapshot); solarNav.skySnapshot = null; return true;
+    }
+    var snapshot = solarNav.cameraStack.pop();
+    if (!snapshot) return false;
+    setSolarNavigation(snapshot); return true;
+  }
+  function resetSolarNavigation() {
+    solarFlight = null; solarCardOpen = false;
+    solarNav.level = 'overview'; solarNav.selectedId = null; solarNav.parentId = null; solarNav.cameraStack = []; solarNav.skySnapshot = null;
+    updateSolarVisibility();
+  }
+  function solarPointerPosition(e) {
+    var rect = renderer.domElement.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top, width: rect.width, height: rect.height };
+  }
+  renderer.domElement.addEventListener('pointerdown', function (e) {
+    if (viewMode !== 'solar') return;
+    var point = solarPointerPosition(e); solarPointer.down = true; solarPointer.x = point.x; solarPointer.y = point.y; solarPointer.moved = false;
+    settleSolarFlight(performance.now());
+  });
+  renderer.domElement.addEventListener('pointermove', function (e) {
+    if (!solarPointer.down || viewMode !== 'solar') return;
+    var point = solarPointerPosition(e); if (Math.abs(point.x - solarPointer.x) > 6 || Math.abs(point.y - solarPointer.y) > 6) solarPointer.moved = true;
+  });
+  renderer.domElement.addEventListener('pointerup', function (e) {
+    if (!solarPointer.down || viewMode !== 'solar') return;
+    solarPointer.down = false; if (solarPointer.moved) return;
+    var point = solarPointerPosition(e); if (!point.width || !point.height) return;
+    solarRaycaster.setFromCamera({ x: point.x / point.width * 2 - 1, y: -(point.y / point.height) * 2 + 1 }, solarCamera);
+    var proxies = SOLAR_BODIES.map(function (body) { return SOLAR_OBJECTS[body.id].hitProxy; }).filter(function (proxy) { return proxy.visible && proxy.userData.solarActive; });
+    solarRoot.updateMatrixWorld(true);
+    var hits = solarRaycaster.intersectObjects(proxies, false);
+    if (hits.length) selectSolarBody(hits[0].object.userData.solarId);
+  });
   function enterSolar() {
     if (viewMode !== 'galaxy') return;
     flyState = null; // cancel a partial galaxy fly before preserving the current view
     savedGalaxyView = { position: camera.position.clone(), target: controls.target.clone(), returnVisible: !!returnBtn && returnBtn.style.display === 'block' };
+    resetSolarNavigation(); solarNav.galaxySnapshot = savedGalaxyView;
     clearSelection();
     viewMode = 'solar';
     controls.enabled = false; skyControls.enabled = false; solarControls.enabled = true;
@@ -1509,14 +1717,15 @@
       if (returnBtn) returnBtn.style.display = galaxyView.returnVisible ? 'block' : 'none';
       savedGalaxyView = null;
     }
+    resetSolarNavigation(); solarNav.galaxySnapshot = null; setSolarPaused(false);
     controls.update();
     solarFrameLast = 0;
     perfLast = 0;
   }
-  solarBackEl.addEventListener('click', exitSolar);
+  solarBackEl.addEventListener('click', function () { if (!leaveSolarLevel()) exitSolar(); });
   window.addEventListener('keydown', function (e) {
     if ((e.key || '').toLowerCase() !== 'escape' || viewMode !== 'solar') return;
-    exitSolar();
+    if (!leaveSolarLevel()) exitSolar();
     e.stopImmediatePropagation();
   });
   var SKY_R = 1000;
@@ -2132,7 +2341,7 @@
       var solarNow = performance.now(), solarDt = solarFrameLast ? Math.min((solarNow - solarFrameLast) / 1000, 0.15) : 0;
       solarFrameLast = solarNow;
       updateSolarMotion(solarDt);
-      solarControls.update();
+      if (!stepSolarFlight(solarNow)) solarControls.update();
       renderer.render(solarScene, solarCamera);
       updateSolarLabels();
       rafId = requestAnimationFrame(frame);
