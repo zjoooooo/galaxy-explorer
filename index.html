@@ -22,18 +22,19 @@
 
   /* cinema mode (F): hide all UI chrome */
   body.gx-cinema #title, body.gx-cinema #audio, body.gx-cinema #beacons, body.gx-cinema #lang,
-  body.gx-cinema #skyback, body.gx-cinema #skylabels { display: none !important; }
+  body.gx-cinema #skyback, body.gx-cinema #skylabels, body.gx-cinema #solarback, body.gx-cinema #solarlabels { display: none !important; }
 
   /* language selector (native <select>, dark) */
   #lang { top: 12px; right: 14px; z-index: 6; font: inherit; font-size: 12px; color: #cbd5e1;
     background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 5px 8px; cursor: pointer; }
   #lang:hover { border-color: #6366f1; }
 
-  /* sky view: back-to-galaxy button */
-  #skyback { top: 64px; left: 18px; z-index: 6; display: none; cursor: pointer; font-size: 13px;
+  /* sky and solar views: back-to-galaxy buttons */
+  #skyback, #solarback { top: 64px; left: 18px; z-index: 6; display: none; cursor: pointer; font: inherit; font-size: 13px;
     color: #cbd5e1; background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 6px 12px; }
-  #skyback:hover { border-color: #6366f1; color: #fff; }
-  #skylabels { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+  #skyback:hover, #solarback:hover { border-color: #6366f1; color: #fff; }
+  #skyback:focus-visible, #solarback:focus-visible, .solar-label:focus-visible { outline: 2px solid #9cc0ff; outline-offset: 3px; }
+  #skylabels, #solarlabels { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
   .skylabel { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
     font-size: 13px; letter-spacing: .08em; color: #cfe0ff; white-space: nowrap; text-align: center;
     text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(120,170,255,.45); transition: opacity .2s ease; }
@@ -42,6 +43,10 @@
   .skylabel.sel { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 14px rgba(150,190,255,.9); }
   .skylabel.skygal { font-size: 12px; color: #bfe6ff; margin-top: 14px; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 12px rgba(150,210,255,.6); } /* the galaxy markers — offset below their glow */
   .skylabel.skygal.sel { color: #fff; }
+  .solar-label { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
+    font: inherit; font-size: 13px; letter-spacing: .08em; color: #ffe5a9; white-space: nowrap; text-align: center;
+    background: transparent; border: 0; padding: 2px 4px;
+    text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(255,190,100,.45); transition: opacity .2s ease; }
 
   /* location beacons: borderless glow-dot + pulse rings + floating label (no boxes, no borders) */
   /* absolute (not fixed): under Safari pinch/page-zoom, fixed layers detach from the
@@ -109,9 +114,10 @@
   #bp-img { display: block; width: 100%; height: 150px; object-fit: cover; border-radius: 8px;
     margin: 10px 0 3px; background: rgba(255,255,255,.04); }
   #bp-credit { font-size: 9px; line-height: 1.35; color: #5b6578; margin-bottom: 6px; }
-  #bp-zodiac-link, #bp-flyto { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.07);
+  #bp-solar-link, #bp-flyto { display: block; width: 100%; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(255,255,255,.07);
     color: #9cc0ff; cursor: pointer; font-size: 13px; }
-  #bp-zodiac-link:hover, #bp-flyto:hover { color: #cfe2ff; }
+  #bp-solar-link { font: inherit; text-align: left; background: transparent; }
+  #bp-solar-link:hover, #bp-flyto:hover { color: #cfe2ff; }
   #return-mw { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 50; display: none;
     padding: 8px 16px; border-radius: 20px; cursor: pointer; background: rgba(20,26,40,.72);
     border: 1px solid rgba(255,255,255,.14); color: #cfe0ff; font-size: 13px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
@@ -123,6 +129,8 @@
       border-radius: 14px 14px 0 0; padding: 14px 16px 18px; }
     #beacon-panel.open { animation: bpUp .2s ease; }
     @keyframes bpUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    #skyback, #solarback { left: 12px; }
+    .solar-label { font-size: 11px; letter-spacing: .04em; }
   }
 
   /* background-music control: speaker button + a hover popup listing tracks by name */
@@ -152,7 +160,9 @@
   <option value="ko">한국어</option>
 </select>
 
-<div id="skyback" class="overlay">← Back to Galaxy</div>
+<button id="skyback" class="overlay" type="button">← Back to Galaxy</button>
+<button id="solarback" class="overlay" type="button">← Back to Galaxy</button>
+<div id="solarlabels" aria-live="polite" style="display:none"></div>
 
 <div id="msg" class="overlay"></div>
 
@@ -232,8 +242,21 @@
         ok(SOLAR_BY_ID.jupiter.info[L].facts[1][1] === jupiterFeatures[L], 'jupiter feature is not curated for ' + L);
       });
     });
+    check('solar-entry', function () {
+      ok(typeof enterSolar === 'function', 'enterSolar missing');
+      ok(typeof exitSolar === 'function', 'exitSolar missing');
+    });
+    check('solar-overlay', function () {
+      ok(document.getElementById('solarlabels'), 'solarlabels missing');
+      ok(document.getElementById('solarback'), 'solarback missing');
+    });
+    check('solar-card', function () {
+      renderPanel(0, 'en');
+      ok(document.getElementById('bp-solar-link'), 'bp-solar-link missing');
+      ok(!document.getElementById('bp-zodiac-link'), 'bp-zodiac-link must not appear on the Solar System card');
+    });
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
-    if (/[?&]solarTest=1/.test(location.search)) setMsg(statusText());
+    if (/[?&]solarTest=1/.test(location.search)) setMsg(failures.length ? failures.join(' | ') : statusText());
     return window.__solarTestResult;
   }
 
@@ -251,6 +274,36 @@
   camera.position.set(0, 390, 520); // elevated 3/4 top-down view, pulled back so the whole disc + deep-field neighbours frame with margin on load
   var controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxDistance = 1600; controls.minDistance = 5;
+
+  // ── independent solar scene shell (bodies are added in the next task) ────────
+  var solarScene = new THREE.Scene();
+  var solarRoot = new THREE.Group(); solarScene.add(solarRoot);
+  var solarCamera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.05, 1800);
+  solarCamera.position.set(0, 105, 180);
+  var solarControls = new THREE.OrbitControls(solarCamera, renderer.domElement);
+  solarControls.enabled = false;
+  solarControls.enableDamping = true;
+  solarControls.dampingFactor = 0.08;
+  solarControls.minDistance = 2;
+  solarControls.maxDistance = 420;
+  (function solarBackdrop() {
+    var N = 1400, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), c = new THREE.Color();
+    for (var i = 0; i < N; i++) {
+      var th = Math.random() * Math.PI * 2, y = Math.random() * 2 - 1, r = Math.sqrt(1 - y * y) * (520 + Math.random() * 280);
+      pos[i * 3] = Math.cos(th) * r; pos[i * 3 + 1] = y * (520 + Math.random() * 280); pos[i * 3 + 2] = Math.sin(th) * r;
+      var b = 0.28 + Math.random() * 0.48;
+      if (Math.random() < 0.16) c.setRGB(b, b * 0.82, b * 0.62); else c.setRGB(b * 0.78, b * 0.88, b);
+      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    solarScene.add(new THREE.Points(g, new THREE.PointsMaterial({ size: 1.5, vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false })));
+  })();
+  solarRoot.add(new THREE.AmbientLight(0x33445f, 0.55));
+  var solarKey = new THREE.DirectionalLight(0xffe2a6, 1.1); solarKey.position.set(70, 110, 55); solarRoot.add(solarKey);
+  var solarLabelsEl = document.getElementById('solarlabels');
+  var solarBackEl = document.getElementById('solarback');
 
   // bloom composer (defensive: fall back to plain rendering if any global is missing)
   var composer = null;
@@ -564,8 +617,8 @@
       var t = BEACONS[i].t[lang] || BEACONS[i].t.en;
       BEACONS[i].el.querySelector('.b-label').innerHTML = t[0] + (t[1] ? '<small>' + t[1] + '</small>' : '');
     }
-    var sb = document.getElementById('skyback');
-    if (sb) { var SB = { en: '← Back to Galaxy', hans: '← 返回银河系', hant: '← 返回銀河系', ja: '← 銀河に戻る', ko: '← 은하로 돌아가기' }; sb.textContent = SB[lang] || SB.en; }
+    var sb = document.getElementById('skyback'), solb = document.getElementById('solarback');
+    if (sb) { var SB = { en: '← Back to Galaxy', hans: '← 返回银河系', hant: '← 返回銀河系', ja: '← 銀河に戻る', ko: '← 은하로 돌아가기' }; sb.textContent = SB[lang] || SB.en; if (solb) solb.textContent = SB[lang] || SB.en; }
     if (returnBtn && returnBtn.style.display === 'block') returnBtn.textContent = RET_TXT[lang] || RET_TXT.en;
     if (typeof selectedBeacon !== 'undefined' && selectedBeacon !== null && typeof renderPanel === 'function') renderPanel(selectedBeacon, lang);
     if (typeof paintSkyLabels === 'function' && typeof SKY_CONS !== 'undefined' && SKY_CONS.length) paintSkyLabels(lang);
@@ -1074,9 +1127,9 @@
       rows.join('') +
       '<div id="bp-desc">' + esc(o.desc) + '</div>' +
       (o.catalog ? '<div id="bp-cat">' + esc(o.catalog) + '</div>' : '');
-    if (i === 0) { // Solar System card → doorway to the Earth-sky view
-      var zl = { en: '✨ Constellations · view the night sky →', hans: '✨ 星座天空 · 查看星空 →', hant: '✨ 星座天空 · 查看星空 →', ja: '✨ 星座の空 · 星空を見る →', ko: '✨ 별자리 하늘 · 밤하늘 보기 →' };
-      bpBody.innerHTML += '<div id="bp-zodiac-link">' + (zl[lang] || zl.en) + '</div>';
+    if (i === 0) { // Solar System card → doorway to the solar view
+      var sl = { en: 'Explore the Solar System →', hans: '探索太阳系 →', hant: '探索太陽系 →', ja: '太陽系を探索する →', ko: '태양계 탐험하기 →' };
+      bpBody.innerHTML += '<button id="bp-solar-link" type="button">' + (sl[lang] || sl.en) + '</button>';
     }
     if (b.gal && viewMode !== 'sky') { // galaxy card → fly the camera over (galaxy view only; meaningless in the sky map)
       var fl = { en: '🚀 Fly to this galaxy →', hans: '🚀 飞跃到此星系 →', hant: '🚀 飛越到此星系 →', ja: '🚀 この銀河へ飛ぶ →', ko: '🚀 이 은하로 날아가기 →' };
@@ -1096,7 +1149,7 @@
   window.addEventListener('click', function () { if (selectedBeacon !== null) clearSelection(); }); // outside click closes
   bpEl.addEventListener('click', function (e) { e.stopPropagation(); }); // clicks inside the panel don't close it
   bpBody.addEventListener('click', function (e) {
-    if (e.target && e.target.id === 'bp-zodiac-link') enterSky();
+    if (e.target && e.target.id === 'bp-solar-link') enterSolar();
     else if (e.target && e.target.id === 'bp-flyto' && selectedBeacon !== null) flyToBeacon(selectedBeacon);
   });
   // ── smooth camera fly-to (for galaxy beacons): ease camera + orbit target over to the
@@ -1188,6 +1241,44 @@
 
   // ── celestial sky view: an Earth-centred rotatable star dome ────────────────
   var viewMode = 'galaxy';
+  var savedGalaxyView = null;
+  function updateSolarLabels() {
+    // The shell deliberately has no body labels until solar bodies are built.
+  }
+  function enterSolar() {
+    if (viewMode !== 'galaxy') return;
+    savedGalaxyView = { position: camera.position.clone(), target: controls.target.clone() };
+    clearSelection();
+    viewMode = 'solar';
+    controls.enabled = false; skyControls.enabled = false; solarControls.enabled = true;
+    document.getElementById('beacons').style.display = 'none';
+    var skyLabels = document.getElementById('skylabels'); if (skyLabels) skyLabels.style.display = 'none';
+    document.getElementById('skyback').style.display = 'none';
+    if (solarLabelsEl) solarLabelsEl.style.display = '';
+    if (solarBackEl) solarBackEl.style.display = 'block';
+    solarControls.update();
+  }
+  function exitSolar() {
+    if (viewMode !== 'solar') return;
+    viewMode = 'galaxy';
+    solarControls.enabled = false; skyControls.enabled = false; controls.enabled = true;
+    document.getElementById('beacons').style.display = '';
+    if (solarLabelsEl) solarLabelsEl.style.display = 'none';
+    if (solarBackEl) solarBackEl.style.display = 'none';
+    if (savedGalaxyView) {
+      camera.position.copy(savedGalaxyView.position);
+      controls.target.copy(savedGalaxyView.target);
+      savedGalaxyView = null;
+    }
+    controls.update();
+    perfLast = 0;
+  }
+  solarBackEl.addEventListener('click', exitSolar);
+  window.addEventListener('keydown', function (e) {
+    if ((e.key || '').toLowerCase() !== 'escape' || viewMode !== 'solar') return;
+    exitSolar();
+    e.stopImmediatePropagation();
+  });
   var SKY_R = 1000;
   function raDecDir(raHours, decDeg) { // J2000 → unit direction on the sky sphere
     var ra = raHours / 24 * Math.PI * 2, dec = decDeg * Math.PI / 180;
@@ -1748,7 +1839,7 @@
   window.addEventListener('click', function () { if (viewMode === 'sky' && (skySelected != null || window.skyGalSelected != null)) clearSkySelection(); });
   var skybackEl = document.getElementById('skyback');
   function enterSky() {
-    if (viewMode === 'sky') return;
+    if (viewMode !== 'galaxy') return;
     clearSelection();                          // close the beacon panel + ring
     viewMode = 'sky';
     controls.enabled = false; skyControls.enabled = true;
@@ -1757,7 +1848,7 @@
     skybackEl.style.display = 'block';
   }
   function exitSky() {
-    if (viewMode === 'galaxy') return;
+    if (viewMode !== 'sky') return;
     if (window.clearSkySelection) clearSkySelection(); // close a sky card if open
     viewMode = 'galaxy';
     skyControls.enabled = false; controls.enabled = true;
@@ -1792,6 +1883,13 @@
       if (skyComposer) skyComposer.render(); else renderer.render(skyScene, skyCamera);
       updateSkyFx(performance.now());
       if (window.updateSkyLabels) updateSkyLabels();
+      rafId = requestAnimationFrame(frame);
+      return;
+    }
+    if (viewMode === 'solar') {
+      solarControls.update();
+      renderer.render(solarScene, solarCamera);
+      updateSolarLabels();
       rafId = requestAnimationFrame(frame);
       return;
     }
@@ -1840,6 +1938,7 @@
   window.addEventListener('resize', function () {
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
     skyCamera.aspect = window.innerWidth / window.innerHeight; skyCamera.updateProjectionMatrix();
+    solarCamera.aspect = window.innerWidth / window.innerHeight; solarCamera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     if (composer) composer.setSize(window.innerWidth, window.innerHeight);
     if (skyComposer) skyComposer.setSize(window.innerWidth, window.innerHeight);
@@ -2679,6 +2778,8 @@
     camera.position.copy(controls.target).addScaledVector(dir, d);
   });
   window.addEventListener('gestureend', function (e) { e.preventDefault(); });
+
+  if (/[?&]solarTest=1/.test(location.search)) runSolarSelfTests();
 
   // ── go ───────────────────────────────────────────────────────────────────────
   startLoop();
