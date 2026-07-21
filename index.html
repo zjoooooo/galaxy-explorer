@@ -255,6 +255,40 @@
       ok(document.getElementById('bp-solar-link'), 'bp-solar-link missing');
       ok(!document.getElementById('bp-zodiac-link'), 'bp-zodiac-link must not appear on the Solar System card');
     });
+    check('solar-transition', function () {
+      var startPosition = camera.position.clone(), startTarget = controls.target.clone(), oldFly = flyState;
+      var hadReturn = !!returnBtn, oldReturnDisplay = hadReturn ? returnBtn.style.display : '';
+      if (!returnBtn) showReturnBtn(true); else returnBtn.style.display = 'block';
+      flyState = { active: true };
+      try {
+        enterSolar();
+        ok(viewMode === 'solar', 'enterSolar did not switch viewMode');
+        ok(!controls.enabled && !skyControls.enabled && solarControls.enabled, 'controls did not switch to solar');
+        ok(flyState === null, 'enterSolar did not cancel the galaxy fly');
+        ok(document.getElementById('beacons').style.display === 'none', 'beacons remain visible in solar view');
+        ok(solarLabelsEl.style.display === '' && solarBackEl.style.display === 'block', 'solar overlays did not open');
+        ok(returnBtn.style.display === 'none', 'galaxy return control remains visible in solar view');
+        ok(savedGalaxyView && savedGalaxyView.position !== camera.position && savedGalaxyView.target !== controls.target, 'galaxy view was not cloned');
+        camera.position.set(999, 888, 777); controls.target.set(66, 55, 44);
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        ok(viewMode === 'galaxy', 'Escape did not exit solar view');
+        ok(controls.enabled && !skyControls.enabled && !solarControls.enabled, 'controls did not return to galaxy');
+        ok(document.getElementById('beacons').style.display === '', 'beacons did not return');
+        ok(solarLabelsEl.style.display === 'none' && solarBackEl.style.display === 'none', 'solar overlays did not close');
+        ok(returnBtn.style.display === 'block', 'galaxy return control did not restore');
+        ok(camera.position.distanceTo(startPosition) === 0 && controls.target.distanceTo(startTarget) === 0, 'galaxy camera was not restored exactly');
+      } finally {
+        if (viewMode === 'solar') exitSolar();
+        camera.position.copy(startPosition); controls.target.copy(startTarget); controls.update();
+        flyState = oldFly;
+        if (hadReturn) returnBtn.style.display = oldReturnDisplay;
+        else if (returnBtn) { returnBtn.parentNode.removeChild(returnBtn); returnBtn = null; }
+      }
+    });
+    check('solar-resize', function () {
+      window.dispatchEvent(new Event('resize'));
+      ok(solarCamera.aspect === window.innerWidth / window.innerHeight, 'resize did not update solar camera');
+    });
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
     if (/[?&]solarTest=1/.test(location.search)) setMsg(failures.length ? failures.join(' | ') : statusText());
     return window.__solarTestResult;
@@ -1247,10 +1281,12 @@
   }
   function enterSolar() {
     if (viewMode !== 'galaxy') return;
-    savedGalaxyView = { position: camera.position.clone(), target: controls.target.clone() };
+    flyState = null; // cancel a partial galaxy fly before preserving the current view
+    savedGalaxyView = { position: camera.position.clone(), target: controls.target.clone(), returnVisible: !!returnBtn && returnBtn.style.display === 'block' };
     clearSelection();
     viewMode = 'solar';
     controls.enabled = false; skyControls.enabled = false; solarControls.enabled = true;
+    if (returnBtn) returnBtn.style.display = 'none';
     document.getElementById('beacons').style.display = 'none';
     var skyLabels = document.getElementById('skylabels'); if (skyLabels) skyLabels.style.display = 'none';
     document.getElementById('skyback').style.display = 'none';
@@ -1260,14 +1296,16 @@
   }
   function exitSolar() {
     if (viewMode !== 'solar') return;
+    var galaxyView = savedGalaxyView;
     viewMode = 'galaxy';
     solarControls.enabled = false; skyControls.enabled = false; controls.enabled = true;
     document.getElementById('beacons').style.display = '';
     if (solarLabelsEl) solarLabelsEl.style.display = 'none';
     if (solarBackEl) solarBackEl.style.display = 'none';
-    if (savedGalaxyView) {
-      camera.position.copy(savedGalaxyView.position);
-      controls.target.copy(savedGalaxyView.target);
+    if (galaxyView) {
+      camera.position.copy(galaxyView.position);
+      controls.target.copy(galaxyView.target);
+      if (returnBtn) returnBtn.style.display = galaxyView.returnVisible ? 'block' : 'none';
       savedGalaxyView = null;
     }
     controls.update();
