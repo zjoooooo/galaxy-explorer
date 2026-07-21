@@ -487,12 +487,15 @@
       }
     });
     check('solar-performance-regression', function () {
+      var oldView = viewMode, oldCompact = solarCompactOverride, oldSavedGalaxy = savedGalaxyView, oldPanel = { html: bpBody.innerHTML, open: bpEl.classList.contains('open') }, oldDisplays = { beacons: document.getElementById('beacons').style.display, labels: solarLabelsEl.style.display, back: solarBackEl.style.display };
+      var oldControls = { galaxy: controls.enabled, solar: solarControls.enabled, sky: skyControls.enabled, min: solarControls.minDistance, max: solarControls.maxDistance };
       var oldStage = solarPerf.stage, oldEpoch = solarPerf.epoch, oldActive = solarLOD.active2, oldFades = solarLOD.fades.slice(), oldCache = solarLOD.cache, oldPending = solarLOD.pending;
       var oldBelt = solarAsteroidBelt.geometry.drawRange.count, oldBackdrop = solarBackdrop.geometry.drawRange.count, oldLabels = solarPerf.labelEvery, oldWatch = [solarPerfEMA, solarPerfLast, solarPerfNextCheck];
-      var oldNav = { selectedId: solarNav.selectedId, level: solarNav.level, parentId: solarNav.parentId }, oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
+      var oldNav = { selectedId: solarNav.selectedId, level: solarNav.level, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
       var objects = {};
       SOLAR_BODIES.forEach(function (body) { var o = SOLAR_OBJECTS[body.id]; objects[body.id] = { epoch: o.lodEpoch, perfEpoch: o.lodPerfEpoch, target: o.lodTarget, request: o.lodRequest, fade: o.lodFade, tier: o.lodTier, meshes: o.lodMeshes.map(function (m) { return [m.visible, m.material.opacity, m.material.depthWrite]; }), special: Object.keys(o.specialty).map(function (k) { var m = o.specialty[k]; return [k, m.visible, m.material && m.material.opacity]; }) }; });
       try {
+        solarCompactOverride = true;
         if (viewMode !== 'solar') enterSolar();
         solarNav.selectedId = 'earth'; solarNav.level = 'focus'; solarNav.parentId = null; updateSolarVisibility();
         var earth = SOLAR_OBJECTS.earth, point = new THREE.Vector3(); earth.mesh.getWorldPosition(point);
@@ -511,8 +514,11 @@
         solarLOD.active2 = 'earth'; earth.lodEpoch = 9; earth.lodPerfEpoch = solarPerf.epoch; earth.lodTarget = 2; var stale = solarPerf.epoch; solarPerf.epoch++; ok(!solarLODRequestCurrent(earth, 9, 'earth', 2, stale), 'stale delayed LOD request remained current');
       } finally {
         solarPerf.stage = oldStage; solarPerf.epoch = oldEpoch; solarLOD.active2 = oldActive; solarLOD.fades = oldFades; solarLOD.cache = oldCache; solarLOD.pending = oldPending; solarAsteroidBelt.geometry.setDrawRange(0, oldBelt); solarBackdrop.geometry.setDrawRange(0, oldBackdrop); solarPerf.labelEvery = oldLabels; solarPerfEMA = oldWatch[0]; solarPerfLast = oldWatch[1]; solarPerfNextCheck = oldWatch[2];
-        solarNav.selectedId = oldNav.selectedId; solarNav.level = oldNav.level; solarNav.parentId = oldNav.parentId; solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
+        if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
+        solarNav.selectedId = oldNav.selectedId; solarNav.level = oldNav.level; solarNav.parentId = oldNav.parentId; solarNav.cameraStack = oldNav.cameraStack; solarNav.galaxySnapshot = oldNav.galaxySnapshot; solarNav.skySnapshot = oldNav.skySnapshot; solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
         SOLAR_BODIES.forEach(function (body) { var o = SOLAR_OBJECTS[body.id], s = objects[body.id]; o.lodEpoch = s.epoch; o.lodPerfEpoch = s.perfEpoch; o.lodTarget = s.target; o.lodRequest = s.request; o.lodFade = s.fade; o.lodTier = s.tier; o.lodMeshes.forEach(function (m, i) { m.visible = s.meshes[i][0]; m.material.opacity = s.meshes[i][1]; m.material.depthWrite = s.meshes[i][2]; }); s.special.forEach(function (x) { var m = o.specialty[x[0]]; m.visible = x[1]; if (m.material) m.material.opacity = x[2]; }); });
+        solarCompactOverride = oldCompact; savedGalaxyView = oldSavedGalaxy; controls.enabled = oldControls.galaxy; solarControls.enabled = oldControls.solar; skyControls.enabled = oldControls.sky; solarControls.minDistance = oldControls.min; solarControls.maxDistance = oldControls.max; document.getElementById('beacons').style.display = oldDisplays.beacons; solarLabelsEl.style.display = oldDisplays.labels; solarBackEl.style.display = oldDisplays.back; bpBody.innerHTML = oldPanel.html; bpEl.classList.toggle('open', oldPanel.open); viewMode = oldView;
+        ok(viewMode === oldView && solarPerf.beltFraction === (oldStage >= 1 ? 0.55 : 1), 'performance regression test did not restore view or belt fraction');
       }
     });
     check('solar-runtime-objects', function () {
