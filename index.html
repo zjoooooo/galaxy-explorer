@@ -2378,49 +2378,64 @@
   // ── card-initiated fly: ease the camera to frame the body, then enter its level (moons appear)
   var solarWarp = null, solarWarpStreaks = null;
   function makeWarpStreaks() {
-    var N = 360, positions = new Float32Array(N * 6), z0 = new Float32Array(N), lengths = new Float32Array(N);
+    var N = 520, positions = new Float32Array(N * 6), colors = new Float32Array(N * 6), z0 = new Float32Array(N), lengths = new Float32Array(N);
     var state = 0x5eed; function rnd() { state = (state * 1664525 + 1013904223) >>> 0; return state / 4294967296; }
     for (var i = 0; i < N; i++) {
       var ang = rnd() * Math.PI * 2, rad = 3 + Math.pow(rnd(), 0.6) * 42;
       var x = Math.cos(ang) * rad, y = Math.sin(ang) * rad;
       z0[i] = rnd() * 280; lengths[i] = 10 + rnd() * 26;
       positions[i * 6] = x; positions[i * 6 + 1] = y; positions[i * 6 + 3] = x; positions[i * 6 + 4] = y;
+      var pick = rnd(), r = pick < 0.55 ? 0.75 : pick < 0.85 ? 1 : 0.8, g = pick < 0.55 ? 0.86 : pick < 0.85 ? 1 : 0.72, b = 1;
+      colors[i * 6] = r; colors[i * 6 + 1] = g; colors[i * 6 + 2] = b; colors[i * 6 + 3] = r; colors[i * 6 + 4] = g; colors[i * 6 + 5] = b;
     }
     var geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    var streaks = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0xbfd8ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    var streaks = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
     streaks.frustumCulled = false; streaks.visible = false;
     streaks.userData.z0 = z0; streaks.userData.lengths = lengths;
     return streaks;
   }
   function stepSolarWarp() {
     if (!solarWarp) return false;
-    if (!solarWarp.t0) { // first frame: take over the camera, light the star streaks
+    if (!solarWarp.t0) { // first frame: build the winding wormhole path, light the star streaks
       solarWarp.t0 = performance.now();
       solarWarp.to = { position: solarCamera.position.clone(), target: solarControls.target.clone() };
       var dir = solarWarp.to.position.clone().sub(solarWarp.to.target).normalize();
-      solarWarp.from = solarWarp.to.target.clone().addScaledVector(dir, solarWarp.to.position.distanceTo(solarWarp.to.target) * 9);
+      var from = solarWarp.to.target.clone().addScaledVector(dir, solarWarp.to.position.distanceTo(solarWarp.to.target) * 9);
+      var axis = solarWarp.to.position.clone().sub(from), span = axis.length();
+      var side = new THREE.Vector3().crossVectors(axis, new THREE.Vector3(0, 1, 0)).normalize();
+      var lift = new THREE.Vector3().crossVectors(side, axis).normalize();
+      function bend(t, sideAmount, liftAmount) { return from.clone().addScaledVector(axis, t).addScaledVector(side, sideAmount * span).addScaledVector(lift, liftAmount * span); }
+      // a wormhole snakes — alternating lateral bends that settle as the Solar System nears
+      solarWarp.curve = new THREE.CatmullRomCurve3([from, bend(0.2, 0.15, 0.07), bend(0.45, -0.13, -0.09), bend(0.68, 0.09, 0.1), bend(0.87, -0.04, -0.04), solarWarp.to.position.clone()]);
+      solarWarp.look = new THREE.Vector3();
       if (!solarWarpStreaks) { solarWarpStreaks = makeWarpStreaks(); solarScene.add(solarWarpStreaks); }
       solarWarpStreaks.visible = true;
       solarControls.enabled = false;
     }
     var k = Math.min(1, (performance.now() - solarWarp.t0) / solarWarp.dur);
-    var e = 1 - Math.pow(1 - k, 4); // light-speed entry: blistering start, gentle arrival
-    e = Math.min(e, solarWarp.e + 0.08); solarWarp.e = e;
-    solarCamera.position.lerpVectors(solarWarp.from, solarWarp.to.position, e);
+    var e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; // easeInOutCubic: fastest at mid-tunnel where the streaks peak
+    e = Math.min(e, solarWarp.e + 0.05); solarWarp.e = e;
+    solarCamera.position.copy(solarWarp.curve.getPoint(e));
+    var blend = Math.max(0, Math.min(1, (e - 0.78) / 0.22)); // last stretch: swing the gaze onto the Sun
+    solarWarp.look.copy(solarWarp.curve.getPoint(Math.min(1, e + 0.04))).lerp(solarWarp.to.target, blend);
+    solarCamera.up.set(Math.sin(e * Math.PI * 2) * 0.14, 1, 0).normalize(); // gentle roll through the bends
+    solarCamera.lookAt(solarWarp.look);
     solarControls.target.copy(solarWarp.to.target);
-    solarCamera.fov = 60 + 24 * Math.sin(Math.min(1, e * 1.15) * Math.PI); // widen mid-flight for speed
+    solarCamera.fov = 60 + 26 * Math.sin(Math.min(1, e * 1.1) * Math.PI);
     solarCamera.updateProjectionMatrix();
-    var streaks = solarWarpStreaks, roll = k * 900, array = streaks.geometry.attributes.position.array;
+    var streaks = solarWarpStreaks, roll = k * 2600, array = streaks.geometry.attributes.position.array;
     for (var i = 0; i < streaks.userData.z0.length; i++) {
       var z = -(((streaks.userData.z0[i] + roll) % 280) + 12);
       array[i * 6 + 2] = z; array[i * 6 + 5] = z - streaks.userData.lengths[i];
     }
     streaks.geometry.attributes.position.needsUpdate = true;
     streaks.position.copy(solarCamera.position); streaks.quaternion.copy(solarCamera.quaternion);
-    streaks.material.opacity = 0.8 * Math.sin(Math.min(1, k * 1.08) * Math.PI);
+    streaks.material.opacity = Math.sin(Math.min(1, k) * Math.PI); // dark → full blaze at 3 s → dark at 6 s
     if (e >= 1) {
       solarWarp = null; streaks.visible = false;
+      solarCamera.up.set(0, 1, 0);
       solarCamera.fov = 60; solarCamera.updateProjectionMatrix();
       solarControls.enabled = true; solarControls.update();
     }
@@ -2550,7 +2565,7 @@
     solarFrameLast = 0;
     resetSolarPerformanceWatchdog();
     solarControls.update();
-    if (!solarReducedMotion()) solarWarp = { t0: 0, dur: 1500, e: 0 }; // queued; the frame loop performs the light-speed entry
+    if (!solarReducedMotion()) solarWarp = { t0: 0, dur: 6000, e: 0 }; // queued; the frame loop performs the wormhole entry
   }
   function exitSolar() {
     if (viewMode !== 'solar') return;
