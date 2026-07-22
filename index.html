@@ -571,7 +571,7 @@
       var points = 0;
       solarRoot.traverse(function (o) { if (o instanceof THREE.Points) points++; });
       ok(solarAsteroidBelt instanceof THREE.Points, 'asteroid belt is not points');
-      ok(points === 3, 'expected the dust belt, the Sun CME points, and the prominence flow');
+      ok(points === 5, 'expected the dust belt, the Sun CME points, the prominence flow, and two comet tails');
       ok(solarAsteroidRocks && solarAsteroidRocks.children.length === 3 && solarAsteroidRocks.children.every(function (mesh) { return mesh.isInstancedMesh; }), 'asteroid rock layer must be three instanced meshes');
       var rockTotal = solarAsteroidRocks.children.reduce(function (sum, mesh) { return sum + mesh.count; }, 0);
       ok(rockTotal >= 300, 'asteroid rock layer is too sparse');
@@ -777,6 +777,7 @@
   solarControls.dampingFactor = 0.08;
   solarControls.minDistance = 2;
   solarControls.maxDistance = 420;
+  var GLOW_TEX = glowTexture(); // created before its first users below (backdrop band, Kuiper belt, comets)
   (function buildSolarBackdrop() {
     var N = 1400, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), phs = new Float32Array(N), spd = new Float32Array(N), c = new THREE.Color();
     for (var i = 0; i < N; i++) {
@@ -806,7 +807,97 @@
     });
     solarBackdrop = new THREE.Points(g, twinkle);
     solarScene.add(solarBackdrop);
+    // the Milky Way as a soft band across the backdrop, tilted ~60° like the real
+    // galactic plane against the ecliptic
+    var bandPole = new THREE.Vector3(0, Math.cos(60.2 * Math.PI / 180), Math.sin(60.2 * Math.PI / 180)).normalize();
+    var bandU = new THREE.Vector3(1, 0, 0), bandV = new THREE.Vector3().crossVectors(bandPole, bandU).normalize();
+    function bandGauss() { return (Math.random() + Math.random() + Math.random() - 1.5) / 1.5; }
+    var M = 1600, mp = new Float32Array(M * 3), mc = new Float32Array(M * 3);
+    for (var mi = 0; mi < M; mi++) {
+      var phi = Math.random() * 6.28318, lat = bandGauss() * 0.12;
+      var d3 = bandU.clone().multiplyScalar(Math.cos(phi)).addScaledVector(bandV, Math.sin(phi)).addScaledVector(bandPole, lat).normalize();
+      var br2 = 640 + Math.random() * 140;
+      mp[mi * 3] = d3.x * br2; mp[mi * 3 + 1] = d3.y * br2; mp[mi * 3 + 2] = d3.z * br2;
+      var mb = 0.09 + Math.random() * 0.2;
+      mc[mi * 3] = mb; mc[mi * 3 + 1] = mb; mc[mi * 3 + 2] = mb * 1.12;
+    }
+    var mg = new THREE.BufferGeometry();
+    mg.setAttribute('position', new THREE.BufferAttribute(mp, 3));
+    mg.setAttribute('color', new THREE.BufferAttribute(mc, 3));
+    solarScene.add(new THREE.Points(mg, new THREE.PointsMaterial({ size: 7, map: GLOW_TEX, vertexColors: true, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true })));
+    // Kuiper belt: a sparse, thick scattered disc beyond Neptune — Pluto's neighborhood
+    var K = 900, kp = new Float32Array(K * 3), kInner = solarOrbitRadius(30), kOuter = solarOrbitRadius(50);
+    for (var ki = 0; ki < K; ki++) {
+      var kAng = Math.random() * 6.28318, kR = kInner + (kOuter - kInner) * Math.pow(Math.random(), 0.8);
+      kp[ki * 3] = Math.cos(kAng) * kR; kp[ki * 3 + 1] = bandGauss() * 9; kp[ki * 3 + 2] = Math.sin(kAng) * kR;
+    }
+    var kg = new THREE.BufferGeometry();
+    kg.setAttribute('position', new THREE.BufferAttribute(kp, 3));
+    solarScene.add(new THREE.Points(kg, new THREE.PointsMaterial({ color: 0x8d8a94, size: 0.9, map: GLOW_TEX, transparent: true, opacity: 0.22, depthWrite: false, sizeAttenuation: true })));
   })();
+  // ── comets: nucleus + coma, a straight blue ION tail pinned anti-sunward, and a curved
+  // pale DUST tail whose grains keep their own Keplerian paths while radiation pressure
+  // pushes them out — per Jewitt & the standard comet-tail model ──
+  var solarComets = [];
+  (function buildSolarComets() {
+    var ION_N = 70, DUST_N = 110;
+    [ { q: 16, Q: 150, incl: 0.31, phase: 1.2, rate: 0.05 },
+      { q: 24, Q: 205, incl: -0.21, phase: 4.3, rate: 0.038 } ].forEach(function (spec) {
+      var a = (spec.q + spec.Q) / 2, e = (spec.Q - spec.q) / (spec.Q + spec.q), b = a * Math.sqrt(1 - e * e);
+      var group = new THREE.Group(); group.rotation.x = spec.incl; solarRoot.add(group);
+      var coma = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xcfe2d8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+      group.add(coma);
+      var N = ION_N + DUST_N, tp = new Float32Array(N * 3), tc = new Float32Array(N * 3);
+      var tg = new THREE.BufferGeometry();
+      tg.setAttribute('position', new THREE.BufferAttribute(tp, 3));
+      tg.setAttribute('color', new THREE.BufferAttribute(tc, 3));
+      var tails = new THREE.Points(tg, new THREE.PointsMaterial({ map: GLOW_TEX, size: 2.3, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+      tails.frustumCulled = false; group.add(tails);
+      solarComets.push({ a: a, b: b, e: e, angle: spec.phase, rate: spec.rate, q: spec.q, group: group, coma: coma, tails: tails, positions: tp, colors: tc, ION_N: ION_N, DUST_N: DUST_N });
+    });
+  })();
+  var solarCometPos = new THREE.Vector3(), solarCometPast = new THREE.Vector3(), solarCometAnti = new THREE.Vector3();
+  function cometPoint(comet, angle, target) {
+    target.set(Math.cos(angle) * comet.a - comet.e * comet.a, 0, Math.sin(angle) * comet.b);
+    return target;
+  }
+  function updateSolarComets(dt) {
+    solarComets.forEach(function (comet) {
+      cometPoint(comet, comet.angle, solarCometPos);
+      var r = solarCometPos.length();
+      comet.angle += dt * comet.rate * Math.pow(comet.q / Math.max(r, comet.q), 1.5) * 60; // Kepler's 2nd law, visually: fast at perihelion
+      var activity = Math.max(0, Math.min(1, (110 - r) / 80)); // volatiles only wake within the inner system
+      comet.coma.position.copy(solarCometPos);
+      var comaScale = 1 + activity * 2.6;
+      comet.coma.scale.set(comaScale, comaScale, 1);
+      comet.coma.material.opacity = 0.12 + activity * 0.55;
+      solarCometAnti.copy(solarCometPos).normalize(); // anti-solar direction (from the Sun through the comet)
+      var tp = comet.positions, tc = comet.colors, ionLen = (14 + 46 * activity);
+      for (var i = 0; i < comet.ION_N; i++) { // ION tail: narrow, straight, dead anti-sunward, blue glow
+        var k = (i + 0.5) / comet.ION_N, i3 = i * 3;
+        var wig = Math.sin(k * 9 + comet.angle * 7) * 0.5 * k; // faint magnetic kinks
+        tp[i3] = solarCometPos.x + solarCometAnti.x * ionLen * k + wig;
+        tp[i3 + 1] = solarCometPos.y + wig * 0.6;
+        tp[i3 + 2] = solarCometPos.z + solarCometAnti.z * ionLen * k - wig;
+        var fade = (1 - k) * activity;
+        tc[i3] = 0.45 * fade; tc[i3 + 1] = 0.62 * fade; tc[i3 + 2] = 1.0 * fade;
+      }
+      for (var j = 0; j < comet.DUST_N; j++) { // DUST tail: grains released earlier drift anti-sunward on their own orbits → curved, lagging
+        var kd = (j + 0.5) / comet.DUST_N, j3 = (comet.ION_N + j) * 3;
+        var back = kd * 0.55; // how long ago this grain left the nucleus (in orbit angle)
+        cometPoint(comet, comet.angle - back, solarCometPast);
+        solarCometAnti.copy(solarCometPast).normalize();
+        var drift = (kd * kd) * 34 * activity + kd * 2; // radiation-pressure push grows with age
+        tp[j3] = solarCometPast.x + solarCometAnti.x * drift + (Math.sin(j * 3.7) * 0.7) * kd;
+        tp[j3 + 1] = solarCometPast.y + (Math.cos(j * 2.9) * 0.5) * kd;
+        tp[j3 + 2] = solarCometPast.z + solarCometAnti.z * drift + (Math.cos(j * 4.1) * 0.7) * kd;
+        var fd = (1 - kd) * activity;
+        tc[j3] = 1.0 * fd; tc[j3 + 1] = 0.93 * fd; tc[j3 + 2] = 0.78 * fd;
+      }
+      comet.tails.geometry.attributes.position.needsUpdate = true;
+      comet.tails.geometry.attributes.color.needsUpdate = true;
+    });
+  }
   var solarFx = [], solarMeteorNext = performance.now() + 8000 + Math.random() * 10000;
   function spawnSolarMeteor() {
     var nx = Math.random() * 1.4 - 0.7, ny = Math.random() * 1.0 - 0.25;
@@ -1103,7 +1194,6 @@
     x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
     return new THREE.CanvasTexture(c);
   }
-  var GLOW_TEX = glowTexture();
   function bulgeTexture() { // per-pixel gaussian falloff — canvas gradients dither with RGB noise (visible as
     // coloured confetti when a huge close-up halo sprite magnifies the texture), so we write exact pixels instead
     var S = 128, c = document.createElement('canvas'); c.width = c.height = S;
@@ -1719,6 +1809,17 @@
     fragmentShader: 'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; varying vec3 vNormal; void main(){ float edge = pow(1.0 - abs(vNormal.z), 2.0); float pulse = 0.72 + sin(uTime * 1.7) * 0.12; gl_FragColor = vec4(uColor, edge * pulse * 0.24 * uOpacity); }'
   });
   var solarSunGlows = [];
+  function solarAtmosphereMaterial(colorHex, falloff, intensity) {
+    // thin translucent limb glow: brightest right at the limb, exponential falloff outward —
+    // rendered on a BackSide shell so the planet's own disc stays untouched
+    var material = new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: new THREE.Color(colorHex) }, uFalloff: { value: falloff }, uIntensity: { value: intensity }, uOpacity: { value: 1 } },
+      transparent: true, depthWrite: false, side: THREE.BackSide, blending: THREE.AdditiveBlending,
+      vertexShader: 'varying float vRim; uniform float uFalloff; void main(){ vec3 n = normalize(normalMatrix * normal); vRim = pow(1.0 - abs(n.z), uFalloff); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'uniform vec3 uColor; uniform float uIntensity; uniform float uOpacity; varying float vRim; void main(){ gl_FragColor = vec4(uColor, vRim * uIntensity * uOpacity); }'
+    });
+    return material;
+  }
 
   function solarMaterialFor(body) {
     var key = body.kind === 'planet' ? (body.id === 'jupiter' || body.id === 'saturn' || body.id === 'uranus' || body.id === 'neptune' ? 'giant' : 'terrestrial') : body.kind === 'moon' ? 'moon' : body.kind === 'star' ? 'sun' : 'dwarf';
@@ -1962,10 +2063,24 @@
       if (body.id === 'earth') mesh.material.specular = new THREE.Color(0x000000); // no specular at all — every glint attempt read as a white blob
       if (body.id === 'earth') {
         var clouds = new THREE.Mesh(solarSphereHigh, new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.34, depthWrite: false })); // Lambert: clouds must not throw a specular blob
-        var atmosphere = new THREE.Mesh(solarSphereHigh, solarCoronaMaterial.clone());
-        [clouds, atmosphere].forEach(function (layer) { layer.scale.set(radius * 1.018, radius * 1.018, radius * 1.018); layer.userData.solarId = body.id; lodGroup.add(layer); });
-        atmosphere.material.uniforms.uColor.value.set(0x7fb9ff); solarAnimatedMaterials.push(atmosphere.material);
-        object.specialty.clouds = clouds; object.specialty.atmosphere = atmosphere;
+        clouds.scale.set(radius * 1.018, radius * 1.018, radius * 1.018); clouds.userData.solarId = body.id; lodGroup.add(clouds);
+        object.specialty.clouds = clouds;
+      }
+      // translucent limb atmospheres, tinted per world (thin worlds get faint ones)
+      var ATMOS = { venus: [0xf3e3b8, 3.2, 0.5], earth: [0x7fb9ff, 3.0, 0.55], mars: [0xd9a07a, 4.2, 0.16], jupiter: [0xe8d2ac, 3.4, 0.34], saturn: [0xf0e0b6, 3.4, 0.3], titan: [0xe8b060, 2.8, 0.5], uranus: [0xa8e6e6, 3.2, 0.35], neptune: [0x86a8f0, 3.2, 0.35] };
+      if (ATMOS[body.id]) {
+        var atmosphereSpec = ATMOS[body.id];
+        var atmosphere = new THREE.Mesh(solarSphereHigh, solarAtmosphereMaterial(atmosphereSpec[0], atmosphereSpec[1], atmosphereSpec[2]));
+        atmosphere.scale.set(radius * 1.045, radius * 1.045, radius * 1.045); atmosphere.userData.solarId = body.id; lodGroup.add(atmosphere);
+        object.specialty.atmosphere = atmosphere;
+      }
+      // the other giants have real (faint, narrow) ring systems too
+      var FAINT_RINGS = { jupiter: [1.4, 1.62, 0xa08868, 0.06], uranus: [1.62, 1.95, 0x9fb4c0, 0.16], neptune: [1.7, 2.05, 0x8898b0, 0.08] };
+      if (FAINT_RINGS[body.id]) {
+        var ringSpec = FAINT_RINGS[body.id];
+        var faintRing = new THREE.Mesh(new THREE.RingGeometry(ringSpec[0], ringSpec[1], 64, 1), new THREE.MeshBasicMaterial({ color: ringSpec[2], transparent: true, opacity: ringSpec[3], side: THREE.DoubleSide, depthWrite: false }));
+        faintRing.rotation.x = Math.PI / 2; faintRing.scale.set(radius, radius, 1); faintRing.userData.solarId = body.id; spinNode.add(faintRing);
+        object.specialty.faintRing = faintRing;
       }
       if (body.id === 'saturn') {
         var rings = new THREE.Mesh(solarRingGeometry, new THREE.MeshBasicMaterial({ color: 0xdcc58b, transparent: true, opacity: 0.54, side: THREE.DoubleSide, depthWrite: false }));
@@ -2120,6 +2235,7 @@
       }
     }
     if (solarPaused || solarReducedMotion()) return;
+    updateSolarComets(dt);
     solarElapsed += dt;
     var orbitElapsed = solarElapsed * SOLAR_ORBIT_RATE;
     SOLAR_BODIES.forEach(function (body) {
@@ -2668,6 +2784,7 @@
   function enterSolar() {
     if (viewMode !== 'galaxy') return;
     preloadSolarMaps();
+    ensureSolarComposer();
     flyState = null; // cancel a partial galaxy fly before preserving the current view
     savedGalaxyView = { position: camera.position.clone(), target: controls.target.clone(), returnVisible: !!returnBtn && returnBtn.style.display === 'block' };
     resetSolarNavigation(); solarNav.galaxySnapshot = savedGalaxyView;
@@ -2805,6 +2922,20 @@
     skyScene.add(new THREE.LineLoop(eg, new THREE.LineBasicMaterial({ color: 0xc9a86a, transparent: true, opacity: 0.22 })));
   })();
   // sky-view bloom composer — a gentle glow on the brightest stars (defensive: fall back to plain render)
+  var solarComposer = null, solarComposerTried = false;
+  function ensureSolarComposer() {
+    if (solarComposerTried) return;
+    solarComposerTried = true;
+    try {
+      solarComposer = new THREE.EffectComposer(renderer);
+      solarComposer.addPass(new THREE.RenderPass(solarScene, solarCamera));
+      // high threshold: the Sun blooms, planets get a whisper, dim twinkle stars stay OUT of the
+      // bloom mips (sub-threshold sparkles are what caused RGB confetti in the past)
+      solarComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.75, 0.55, 0.9));
+      solarComposer.addPass(new THREE.ShaderPass(THREE.CopyShader));
+      solarComposer.setSize(window.innerWidth, window.innerHeight);
+    } catch (e) { solarComposer = null; }
+  }
   var skyComposer = null, skyComposerTried = false;
   function ensureSkyComposer() { // built lazily on first sky entry — many sessions never open the sky view
     if (skyComposerTried) return;
@@ -3491,7 +3622,7 @@
       if (!stepSolarWarp() && !stepSolarFly()) { stepSolarFollow(); solarControls.update(); } // warp, then fly tween, then free orbit
         updateSolarBackdrop();
       if (!solarReducedMotion()) updateSolarFx(solarNow);
-      renderer.render(solarScene, solarCamera);
+      if (solarComposer) solarComposer.render(); else renderer.render(solarScene, solarCamera);
       solarPerf.labelFrame++;
       if (solarPerf.labelFrame % solarPerf.labelEvery === 0) updateSolarLabels();
       sampleSolarPerformance(solarNow);
@@ -3536,6 +3667,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         if (composer) composer.setSize(window.innerWidth, window.innerHeight);
         if (skyComposer) skyComposer.setSize(window.innerWidth, window.innerHeight);
+        if (solarComposer) solarComposer.setSize(window.innerWidth, window.innerHeight);
         setMsg('low frame rate — resolution reduced');
         setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('resolution') !== -1) setMsg(''); }, 2500);
       } else if (perfEMA > 40 && composer) { // last resort: drop the bloom pass, render() falls back to plain
@@ -3558,6 +3690,7 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     if (composer) composer.setSize(window.innerWidth, window.innerHeight);
     if (skyComposer) skyComposer.setSize(window.innerWidth, window.innerHeight);
+    if (solarComposer) solarComposer.setSize(window.innerWidth, window.innerHeight);
     refreshSolarResponsiveState();
   });
   var solarPointerMedia = window.matchMedia ? window.matchMedia('(pointer:coarse)') : null;
