@@ -35,10 +35,13 @@ and supernovae are all math.
   with a glowing 3D ring on the selected object.
 - **Solar System guide** — follow the **Solar System** beacon to **Explore the
   Solar System**, then freely orbit and zoom around the Sun, eight planets,
-  Pluto, Ceres, the asteroid belt and representative moons. Click a body to
-  focus it; from Earth, choose **Explore Earth's sky** for the star dome.
-  Display scale and starting positions are arranged for readability, not a
-  literal scale model or real-time ephemeris.
+  Pluto, Ceres, the asteroid belt and representative moons. Select a body to
+  open its illustrated information card without moving the camera or stopping
+  the Solar System; from Earth, choose **Explore Earth's sky** for the star
+  dome. Orbital and axial motion are intentionally slowed for observation;
+  their relative directions and periods remain a visual guide. Display scale
+  and starting positions are arranged for readability, not a literal scale
+  model or real-time ephemeris.
 - **Zodiac sky view** — from Earth's Solar System card, open an Earth-centred,
   rotatable star dome with the 12 zodiac constellations drawn from 106 real
   stars (J2000 positions), each with its own card.
@@ -92,7 +95,7 @@ nginx, or any web host. Just upload the folder — there is nothing to build.
 |---|---|
 | **drag** | orbit the camera |
 | **scroll / pinch** | zoom in / out |
-| **click a beacon or body** | open its card; click a Solar body to focus it |
+| **click a beacon or body** | open its card; selecting a Solar body leaves the camera and motion unchanged |
 | **Back** | return one level: sky → Earth → Solar overview → galaxy |
 | **`Esc`** | staged return: close a card, then leave the current Solar level, then the Solar System |
 | **`F`** | cinema mode — hide all UI |
