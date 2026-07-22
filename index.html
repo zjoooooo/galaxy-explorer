@@ -200,7 +200,7 @@
   var BLOOM = { strength: 0.08, radius: 0.32, threshold: 0.42 };
   var TONE = { exposure: 1.1 };
   var DUST = { count: 85000, min: 1500, radius: 360, arms: 4, minorDim: 0.42, tight: 0.85, armWidth: 46, randomness: 0.5, thickness: 24, radPow: 0.72, size: 4.0, brightness: 0.5, inside: 0xffcf8a, outside: 0x86acec, hii: 0xff5fa8, blueStar: 0xcfe6ff };
-  var GLOW_SIZE = 12, GALAXY_SPIN = 0.013;
+  var GALAXY_SPIN = 0.013;
 
   function setMsg(t) { var el = document.getElementById('msg'); if (el) el.textContent = t || ''; }
 
@@ -964,7 +964,22 @@
         '}',
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
     });
-    var plane = new THREE.Mesh(geo, nebMat); plane.rotation.x = Math.PI / 2; plane.frustumCulled = false; // +π/2 so local y → world +z (matches the dust's world angle, no mirror)
+    var plane = new THREE.Mesh(geo, nebMat); plane.rotation.x = Math.PI / 2; plane.frustumCulled = false;
+    if (!/[?&]tune/i.test(location.search)) {
+      // the pattern is completely static — bake the ~150-noise-ops-per-pixel shader ONCE
+      // into a texture and draw a plain quad forever after (?tune keeps the live shader)
+      var bakeHalf = DUST.radius * 1.3, bakeRT = new THREE.WebGLRenderTarget(2048, 2048, { format: THREE.RGBAFormat });
+      var bakeMat = nebMat.clone(); bakeMat.blending = THREE.NoBlending;
+      var bakeScene = new THREE.Scene(); bakeScene.add(new THREE.Mesh(geo, bakeMat));
+      var bakeCam = new THREE.OrthographicCamera(-bakeHalf, bakeHalf, bakeHalf, -bakeHalf, 0.1, 10);
+      bakeCam.position.z = 1; bakeCam.lookAt(0, 0, 0);
+      var bakeClear = renderer.getClearColor(new THREE.Color()), bakeAlpha = renderer.getClearAlpha();
+      renderer.setRenderTarget(bakeRT); renderer.setClearColor(0x000000, 0); renderer.clear();
+      renderer.render(bakeScene, bakeCam);
+      renderer.setRenderTarget(null); renderer.setClearColor(bakeClear, bakeAlpha);
+      plane.material = new THREE.MeshBasicMaterial({ map: bakeRT.texture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+      bakeMat.dispose(); nebMat.dispose();
+    } // +π/2 so local y → world +z (matches the dust's world angle, no mirror)
     galaxyRoot.add(plane); // lies flat in the disc, rotates with the galaxy + the stars
   })();
 
@@ -1102,7 +1117,7 @@
   // arm). Each frame the 3D point is projected to the screen and a borderless
   // HTML beacon (glow dot + pulse rings + label) is moved onto it.
   var BEACONS = [];
-  var beaconLang = 'en'; try { beaconLang = localStorage.getItem('gx-lang') || 'en'; } catch (e) {} // default English; remembers last choice
+  var beaconLang = 'en'; try { var storedLang = localStorage.getItem('gx-lang'); if (['en', 'hans', 'hant', 'ja', 'ko'].indexOf(storedLang) !== -1) beaconLang = storedLang; } catch (e) {} // whitelist: a prototype key like 'constructor' would defeat every || fallback
   function setBeaconLang(lang) {
     beaconLang = lang;
     try { localStorage.setItem('gx-lang', lang); } catch (e) {}
@@ -1260,13 +1275,13 @@
         info: { en:{"type":"Red dwarf (flare star)","distance":"~4.24 light-years","constellation":"Centaurus","facts":[["Proxima b mass","~1.1 Earth masses"],["Spectral type","M5.5Ve (red dwarf)"]],"desc":"Proxima Centauri is the closest star to the Sun, a small, cool red dwarf that unleashes sudden flares far brighter than our steady Sun. Despite its faintness, it hosts Proxima b, a roughly Earth-mass planet orbiting in the habitable zone. This makes it both our nearest stellar neighbour and the site of the nearest known exoplanet.","catalog":"α Cen C"}, hans:{"type":"红矮星（耀星）","distance":"约 4.24 光年","constellation":"半人马座","facts":[["比邻星b质量","约 1.1 个地球质量"],["光谱型","M5.5Ve（红矮星）"]],"desc":"比邻星是距离太阳最近的恒星，一颗又小又冷的红矮星，会突然爆发出比平稳的太阳明亮得多的耀斑。尽管它十分暗弱，却拥有一颗行星比邻星b，其质量约与地球相当，且运行在宜居带内。因此，它既是离我们最近的恒星邻居，也是已知最近的系外行星所在之处。","catalog":"α Cen C"}, hant:{"type":"紅矮星（耀星）","distance":"約 4.24 光年","constellation":"半人馬座","facts":[["比鄰星b質量","約 1.1 個地球質量"],["光譜型","M5.5Ve（紅矮星）"]],"desc":"比鄰星是距離太陽最近的恆星，一顆又小又冷的紅矮星，會突然爆發出比平穩的太陽明亮得多的閃焰。儘管它十分暗弱，卻擁有一顆行星比鄰星b，其質量約與地球相當，且運行在適居帶內。因此，它既是離我們最近的恆星鄰居，也是已知最近的系外行星所在之處。","catalog":"α Cen C"}, ja:{"type":"赤色矮星（閃光星）","distance":"約4.24光年","constellation":"ケンタウルス座","facts":[["プロキシマbの質量","地球の約1.1倍"],["スペクトル型","M5.5Ve（赤色矮星）"]],"desc":"プロキシマ・ケンタウリは太陽に最も近い恒星で、小さく低温の赤色矮星でありながら、穏やかな太陽よりはるかに明るいフレアを突然放ちます。暗い星ですが、地球ほどの質量をもつ惑星プロキシマbがハビタブルゾーンを公転しています。そのため、太陽系で最も近い恒星であると同時に、最も近い既知の系外惑星が存在する場所でもあります。","catalog":"α Cen C"}, ko:{"type":"적색왜성(섬광성)","distance":"약 4.24광년","constellation":"센타우루스자리","facts":[["프록시마 b 질량","지구의 약 1.1배"],["분광형","M5.5Ve(적색왜성)"]],"desc":"프록시마 센타우리는 태양에서 가장 가까운 별로, 작고 차가운 적색왜성이지만 잔잔한 태양보다 훨씬 밝은 플레어를 갑자기 내뿜습니다. 어두운 별임에도 지구와 질량이 비슷한 행성 프록시마 b가 생명체 거주가능 영역을 공전하고 있습니다. 덕분에 가장 가까운 항성 이웃이자 가장 가까운 알려진 외계행성의 보금자리이기도 합니다.","catalog":"α Cen C"} } },
       { p: galPos(28, -0.4, 5.1),
         t: {"en":["UY Scuti"],"hans":["盾牌座UY"],"hant":["盾牌座UY"],"ja":["たて座UY星"],"ko":["방패자리 UY"]},
-        info: { en:{"type":"Red hypergiant","distance":"~5,100 light-years","constellation":"Scutum","facts":[["Radius","~1,700× the Sun"],["Volume","~5 billion Suns"]],"desc":"UY Scuti is one of the largest stars known by radius, stretching roughly 1,700 times wider than the Sun. If it replaced the Sun at the center of our solar system, its glowing surface would engulf the orbits of Mercury, Venus, Earth, Mars, and even Jupiter. It marks the extreme upper end of how big a star can grow.","catalog":"UY Sct"}, hans:{"type":"红特超巨星","distance":"约 5,100 光年","constellation":"盾牌座","facts":[["半径","约为太阳的 1,700 倍"],["体积","约 50 亿个太阳"]],"desc":"盾牌座UY是已知半径最大的恒星之一，直径约为太阳的 1,700 倍。如果把它放在太阳的位置，它炙热的表面会吞没水星、金星、地球、火星，甚至木星的轨道。它代表着恒星大小所能达到的极限。","catalog":"UY Sct"}, hant:{"type":"紅特超巨星","distance":"約 5,100 光年","constellation":"盾牌座","facts":[["半徑","約為太陽的 1,700 倍"],["體積","約 50 億個太陽"]],"desc":"盾牌座UY是已知半徑最大的恆星之一，直徑約為太陽的 1,700 倍。如果把它放在太陽的位置，它熾熱的表面會吞沒水星、金星、地球、火星，甚至木星的軌道。它代表著恆星大小所能達到的極限。","catalog":"UY Sct"}, ja:{"type":"赤色極超巨星","distance":"約5,100光年","constellation":"たて座","facts":[["半径","太陽の約1,700倍"],["体積","太陽約50億個分"]],"desc":"たて座UY星は、半径で見ると知られている中で最も大きな恒星の一つで、太陽の約1,700倍もの大きさがあります。もし太陽の位置に置けば、その輝く表面は水星・金星・地球・火星、さらには木星の軌道まで飲み込んでしまいます。恒星がどこまで大きくなれるか、その極限を示す存在です。","catalog":"UY Sct"}, ko:{"type":"적색 극대거성","distance":"약 5,100광년","constellation":"방패자리","facts":[["반지름","태양의 약 1,700배"],["부피","태양 약 50억 개"]],"desc":"방패자리 UY는 반지름 기준으로 알려진 가장 큰 별 중 하나로, 지름이 태양의 약 1,700배에 이릅니다. 만약 태양 자리에 놓는다면 그 이글거리는 표면이 수성, 금성, 지구, 화성은 물론 목성의 궤도까지 삼켜 버립니다. 별이 얼마나 커질 수 있는지, 그 극한을 보여 주는 천체입니다.","catalog":"UY Sct"} } },
+        info: { en:{"type":"Red hypergiant","distance":"~5,100 light-years","constellation":"Scutum","facts":[["Radius","~750× the Sun (Gaia-revised)"],["Volume","~400 million Suns"]],"desc":"UY Scuti is a colossal red hypergiant roughly 750 times wider than the Sun. If it replaced the Sun at the center of our solar system, its glowing surface would engulf the orbits of Mercury, Venus, Earth, and Mars. It was long billed as the largest star known, until Gaia's sharper distance measurement trimmed its estimated size.","catalog":"UY Sct"}, hans:{"type":"红特超巨星","distance":"约 5,100 光年","constellation":"盾牌座","facts":[["半径","约为太阳的 750 倍（依 Gaia 修订）"],["体积","约 4 亿个太阳"]],"desc":"盾牌座UY是一颗巨大的红特超巨星，直径约为太阳的 750 倍。如果把它放在太阳的位置，它炙热的表面会吞没水星、金星、地球和火星的轨道。它曾长期被称为已知最大的恒星，直到盖亚卫星更精确的距离测量将其估算尺寸下调。","catalog":"UY Sct"}, hant:{"type":"紅特超巨星","distance":"約 5,100 光年","constellation":"盾牌座","facts":[["半徑","約為太陽的 750 倍（依 Gaia 修訂）"],["體積","約 4 億個太陽"]],"desc":"盾牌座UY是一顆巨大的紅特超巨星，直徑約為太陽的 750 倍。如果把它放在太陽的位置，它熾熱的表面會吞沒水星、金星、地球和火星的軌道。它曾長期被稱為已知最大的恆星，直到蓋亞衛星更精確的距離測量將其估算尺寸下調。","catalog":"UY Sct"}, ja:{"type":"赤色極超巨星","distance":"約5,100光年","constellation":"たて座","facts":[["半径","太陽の約750倍（Gaia改訂値）"],["体積","太陽約4億個分"]],"desc":"たて座UY星は太陽の約750倍もの大きさをもつ巨大な赤色極超巨星です。もし太陽の位置に置けば、その輝く表面は水星・金星・地球・火星の軌道まで飲み込んでしまいます。長らく既知最大の恒星とされてきましたが、ガイア衛星のより精密な距離測定により、推定サイズは下方修正されました。","catalog":"UY Sct"}, ko:{"type":"적색 극대거성","distance":"약 5,100광년","constellation":"방패자리","facts":[["반지름","태양의 약 750배 (가이아 수정값)"],["부피","태양 약 4억 개"]],"desc":"방패자리 UY는 지름이 태양의 약 750배에 이르는 거대한 적색 극대거성입니다. 만약 태양 자리에 놓는다면 그 이글거리는 표면이 수성, 금성, 지구, 화성의 궤도까지 삼켜 버립니다. 오랫동안 알려진 가장 큰 별로 불렸지만, 가이아 위성의 더 정밀한 거리 측정으로 추정 크기가 하향 조정되었습니다.","catalog":"UY Sct"} } },
       { p: galPos(69.5, -47.2, 0.0409),
         t: {"en":["TRAPPIST-1"],"hans":["TRAPPIST-1"],"hant":["TRAPPIST-1"],"ja":["トラピスト1"],"ko":["트라피스트-1"]},
         info: { en:{"type":"Ultracool red dwarf star","distance":"~40 light-years","constellation":"Aquarius","facts":[["Planets","7 (all Earth-size)"],["In habitable zone","3-4"]],"desc":"This dim, ultracool red dwarf is circled by seven roughly Earth-size planets — more than are known around any other single star. Three or four of them orbit within the habitable zone, where liquid water could exist. That makes TRAPPIST-1 the richest known laboratory for studying potentially habitable worlds.","catalog":"TRAPPIST-1"}, hans:{"type":"超冷红矮星","distance":"约 40 光年","constellation":"宝瓶座","facts":[["行星数量","7 颗（均为地球大小）"],["宜居带内","3–4 颗"]],"desc":"这颗昏暗的超冷红矮星拥有七颗与地球大小相近的行星，是目前已知单颗恒星周围行星数量最多的系统。其中三到四颗位于可能存在液态水的宜居带内。这使 TRAPPIST-1 成为研究潜在宜居世界最丰富的天然实验室。","catalog":"TRAPPIST-1"}, hant:{"type":"超冷紅矮星","distance":"約 40 光年","constellation":"寶瓶座","facts":[["行星數量","7 顆（均為地球大小）"],["宜居帶內","3–4 顆"]],"desc":"這顆昏暗的超冷紅矮星擁有七顆與地球大小相近的行星，是目前已知單一恆星周圍行星數量最多的系統。其中三到四顆位於可能存在液態水的宜居帶內。這使 TRAPPIST-1 成為研究潛在宜居世界最豐富的天然實驗室。","catalog":"TRAPPIST-1"}, ja:{"type":"超低温の赤色矮星","distance":"約40光年","constellation":"みずがめ座","facts":[["惑星の数","7個（すべて地球サイズ）"],["ハビタブルゾーン内","3〜4個"]],"desc":"この暗く低温の赤色矮星の周りには、地球とほぼ同じ大きさの惑星が7個も回っており、単一の恒星の周囲としては知られる中で最多です。そのうち3〜4個は液体の水が存在しうるハビタブルゾーンに位置しています。トラピスト1は、生命を宿しうる世界を研究するうえで最も恵まれた天然の実験場です。","catalog":"TRAPPIST-1"}, ko:{"type":"극저온 적색왜성","distance":"약 40광년","constellation":"물병자리","facts":[["행성 수","7개 (모두 지구 크기)"],["생명체 거주가능 영역 내","3~4개"]],"desc":"이 어둡고 극저온인 적색왜성 주위에는 지구와 비슷한 크기의 행성이 7개나 돌고 있으며, 이는 하나의 항성 주위로는 알려진 것 중 가장 많은 수입니다. 그중 3~4개는 액체 물이 존재할 수 있는 생명체 거주가능 영역에 놓여 있습니다. 이 덕분에 트라피스트-1은 잠재적 거주 가능 행성을 연구하기에 가장 풍부한 자연 실험실입니다.","catalog":"TRAPPIST-1"} } },
       { p: galPos(121, -21.6, 202), cls: 'ext', fixed: true, gal: { mode: 'spiral', opts: { sq: 0.42, arms: 2 }, size: 330, fade: 0.7, stars: { count: 26000, radius: 132, arms: 2, tight: 0.9, inc: 1.3, roll: 0.6, warm: 0.32, warmK: 2.2 } },
         t: {"en":["Andromeda Galaxy","beyond the Milky Way"],"hans":["仙女座星系","银河系之外"],"hant":["仙女座星系","銀河系之外"],"ja":["アンドロメダ銀河","天の川銀河の外"],"ko":["안드로메다 은하","우리은하 너머"]},
-        info: { en:{"type":"Spiral galaxy · external · not to scale","distance":"~2.5 million light-years","constellation":"Andromeda","facts":[["Diameter","~152,000 ly"],["Group","Local Group"]],"desc":"The nearest large galaxy to the Milky Way and the most distant object visible to the naked eye. In about 4.5 billion years it will collide and merge with our galaxy. Shown on the far sky — far beyond the Milky Way and not to scale.","catalog":"M31"}, hans:{"type":"旋涡星系 · 银河系外 · 非真实比例","distance":"约 250 万光年","constellation":"仙女座","facts":[["直径","约 15.2 万光年"],["所属","本星系群"]],"desc":"距离银河系最近的大型星系，也是肉眼可见的最远天体。约 45 亿年后它将与银河系相撞并合。这里画在远方天幕上——远在银河系之外，非真实比例。","catalog":"M31"}, hant:{"type":"螺旋星系 · 銀河系外 · 非真實比例","distance":"約 250 萬光年","constellation":"仙女座","facts":[["直徑","約 15.2 萬光年"],["所屬","本星系群"]],"desc":"距離銀河系最近的大型星系，也是肉眼可見的最遠天體。約 45 億年後它將與銀河系相撞合併。這裡畫在遠方天幕上——遠在銀河系之外，非真實比例。","catalog":"M31"}, ja:{"type":"渦巻銀河 · 天の川銀河の外 · 実スケールではない","distance":"約250万光年","constellation":"アンドロメダ座","facts":[["直径","約15.2万光年"],["所属","局部銀河群"]],"desc":"天の川銀河に最も近い大型銀河で、肉眼で見える最も遠い天体です。約45億年後には天の川銀河と衝突・合体します。ここでは遠くの天空に描いており、天の川銀河のはるか外側で実際のスケールではありません。","catalog":"M31"}, ko:{"type":"나선 은하 · 우리은하 밖 · 실제 비율 아님","distance":"약 250만 광년","constellation":"안드로메다자리","facts":[["지름","약 15.2만 광년"],["소속","국부 은하군"]],"desc":"우리은하에서 가장 가까운 대형 은하이며 맨눈으로 볼 수 있는 가장 먼 천체입니다. 약 45억 년 뒤 우리은하와 충돌·병합합니다. 여기서는 먼 하늘에 그려져 있으며 우리은하 훨씬 바깥이고 실제 비율은 아닙니다.","catalog":"M31"} } },
+        info: { en:{"type":"Spiral galaxy · external · not to scale","distance":"~2.5 million light-years","constellation":"Andromeda","facts":[["Diameter","~152,000 ly"],["Group","Local Group"]],"desc":"The nearest large galaxy to the Milky Way and the most distant object easily visible to the naked eye. In about 4.5 billion years it will collide and merge with our galaxy. Shown on the far sky — far beyond the Milky Way and not to scale.","catalog":"M31"}, hans:{"type":"旋涡星系 · 银河系外 · 非真实比例","distance":"约 250 万光年","constellation":"仙女座","facts":[["直径","约 15.2 万光年"],["所属","本星系群"]],"desc":"距离银河系最近的大型星系，也是肉眼容易看到的最远天体。约 45 亿年后它将与银河系相撞并合。这里画在远方天幕上——远在银河系之外，非真实比例。","catalog":"M31"}, hant:{"type":"螺旋星系 · 銀河系外 · 非真實比例","distance":"約 250 萬光年","constellation":"仙女座","facts":[["直徑","約 15.2 萬光年"],["所屬","本星系群"]],"desc":"距離銀河系最近的大型星系，也是肉眼容易看到的最遠天體。約 45 億年後它將與銀河系相撞合併。這裡畫在遠方天幕上——遠在銀河系之外，非真實比例。","catalog":"M31"}, ja:{"type":"渦巻銀河 · 天の川銀河の外 · 実スケールではない","distance":"約250万光年","constellation":"アンドロメダ座","facts":[["直径","約15.2万光年"],["所属","局部銀河群"]],"desc":"天の川銀河に最も近い大型銀河で、肉眼でたやすく見える最も遠い天体です。約45億年後には天の川銀河と衝突・合体します。ここでは遠くの天空に描いており、天の川銀河のはるか外側で実際のスケールではありません。","catalog":"M31"}, ko:{"type":"나선 은하 · 우리은하 밖 · 실제 비율 아님","distance":"약 250만 광년","constellation":"안드로메다자리","facts":[["지름","약 15.2만 광년"],["소속","국부 은하군"]],"desc":"우리은하에서 가장 가까운 대형 은하이며 맨눈으로 쉽게 볼 수 있는 가장 먼 천체입니다. 약 45억 년 뒤 우리은하와 충돌·병합합니다. 여기서는 먼 하늘에 그려져 있으며 우리은하 훨씬 바깥이고 실제 비율은 아닙니다.","catalog":"M31"} } },
       { p: galPos(133.61, -31.33, 175), cls: 'ext', fixed: true, gal: { mode: 'spiral', opts: { sq: 0.82, arms: 2, tight: 4.2, seed: 12.1 }, size: 250, fade: 0.72, stars: { count: 24000, radius: 108, arms: 2, tight: 0.72, inc: 0.78, roll: 2.2, warm: 0.04, warmK: 4, hii: 0.03, haloSize: 0.5, haloOpacity: 0.1, coreSize: 0.14, coreOpacity: 0.6 } },
         t: {"en":["Triangulum Galaxy","in the Local Group"],"hans":["三角座星系","本星系群成员"],"hant":["三角座星系","本星系群成員"],"ja":["さんかく座銀河","局部銀河群の一員"],"ko":["삼각형자리 은하","국부 은하군의 일원"]},
         info: { en:{"type":"Spiral galaxy · external · not to scale","distance":"~2.7 million light-years","constellation":"Triangulum","facts":[["Diameter","~60,000 ly"],["Group","Local Group"]],"desc":"The third-largest galaxy in the Local Group and a graceful face-on spiral. Under very dark skies it is one of the most distant objects the unaided eye can see. With the Milky Way and Andromeda it completes the Local Group’s trio of great spirals. Drawn on the far sky, not to scale.","catalog":"M33"}, hans:{"type":"旋涡星系 · 银河系外 · 非真实比例","distance":"约 270 万光年","constellation":"三角座","facts":[["直径","约 6 万光年"],["所属","本星系群"]],"desc":"本星系群中第三大的星系，是一个正面朝向我们的秀丽旋涡星系。在非常黑暗的天空下，它是肉眼可见的最远天体之一。它与银河系、仙女座星系一起，构成本星系群三大旋涡星系。这里画在远方天幕上，非真实比例。","catalog":"M33"}, hant:{"type":"螺旋星系 · 銀河系外 · 非真實比例","distance":"約 270 萬光年","constellation":"三角座","facts":[["直徑","約 6 萬光年"],["所屬","本星系群"]],"desc":"本星系群中第三大的星系，是一個正面朝向我們的秀麗螺旋星系。在非常黑暗的天空下，它是肉眼可見的最遠天體之一。它與銀河系、仙女座星系一起，構成本星系群三大螺旋星系。這裡畫在遠方天幕上，非真實比例。","catalog":"M33"}, ja:{"type":"渦巻銀河 · 天の川銀河の外 · 実スケールではない","distance":"約270万光年","constellation":"さんかく座","facts":[["直径","約6万光年"],["所属","局部銀河群"]],"desc":"局部銀河群で3番目に大きい銀河で、正面を向いた優美な渦巻銀河です。非常に暗い空の下では、肉眼で見える最も遠い天体のひとつです。天の川銀河とアンドロメダ銀河とともに、局部銀河群の三大渦巻銀河をなしています。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"M33"}, ko:{"type":"나선 은하 · 우리은하 밖 · 실제 비율 아님","distance":"약 270만 광년","constellation":"삼각형자리","facts":[["지름","약 6만 광년"],["소속","국부 은하군"]],"desc":"국부 은하군에서 세 번째로 큰 은하이며, 정면을 향한 우아한 나선 은하입니다. 매우 어두운 하늘에서는 맨눈으로 볼 수 있는 가장 먼 천체 중 하나입니다. 우리은하, 안드로메다은하와 함께 국부 은하군의 3대 나선 은하를 이룹니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"M33"} } },
@@ -1515,7 +1530,7 @@
       distance: '1.524 AU from the Sun', diameter: '6,780 km', orbit: '686.98 days', rotation: '24.623 hours', temperature: '−63 °C average', moons: '2', gravity: '3.71 m/s²', feature: 'Olympus Mons and Valles Marineris', catalog: 'Mars',
       copy: { en: ['Mars', 'Terrestrial planet', 'Mars is a cold desert world whose iron-rich dust gives it its distinctive red colour.'], hans: ['火星', '类地行星', '火星是一颗寒冷的沙漠世界，富含铁的尘土赋予它独特的红色。'], hant: ['火星', '類地行星', '火星是一顆寒冷的沙漠世界，富含鐵的塵土賦予它獨特的紅色。'], ja: ['火星', '地球型惑星', '火星は鉄分の多い塵によって赤く見える、寒冷な砂漠の世界です。'], ko: ['화성', '지구형 행성', '화성은 철이 풍부한 먼지 때문에 붉게 보이는 차가운 사막 세계입니다.'] } }),
     solarBody({ id: 'ceres', parent: null, kind: 'dwarf-planet', radiusKm: 469.7, distanceAu: 2.7675, periodDays: 1681.63, rotationHours: 9.074, inclinationDeg: 10.594, eccentricity: 0.0758, phase: 4.7, tiltDeg: 4, color: '#aaa59d', maps: { albedo: 'images/solar-system/ceres.jpg' }, cardImage: 'images/solar-system/cards/ceres.jpg', cardCredit: 'NASA/JPL-Caltech · Dawn',
-      distance: '2.77 AU from the Sun', diameter: '939 km', orbit: '1,681.63 days', rotation: '9.074 hours', temperature: '−105 °C average', moons: '0', gravity: '0.27 m/s²', feature: 'Largest object in the asteroid belt', catalog: '1 Ceres',
+      distance: '2.77 AU from the Sun', diameter: '939 km', orbit: '1,681.63 days', rotation: '9.074 hours', temperature: '−105 °C average', moons: '0', gravity: '0.28 m/s²', feature: 'Largest object in the asteroid belt', catalog: '1 Ceres',
       copy: { en: ['Ceres', 'Dwarf planet', 'Ceres is the largest body in the asteroid belt and the only dwarf planet in the inner Solar System.'], hans: ['谷神星', '矮行星', '谷神星是小行星带中最大的天体，也是内太阳系唯一的矮行星。'], hant: ['穀神星', '矮行星', '穀神星是小行星帶中最大的天體，也是內太陽系唯一的矮行星。'], ja: ['ケレス', '準惑星', 'ケレスは小惑星帯で最大の天体で、内太陽系で唯一の準惑星です。'], ko: ['세레스', '왜행성', '세레스는 소행성대에서 가장 큰 천체이며 내태양계의 유일한 왜행성입니다.'] } }),
     solarBody({ id: 'jupiter', parent: null, kind: 'planet', radiusKm: 69911, distanceAu: 5.203, periodDays: 4332.59, rotationHours: 9.925, inclinationDeg: 1.304, eccentricity: 0.0489, phase: 0.2, tiltDeg: 3.13, color: '#d8ac7a', maps: { albedo: 'images/solar-system/jupiter.jpg' }, cardImage: 'images/solar-system/cards/jupiter.jpg', cardCredit: 'NASA/JPL/SSI · Cassini',
       distance: '5.203 AU from the Sun', diameter: '139,820 km', orbit: '4,332.59 days', rotation: '9.925 hours', temperature: '−110 °C cloud tops', moons: '95 confirmed', gravity: '24.79 m/s²', feature: 'Great Red Spot storm', catalog: 'Jupiter',
@@ -1539,7 +1554,7 @@
       distance: '1,221,870 km from Saturn', diameter: '5,150 km', orbit: '15.945 days', rotation: '382.7 hours (synchronous)', temperature: '−179 °C average', moons: '0', gravity: '1.35 m/s²', feature: 'Dense nitrogen atmosphere and methane seas', catalog: 'Saturn VI / Titan',
       copy: { en: ['Titan', 'Natural satellite', 'Titan is the only moon with a dense atmosphere and has rivers, lakes, and seas of liquid methane and ethane.'], hans: ['土卫六', '天然卫星', '土卫六是唯一拥有浓厚大气的卫星，并有液态甲烷和乙烷形成的河流、湖泊与海洋。'], hant: ['土衛六', '天然衛星', '土衛六是唯一擁有濃厚大氣的衛星，並有液態甲烷和乙烷形成的河流、湖泊與海洋。'], ja: ['タイタン', '衛星', 'タイタンは濃い大気をもつ唯一の衛星で、液体メタンとエタンの川・湖・海があります。'], ko: ['타이탄', '자연위성', '타이탄은 짙은 대기를 지닌 유일한 위성으로 액체 메탄과 에탄의 강·호수·바다가 있습니다.'] } }),
     solarBody({ id: 'uranus', parent: null, kind: 'planet', radiusKm: 25362, distanceAu: 19.191, periodDays: 30688.5, rotationHours: -17.24, inclinationDeg: 0.773, eccentricity: 0.0472, phase: 5.0, tiltDeg: 97.77, color: '#8dd3de', maps: { albedo: 'images/solar-system/uranus.jpg' }, cardImage: 'images/solar-system/cards/uranus.jpg', cardCredit: 'NASA/JPL-Caltech · Voyager 2',
-      distance: '19.191 AU from the Sun', diameter: '50,724 km', orbit: '30,688.5 days', rotation: '−17.24 hours (retrograde)', temperature: '−197 °C average', moons: '28', gravity: '8.69 m/s²', feature: 'Rotates on its side', catalog: 'Uranus',
+      distance: '19.191 AU from the Sun', diameter: '50,724 km', orbit: '30,688.5 days', rotation: '−17.24 hours (retrograde)', temperature: '−197 °C average', moons: '29', gravity: '8.69 m/s²', feature: 'Rotates on its side', catalog: 'Uranus',
       copy: { en: ['Uranus', 'Ice giant', 'Uranus is an ice giant with an extreme axial tilt, so each pole can face the Sun for decades.'], hans: ['天王星', '冰巨星', '天王星是一颗轴倾角极端的冰巨星，每个极点都可连续数十年朝向太阳。'], hant: ['天王星', '冰巨星', '天王星是一顆軸傾角極端的冰巨星，每個極點都可連續數十年朝向太陽。'], ja: ['天王星', '天王星型惑星', '天王星は極端な自転軸の傾きをもつ氷惑星で、極は何十年も太陽を向きます。'], ko: ['천왕성', '얼음 거대행성', '천왕성은 자전축이 극단적으로 기울어진 얼음 거대행성으로 극이 수십 년간 태양을 향합니다.'] } }),
     solarBody({ id: 'neptune', parent: null, kind: 'planet', radiusKm: 24622, distanceAu: 30.07, periodDays: 60182, rotationHours: 16.11, inclinationDeg: 1.77, eccentricity: 0.0086, phase: 1.2, tiltDeg: 28.32, color: '#527fd3', maps: { albedo: 'images/solar-system/neptune.jpg' }, cardImage: 'images/solar-system/cards/neptune.jpg', cardCredit: 'NASA · Voyager 2',
       distance: '30.07 AU from the Sun', diameter: '49,244 km', orbit: '60,182 days', rotation: '16.11 hours', temperature: '−201 °C average', moons: '16', gravity: '11.15 m/s²', feature: 'Fastest winds in the Solar System', catalog: 'Neptune',
@@ -1701,12 +1716,6 @@
         '  gl_FragColor = vec4(base * limb * spots, uOpacity); }'
       ].join('\n')
     });
-    solarLoadTexture('images/solar-system/sun.jpg', true).then(function (texture) {
-      if (texture) {
-        texture.wrapT = THREE.RepeatWrapping; texture.needsUpdate = true; // the sun shader also wobbles V slightly past the edge (wrapS comes from the loader)
-        material.uniforms.uMap.value = texture; material.uniforms.uHasMap.value = 1;
-      }
-    });
     solarAnimatedMaterials.push(material);
     return material;
   }
@@ -1735,11 +1744,10 @@
     solarAnimatedMaterials.push(material);
     return material;
   }
-  function solarSelectedId() { return typeof solarNav !== 'undefined' ? solarNav.selectedId : null; }
   function solarLoadTexture(url, albedo) {
     if (Object.prototype.hasOwnProperty.call(solarTextures.cache, url)) return Promise.resolve(solarTextures.cache[url]);
     if (solarTextures.pending[url]) return solarTextures.pending[url];
-    var loader = solarTextures.textureLoader || new THREE.TextureLoader(), settled = false;
+    var loader = solarTextures.textureLoader || (solarTextures.textureLoader = new THREE.TextureLoader()), settled = false;
     var request = new Promise(function (resolve) {
       function finish(texture) {
         settled = true;
@@ -1918,10 +1926,6 @@
         object.specialty.rings = rings;
       }
     });
-    SOLAR_BODIES.forEach(function (body) {
-      var object = SOLAR_OBJECTS[body.id];
-      loadSolarMaps(body).then(function (maps) { solarApplyMaps(object, maps); });
-    });
     updateSolarMotion(0);
     return SOLAR_OBJECTS;  }
   var solarAsteroidRocks = null;
@@ -2011,7 +2015,6 @@
       solarCoronaMaterial.uniforms.uTime.value = solarShaderTime;
       solarAnimatedMaterials.forEach(function (material) {
         if (material.uniforms && material.uniforms.uTime) material.uniforms.uTime.value = solarShaderTime;
-        if (material.userData && material.userData.solarShader) material.userData.solarShader.uniforms.uSolarTime.value = solarShaderTime;
       });
       var breath = 1 + Math.sin(solarShaderTime * Math.PI / 10) * 0.028;
       solarSunGlows.forEach(function (layer, index) {
@@ -2076,7 +2079,9 @@
       var object = SOLAR_OBJECTS[body.id]; if (!object) return;
       if (body.id !== 'sun') solarOrbitPoint(body, body.phase + orbitElapsed / object.compressedPeriod, object.positionNode.position);
       object.spinNode.rotation.y = solarElapsed * SOLAR_SPIN_RATE / Math.max(0.3, Math.abs(body.rotationHours) / 120);
-      if (body.rotationHours < 0) object.spinNode.rotation.y *= -1;
+      // retrograde is double-encoded in NASA data (tilt > 90° AND negative period); the tilt already
+      // flips the axis geometrically, so only flip the spin when exactly one encoding applies (e.g. Triton)
+      if ((body.rotationHours < 0) !== (body.tiltDeg > 90)) object.spinNode.rotation.y *= -1;
     });
     if (solarAsteroidBelt) {
       var ceresObject = SOLAR_OBJECTS.ceres;
@@ -2165,7 +2170,10 @@
   };
   window.closeBeaconExtras = function () { bpEl.classList.remove('open'); beaconRing.visible = false; beaconRing.material.opacity = 0; };
   document.getElementById('bp-close').addEventListener('click', function (e) { e.stopPropagation(); if (viewMode === 'sky') clearSkySelection(); else if (viewMode === 'solar') clearSolarCard(); else clearSelection(); });
-  window.addEventListener('click', function () { if (selectedBeacon !== null) clearSelection(); }); // outside click closes
+  var clickDragGuard = { x: 0, y: 0 };
+  window.addEventListener('pointerdown', function (e) { clickDragGuard.x = e.clientX; clickDragGuard.y = e.clientY; }, true);
+  function clickWasDrag(e) { return Math.abs(e.clientX - clickDragGuard.x) > 6 || Math.abs(e.clientY - clickDragGuard.y) > 6; }
+  window.addEventListener('click', function (e) { if (!clickWasDrag(e) && selectedBeacon !== null) clearSelection(); }); // outside click closes — but an orbit drag is not a click
   bpEl.addEventListener('click', function (e) { e.stopPropagation(); }); // clicks inside the panel don't close it
   bpBody.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'bp-solar-link') enterSolar();
@@ -2205,7 +2213,7 @@
     if (k >= 1) { var done = flyState.onDone; flyState = null; controls.enabled = true; if (done) done(); }
     return true;
   }
-  window.addEventListener('keydown', function (e) { if ((e.key || '').toLowerCase() === 'escape' && selectedBeacon !== null) { clearSelection(); e.stopImmediatePropagation(); } });
+  window.addEventListener('keydown', function (e) { if (document.body.classList.contains('gx-cinema')) return; if ((e.key || '').toLowerCase() === 'escape' && selectedBeacon !== null) { clearSelection(); e.stopImmediatePropagation(); } });
   var beaconTmp = new THREE.Vector3();
   function updateBeacons() { // call AFTER render() — galaxyRoot/camera matrices are fresh then
     for (var i = 0; i < BEACONS.length; i++) {
@@ -2263,19 +2271,19 @@
   // ── celestial sky view: an Earth-centred rotatable star dome ────────────────
   var viewMode = 'galaxy';
   var savedGalaxyView = null;
-  var solarNav = { level: 'overview', selectedId: null, parentId: null, cameraStack: [], galaxySnapshot: null, skySnapshot: null };
+  var solarNav = { level: 'overview', selectedId: null, parentId: null, focusId: null, cameraStack: [], galaxySnapshot: null, skySnapshot: null };
   var skyReturnContext = null;
   var solarCardOpen = false, solarLabelButtons = {}, solarRaycaster = new THREE.Raycaster();
   var solarPointer = { down: false, x: 0, y: 0, moved: false };
-  var solarLabelPoint = new THREE.Vector3();
+  var solarLabelPoint = new THREE.Vector3(), solarLabelProjected = new THREE.Vector3();
 
   function solarSnapshot() {
     return { position: solarCamera.position.clone(), target: solarControls.target.clone(), level: solarNav.level,
-      selectedId: solarNav.selectedId, parentId: solarNav.parentId, panelOpen: solarCardOpen,
+      selectedId: solarNav.selectedId, parentId: solarNav.parentId, focusId: solarNav.focusId, panelOpen: solarCardOpen,
       minDistance: solarControls.minDistance, maxDistance: solarControls.maxDistance };
   }
   function setSolarNavigation(snapshot) {
-    solarNav.level = snapshot.level; solarNav.selectedId = snapshot.selectedId; solarNav.parentId = snapshot.parentId;
+    solarNav.level = snapshot.level; solarNav.selectedId = snapshot.selectedId; solarNav.parentId = snapshot.parentId; solarNav.focusId = snapshot.focusId || null;
     solarCardOpen = !!snapshot.panelOpen;
     if (!solarCardOpen) clearSolarCard();
     if (typeof snapshot.minDistance === 'number') solarControls.minDistance = snapshot.minDistance;
@@ -2288,7 +2296,7 @@
     updateSolarNavigationText();
     if (viewMode === 'solar' && solarCardOpen && solarNav.selectedId) renderSolarPanel(solarNav.selectedId, beaconLang);
   }
-  function solarLocalParent() { return solarNav.parentId || solarNav.selectedId; }
+  function solarLocalParent() { return solarNav.focusId || solarNav.parentId || solarNav.selectedId; } // focusId is set on fly-arrival, so opening another body's card cannot re-anchor the local system
   function solarBodyIsActive(body) {
     if (solarNav.level === 'sky') return false;
     if (solarNav.level === 'overview') return !body.parent;
@@ -2342,15 +2350,16 @@
   }
   function updateSolarLabels() {
     if (!solarLabelsEl || viewMode !== 'solar') return;
-    solarCamera.updateMatrixWorld(); solarRoot.updateMatrixWorld(true);
+    solarCamera.updateMatrixWorld(); // world matrices are fresh from the render; getWorldPosition updates its own chain
     var candidates = [];
     SOLAR_BODIES.forEach(function (body) {
       var object = SOLAR_OBJECTS[body.id], label = solarLabelFor(body);
-      label.textContent = solarLabelText(body); label.setAttribute('aria-label', solarLabelText(body));
+      var labelText = solarLabelText(body);
+      if (label.dataset.txt !== labelText) { label.dataset.txt = labelText; label.textContent = labelText; label.setAttribute('aria-label', labelText); }
       if (!object || !solarBodyIsActive(body)) { label.style.display = 'none'; return; }
       object.mesh.getWorldPosition(solarLabelPoint);
       object.hitProxy.scale.setScalar(solarHitRadius(object, solarLabelPoint));
-      var projected = solarLabelPoint.clone().project(solarCamera);
+      var projected = solarLabelProjected.copy(solarLabelPoint).project(solarCamera);
       if (projected.z < -1 || projected.z > 1 || projected.x < -1 || projected.x > 1 || projected.y < -1 || projected.y > 1) { label.style.display = 'none'; return; }
       candidates.push({ body: body, label: label, x: (projected.x * 0.5 + 0.5) * window.innerWidth, y: (-projected.y * 0.5 + 0.5) * window.innerHeight,
         priority: body.id === solarNav.selectedId ? 0 : (body.id === solarLocalParent() || body.parent === solarLocalParent() ? 1 : (body.kind === 'planet' ? 2 : 3)) });
@@ -2379,7 +2388,7 @@
     }
     if (body.parent) {
       if (solarNav.parentId !== body.parent) solarNav.cameraStack.push(solarSnapshot());
-      solarNav.level = 'focus'; solarNav.parentId = body.parent; solarNav.selectedId = id;
+      solarNav.level = 'focus'; solarNav.parentId = body.parent; solarNav.selectedId = id; solarNav.focusId = body.parent || id;
     } else {
       if (solarNav.parentId === id) { leaveSolarLevel(); return true; }
       if (solarNav.level === 'overview') solarNav.cameraStack.push(solarSnapshot());
@@ -2430,6 +2439,14 @@
     streaks.frustumCulled = false; streaks.visible = false;
     streaks.userData.z0 = z0; streaks.userData.lengths = lengths;
     return streaks;
+  }
+  function cancelSolarWarp() {
+    if (!solarWarp && !(solarWarpStreaks && solarWarpStreaks.visible)) return;
+    solarWarp = null;
+    if (solarWarpStreaks) solarWarpStreaks.visible = false;
+    solarCamera.up.set(0, 1, 0);
+    solarCamera.fov = 60; solarCamera.updateProjectionMatrix();
+    solarControls.enabled = true;
   }
   function stepSolarWarp() {
     if (!solarWarp) return false;
@@ -2489,6 +2506,7 @@
     solarFollow.last.copy(solarFollowPos);
   }
   function flySolarTo(id) {
+    if (solarFly || solarWarp) return false; // one flight at a time — repeated rocket clicks must not stack snapshots
     var body = SOLAR_BY_ID[id], object = SOLAR_OBJECTS[id]; if (!body || !object) return false;
     var wp = new THREE.Vector3(); object.mesh.getWorldPosition(wp);
     var r = Math.max(object.radius, 0.5);
@@ -2516,6 +2534,7 @@
       solarControls.enabled = true;
       solarControls.minDistance = r * 1.8;
       solarNav.level = 'focus'; solarNav.selectedId = id; solarNav.parentId = body.parent || null;
+      solarNav.focusId = body.parent || id; // the system we are IN — the flown-to body's primary
       solarFollow = { id: id, last: null }; // camera rides along with the orbiting body from here on
       updateSolarVisibility(); // the body's moons become visible + selectable here
       updateSolarNavigationText();
@@ -2529,6 +2548,7 @@
   }
   function leaveSolarLevel() {
     if (viewMode === 'sky' && skyReturnContext) return returnSkyToEarth();
+    if (solarFly) { solarFly = null; solarControls.enabled = true; } // Escape mid-flight cancels the tween — no zombie fly
     if (solarNav.level === 'sky' && solarNav.skySnapshot) {
       setSolarNavigation(solarNav.skySnapshot); solarNav.skySnapshot = null; return true;
     }
@@ -2541,7 +2561,7 @@
   }
   function resetSolarNavigation() {
     solarCardOpen = false;
-    solarNav.level = 'overview'; solarNav.selectedId = null; solarNav.parentId = null; solarNav.cameraStack = []; solarNav.skySnapshot = null;
+    solarNav.level = 'overview'; solarNav.selectedId = null; solarNav.parentId = null; solarNav.focusId = null; solarNav.cameraStack = []; solarNav.skySnapshot = null;
     solarFollow = null;
     updateSolarVisibility(); updateSolarNavigationText();
   }
@@ -2582,8 +2602,25 @@
       if (best) selectSolarBody(best);
     }
   });
+  var solarMapsPreloaded = false;
+  function preloadSolarMaps() { // ~hundreds of MB of textures — only fetch once the user actually enters the solar view
+    if (solarMapsPreloaded) return;
+    solarMapsPreloaded = true;
+    SOLAR_BODIES.forEach(function (body) {
+      var object = SOLAR_OBJECTS[body.id];
+      loadSolarMaps(body).then(function (maps) { solarApplyMaps(object, maps); });
+    });
+    var sunMaterial = SOLAR_OBJECTS.sun.mesh.material;
+    solarLoadTexture('images/solar-system/sun.jpg', true).then(function (texture) {
+      if (texture) {
+        texture.wrapT = THREE.RepeatWrapping; texture.needsUpdate = true; // the sun shader also wobbles V slightly past the edge (wrapS comes from the loader)
+        sunMaterial.uniforms.uMap.value = texture; sunMaterial.uniforms.uHasMap.value = 1;
+      }
+    });
+  }
   function enterSolar() {
     if (viewMode !== 'galaxy') return;
+    preloadSolarMaps();
     flyState = null; // cancel a partial galaxy fly before preserving the current view
     savedGalaxyView = { position: camera.position.clone(), target: controls.target.clone(), returnVisible: !!returnBtn && returnBtn.style.display === 'block' };
     resetSolarNavigation(); solarNav.galaxySnapshot = savedGalaxyView;
@@ -2605,8 +2642,8 @@
   }
   function exitSolar() {
     if (viewMode !== 'solar') return;
-    solarWarp = null; if (solarWarpStreaks) solarWarpStreaks.visible = false;
-    solarCamera.fov = 60; solarCamera.updateProjectionMatrix();
+    cancelSolarWarp();
+    solarFly = null; // an abandoned fly must not resume in the next solar session
     var galaxyView = savedGalaxyView;
     clearSolarCard();
     viewMode = 'galaxy';
@@ -2630,6 +2667,7 @@
   solarBackEl.addEventListener('click', function () { if (!leaveSolarLevel()) exitSolar(); });
   window.addEventListener('keydown', function (e) {
     if ((e.key || '').toLowerCase() !== 'escape' || viewMode !== 'solar') return;
+    if (document.body.classList.contains('gx-cinema')) return; // cinema mode owns Escape first
     if (solarCardOpen) { clearSolarCard(); e.stopImmediatePropagation(); return; }
     if (!leaveSolarLevel()) exitSolar();
     e.stopImmediatePropagation();
@@ -2720,14 +2758,18 @@
     skyScene.add(new THREE.LineLoop(eg, new THREE.LineBasicMaterial({ color: 0xc9a86a, transparent: true, opacity: 0.22 })));
   })();
   // sky-view bloom composer — a gentle glow on the brightest stars (defensive: fall back to plain render)
-  var skyComposer = null;
-  try {
-    skyComposer = new THREE.EffectComposer(renderer);
-    skyComposer.addPass(new THREE.RenderPass(skyScene, skyCamera));
-    skyComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.7, 0.6, 0.15));
-    skyComposer.addPass(new THREE.ShaderPass(THREE.CopyShader)); // final output pass — UnrealBloomPass alone renders black to screen
-    skyComposer.setSize(window.innerWidth, window.innerHeight);
-  } catch (e) { skyComposer = null; }
+  var skyComposer = null, skyComposerTried = false;
+  function ensureSkyComposer() { // built lazily on first sky entry — many sessions never open the sky view
+    if (skyComposerTried) return;
+    skyComposerTried = true;
+    try {
+      skyComposer = new THREE.EffectComposer(renderer);
+      skyComposer.addPass(new THREE.RenderPass(skyScene, skyCamera));
+      skyComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.7, 0.6, 0.15));
+      skyComposer.addPass(new THREE.ShaderPass(THREE.CopyShader)); // final output pass — UnrealBloomPass alone renders black to screen
+      skyComposer.setSize(window.innerWidth, window.innerHeight);
+    } catch (e) { skyComposer = null; }
+  }
   // occasional shooting stars streaking across the dome (reuses the galaxy meteor texture)
   var skyFx = [], skyMeteorNext = performance.now() + 7000 + Math.random() * 10000;
   function spawnSkyMeteor() {
@@ -3023,7 +3065,7 @@
     { key:"andromeda",
       t:{"en":"Andromeda","hans":"仙女座","hant":"仙女座","ja":"アンドロメダ座","ko":"안드로메다자리"},
       stars:[[0.139,29.09,2.06],[0.655,30.86,3.27],[1.162,35.62,2.05],[0.947,38.5,3.86],[0.831,41.08,4.09],[2.065,42.33,2.1]], starNames:["Alpheratz","Delta And","Mirach","Mu And","Nu And","Almach"], lines:[[0,1],[1,2],[2,5],[2,3],[3,4]],
-      info:{ en:{"season":"Autumn · Northern Hemisphere","brightest":"Alpheratz","desc":"Andromeda is the chained princess of Greek myth, daughter of Cassiopeia, left on the shore as a sacrifice to a sea monster and rescued by the hero Perseus. Her brightest star, Alpheratz, is shared with the Great Square of Pegasus. Follow the chain of stars from Alpheratz through Mirach and step up two fainter stars to reach the Andromeda Galaxy (M31) — the nearest great spiral to our own and the most distant object visible to the unaided eye."}, hans:{"season":"秋季 · 北半球","brightest":"壁宿二","desc":"仙女座是希腊神话中被锁在海边的公主——仙后座的女儿安德洛墨达，被献给海怪作祭品，最终由英雄珀耳修斯所救。它最亮的星壁宿二，同时也是飞马座大四边形的一角。从壁宿二沿着星链经过奎宿九，再向上跨过两颗较暗的星，便能抵达仙女座星系(M31)——距离我们最近的大型旋涡星系，也是肉眼可见的最遥远天体。"}, hant:{"season":"秋季 · 北半球","brightest":"壁宿二","desc":"仙女座是希臘神話中被鎖在海邊的公主——仙后座的女兒安德洛墨達，被獻給海怪作祭品，最終由英雄珀耳修斯所救。它最亮的星壁宿二，同時也是飛馬座大四邊形的一角。從壁宿二沿著星鏈經過奎宿九，再向上跨過兩顆較暗的星，便能抵達仙女座星系(M31)——距離我們最近的大型螺旋星系，也是肉眼可見的最遙遠天體。"}, ja:{"season":"秋 · 北半球","brightest":"アルフェラッツ","desc":"アンドロメダ座はギリシア神話で鎖につながれた王女、カシオペア座の娘アンドロメダの姿です。海の怪物への生贄として岸辺につながれましたが、英雄ペルセウスに救われました。最も明るい星アルフェラッツは、ペガススの大四辺形の一角でもあります。アルフェラッツからミラクへと星の連なりをたどり、さらに二つの暗めの星を上へたどると、アンドロメダ銀河(M31)に至ります——私たちの銀河系に最も近い大きな渦巻銀河であり、肉眼で見える最も遠い天体です。"}, ko:{"season":"가을 · 북반구","brightest":"알페라츠","desc":"안드로메다자리는 그리스 신화 속 사슬에 묶인 공주로, 카시오페이아자리의 딸 안드로메다의 모습입니다. 바다 괴물의 제물로 해변에 묶였다가 영웅 페르세우스에게 구원받았습니다. 가장 밝은 별 알페라츠는 페가수스 대사각형의 한 꼭짓점이기도 합니다. 알페라츠에서 미라크를 지나 별들의 사슬을 따라가다 조금 더 어두운 두 별을 위로 짚어 올라가면 안드로메다 은하(M31)에 이릅니다 — 우리 은하에서 가장 가까운 큰 나선 은하이자, 맨눈으로 볼 수 있는 가장 먼 천체입니다."} },
+      info:{ en:{"season":"Autumn · Northern Hemisphere","brightest":"Alpheratz","desc":"Andromeda is the chained princess of Greek myth, daughter of Cassiopeia, left on the shore as a sacrifice to a sea monster and rescued by the hero Perseus. Her brightest star, Alpheratz, is shared with the Great Square of Pegasus. Follow the chain of stars from Alpheratz through Mirach and step up two fainter stars to reach the Andromeda Galaxy (M31) — the nearest great spiral to our own and the most distant object easily visible to the unaided eye."}, hans:{"season":"秋季 · 北半球","brightest":"壁宿二","desc":"仙女座是希腊神话中被锁在海边的公主——仙后座的女儿安德洛墨达，被献给海怪作祭品，最终由英雄珀耳修斯所救。它最亮的星壁宿二，同时也是飞马座大四边形的一角。从壁宿二沿着星链经过奎宿九，再向上跨过两颗较暗的星，便能抵达仙女座星系(M31)——距离我们最近的大型旋涡星系，也是肉眼可见的最遥远天体。"}, hant:{"season":"秋季 · 北半球","brightest":"壁宿二","desc":"仙女座是希臘神話中被鎖在海邊的公主——仙后座的女兒安德洛墨達，被獻給海怪作祭品，最終由英雄珀耳修斯所救。它最亮的星壁宿二，同時也是飛馬座大四邊形的一角。從壁宿二沿著星鏈經過奎宿九，再向上跨過兩顆較暗的星，便能抵達仙女座星系(M31)——距離我們最近的大型螺旋星系，也是肉眼可見的最遙遠天體。"}, ja:{"season":"秋 · 北半球","brightest":"アルフェラッツ","desc":"アンドロメダ座はギリシア神話で鎖につながれた王女、カシオペア座の娘アンドロメダの姿です。海の怪物への生贄として岸辺につながれましたが、英雄ペルセウスに救われました。最も明るい星アルフェラッツは、ペガススの大四辺形の一角でもあります。アルフェラッツからミラクへと星の連なりをたどり、さらに二つの暗めの星を上へたどると、アンドロメダ銀河(M31)に至ります——私たちの銀河系に最も近い大きな渦巻銀河であり、肉眼でたやすく見える最も遠い天体です。"}, ko:{"season":"가을 · 북반구","brightest":"알페라츠","desc":"안드로메다자리는 그리스 신화 속 사슬에 묶인 공주로, 카시오페이아자리의 딸 안드로메다의 모습입니다. 바다 괴물의 제물로 해변에 묶였다가 영웅 페르세우스에게 구원받았습니다. 가장 밝은 별 알페라츠는 페가수스 대사각형의 한 꼭짓점이기도 합니다. 알페라츠에서 미라크를 지나 별들의 사슬을 따라가다 조금 더 어두운 두 별을 위로 짚어 올라가면 안드로메다 은하(M31)에 이릅니다 — 우리 은하에서 가장 가까운 큰 나선 은하이자, 맨눈으로 쉽게 볼 수 있는 가장 먼 천체입니다."} },
       img:"images/cons-andromeda.jpg", credit:"E. Slawik/NOIRLab/NSF/AURA/M. Zamani" },
     { key:"triangulum",
       t:{"en":"Triangulum","hans":"三角座","hant":"三角座","ja":"さんかく座","ko":"삼각형자리"},
@@ -3200,12 +3242,13 @@
     bpEl.classList.remove('open');
   };
   window.addEventListener('keydown', function (e) {
+    if (document.body.classList.contains('gx-cinema')) return; // cinema mode owns Escape first
     if ((e.key || '').toLowerCase() === 'escape' && viewMode === 'sky' && (skySelected != null || window.skyGalSelected != null)) {
       clearSkySelection();
       e.stopImmediatePropagation(); // consume: the NEXT Esc exits the sky view, not this one
     }
   });
-  window.addEventListener('click', function () { if (viewMode === 'sky' && (skySelected != null || window.skyGalSelected != null)) clearSkySelection(); });
+  window.addEventListener('click', function (e) { if (!clickWasDrag(e) && viewMode === 'sky' && (skySelected != null || window.skyGalSelected != null)) clearSkySelection(); });
   var skybackEl = document.getElementById('skyback'), skyVeilEl = document.getElementById('skyveil');
   function updateSolarNavigationText() {
     var L = typeof beaconLang === 'string' ? beaconLang : 'en';
@@ -3240,6 +3283,7 @@
     if (closeButton) { closeButton.setAttribute('aria-label', closeText); closeButton.setAttribute('title', closeText); }
   }
   function enterSky(origin) {
+    ensureSkyComposer();
     if (origin === 'earth') {
       if (viewMode !== 'solar') return false;
     } else {
@@ -3273,6 +3317,8 @@
   }
   function enterSkyFromEarth() {
     if (viewMode !== 'solar' || solarNav.selectedId !== 'earth' || solarNav.parentId !== null) return false;
+    cancelSolarWarp(); // never snapshot a mid-warp camera — the dormant warp would resume on return
+    solarFly = null;
     skyReturnContext = { solar: solarSnapshot(), paused: solarPaused };
     clearSolarCard();
     var entered = enterSky('earth');
@@ -3315,6 +3361,7 @@
   skybackEl.addEventListener('click', exitSky);
   window.addEventListener('keydown', function (e) {
     if ((e.key || '').toLowerCase() !== 'escape' || viewMode !== 'sky') return;
+    if (document.body.classList.contains('gx-cinema')) return; // cinema mode owns Escape first
     if (window.skySelected != null || window.skyGalSelected != null) return;
     exitSky();
     e.stopImmediatePropagation();
@@ -3409,6 +3456,17 @@
         buildDust(dustFor());
         setMsg('low frame rate — dust density reduced');
         setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('dust density') !== -1) setMsg(''); }, 2500);
+      } else if (perfEMA > 40 && renderer.getPixelRatio() > 1) { // still fill-rate bound → drop to 1x resolution (4x fewer pixels on hidpi)
+        renderer.setPixelRatio(1);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        if (composer) composer.setSize(window.innerWidth, window.innerHeight);
+        if (skyComposer) skyComposer.setSize(window.innerWidth, window.innerHeight);
+        setMsg('low frame rate — resolution reduced');
+        setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('resolution') !== -1) setMsg(''); }, 2500);
+      } else if (perfEMA > 40 && composer) { // last resort: drop the bloom pass, render() falls back to plain
+        composer = null;
+        setMsg('low frame rate — glow disabled');
+        setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('glow') !== -1) setMsg(''); }, 2500);
       }
     }
     if (!stepFly()) controls.update(); // while flying to a galaxy, stepFly drives the camera

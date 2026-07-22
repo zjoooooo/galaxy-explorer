@@ -21,18 +21,14 @@ domain. Processing details and the per-file inventory are in
 
 | Local files | Exact source page | Agency / creator | Status and local transformation |
 | --- | --- | --- | --- |
-| `mercury.jpg` | [USGS Astro Web Maps](https://www.usgs.gov/tools/astro-web-maps), layer `MESSENGER`; [MDIS Basemap BDR Global Mosaic 166m](https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_global_basemap_bdr_166m) | Applied Coherent Technology Corporation; NASA/JHU APL/Arizona State University/Carnegie Science; USGS Astrogeology | 0°–360° WMS derivative of the global 750-nm reflectance mosaic, 2048×1024 JPEG. Source terms: **Access Constraints: None; Use Constraints: Please cite authors**. |
-| `venus.jpg`, `earth.jpg`, `mars.jpg`, `jupiter.jpg`, `saturn.jpg`, `neptune.jpg`, `pluto.jpg` | [Venus](https://science.nasa.gov/3d-resources/venus/), [Earth (A)](https://science.nasa.gov/3d-resources/earth-a/), [Mars](https://science.nasa.gov/3d-resources/mars/), [Jupiter](https://science.nasa.gov/3d-resources/jupiter/), [Saturn](https://science.nasa.gov/3d-resources/saturn/), [Neptune](https://science.nasa.gov/3d-resources/neptune/), [Pluto](https://science.nasa.gov/3d-resources/pluto/) | NASA/JPL Solar System Simulator; individual credits on each page | Free to download and use; JPEG delivery resamples documented in the local inventory. Pluto source is fictional: Pat Rawlings painting stitched by David Seal/JPL. |
-| `moon.jpg` | [CGI Moon Kit](https://svs.gsfc.nasa.gov/4720/) | NASA SVS; visualizer Ernie Wright (USRA), scientist Noah Petro (NASA/GSFC); LROC and LOLA teams | Public domain unless noted; native 2048×1024 `lroc_color_2k.jpg`. |
+| `sun.jpg`, `mercury.jpg`, `venus.jpg`, `earth.jpg`, `earth-night.jpg`, `earth-clouds.png`, `moon.jpg`, `mars.jpg`, `jupiter.jpg`, `saturn.jpg`, `uranus.jpg`, `neptune.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) | Solar System Scope, based on NASA imagery and elevation data | **CC BY 4.0**; downsampled deliveries (4096×2048 or 2048×1024) as inventoried in `images/solar-system/README.md`; `earth-clouds.png` stores source luminance as alpha. |
+| `pluto.jpg` | [Pluto](https://science.nasa.gov/3d-resources/pluto/) | NASA/JPL Solar System Simulator | Free to download and use; the source page identifies this as a fictional texture stitched by David Seal from a Pat Rawlings painting — retained only with that credit. |
 | `moon-normal.png` | [CGI Moon Kit (LOLA displacement map)](https://svs.gsfc.nasa.gov/4720/) | NASA SVS; Ernie Wright (USRA), Noah Petro (NASA/GSFC), LOLA team | Public domain unless noted; 1024×512 lossless tangent-space normal generated from `ldem_4_uint.tif`, a LOLA elevation/displacement map. |
 | `mars-normal.png` | [MGS MOLA Global DEM 463m](https://astrogeology.usgs.gov/search/map/mars_mgs_mola_dem_463m) | MOLA Team, NASA GSFC, USGS Astrogeology | Source metadata explicitly says **CC0 (public domain)**; official DEM browse raster transformed into a 1024×512 lossless tangent-space normal. |
-| `earth-night.jpg` | [Earth at Night (Black Marble) 2016 Color Maps](https://visibleearth.nasa.gov/images/144898/earth-at-night-black-marble-2016-color-maps/144957l) | NASA Earth Observatory; Joshua Stevens, Suomi NPP VIIRS / Miguel Román, NASA GSFC | NASA material; 3600×1800 JPEG resampled to 2048×1024. |
-| `earth-clouds.png` | [NASA SVS Clouds frames](https://svs.gsfc.nasa.gov/vis/a000000/a003800/a003837/frames/2048x1024_2x1_30p/Clouds/) | NASA GSFC Scientific Visualization Studio | Public domain unless noted; white RGB with processed source-luminance alpha. |
 | `ceres.jpg` | [Ceres Dawn FC Global Mosaic 140m](https://astrogeology.usgs.gov/search/map/ceres_dawn_fc_global_mosaic_140m) | USGS Astrogeology; NASA/JPL-Caltech/UCLA/MPS/DLR/IDA Dawn | Native 1024×512 official browse mosaic. Source terms: **Access Constraints: None; Use Constraints: Please cite authors**. |
 | `io.jpg`, `europa.jpg`, `ganymede.jpg`, `callisto.jpg` | [Io](https://science.nasa.gov/3d-resources/jupiter-io-a/), [Europa](https://science.nasa.gov/3d-resources/jupiter-europa/), [Ganymede](https://science.nasa.gov/3d-resources/jupiter-ganymede/), [Callisto](https://science.nasa.gov/3d-resources/jupiter-callisto/) | NASA/JPL Solar System Simulator; USGS/Voyager mosaics | Free to download and use; local JPEG resamples documented in the inventory. |
 | `saturn-rings.png` | [Panoramic Rings (PIA06175)](https://science.nasa.gov/resource/panoramic-rings/) | NASA/JPL/Space Science Institute, Cassini | NASA material; full central scanline remapped across the 256–512-pixel annulus sampled by `RingGeometry(1, 2)`, with transparent center/outside. |
 | `titan.jpg`, `triton.jpg` | [Titan](https://science.nasa.gov/3d-resources/saturn-titan/), [Triton](https://science.nasa.gov/3d-resources/neptune-triton/) | NASA/JPL Solar System Simulator; Triton credit USGS/Tammy Becker & JPL/Caltech | Free to download and use; local JPEG resamples documented in the inventory. |
-| `uranus.jpg` | [Voyager 2 color observation PIA01391](https://images.nasa.gov/details-PIA01391) | NASA/JPL | NASA material; seamless procedural cyan/banded visualization derived from observed color, not a surface mosaic. |
 
 ---
 
@@ -125,7 +121,7 @@ sourced from Wikimedia Commons.
 
 ### Constellation card images (`images/cons-*.jpg`)
 
-Wide-field photographs of the 8 famous non-zodiac constellations, from the same
+Wide-field photographs of the 13 constellations beyond the zodiac, from the same
 Eckhard Slawik / NOIRLab series as the zodiac cards (Wikimedia Commons).
 
 - `images/cons-ursa-major.jpg` — E. Slawik/NOIRLab/NSF/AURA/M. Zamani · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Photo_of_the_constellation_Ursa_Major_produced_by_NOIRLab_in_collaboration_with_Eckhard_Slawik,_a_German_astrophotographer_(ursa-major).jpg)

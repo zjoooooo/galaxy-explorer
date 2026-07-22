@@ -71,10 +71,9 @@ source-to-delivery resize listed in the table.
 ```sh
 sips -s format jpeg -s formatOptions 85 -z 1024 2048 source.jpg --out target.jpg
 sips -s format jpeg -s formatOptions 85 -z 512 1024 ceres_dawn_fc_dlr_global_feb2016_1024.jpg --out ceres.jpg
-curl -G --fail 'https://planetarymaps.usgs.gov/cgi-bin/mapserv' --data-urlencode 'map=/maps/mercury/mercury_simp_cyl.map' --data-urlencode 'SERVICE=WMS' --data-urlencode 'VERSION=1.1.1' --data-urlencode 'REQUEST=GetMap' --data-urlencode 'LAYERS=MESSENGER' --data-urlencode 'STYLES=' --data-urlencode 'SRS=EPSG:4326' --data-urlencode 'BBOX=0,-90,360,90' --data-urlencode 'WIDTH=2048' --data-urlencode 'HEIGHT=1024' --data-urlencode 'FORMAT=image/jpeg' --output mercury-wms.jpg
-ffmpeg -i mercury-wms.jpg -vf "format=rgb24,geq=r='if(gt(eq(X\,0)+eq(X\,2047)\,0)\,(p(0\,Y)+p(2047\,Y))/2\,p(X\,Y))':g='if(gt(eq(X\,0)+eq(X\,2047)\,0)\,(p(0\,Y)+p(2047\,Y))/2\,p(X\,Y))':b='if(gt(eq(X\,0)+eq(X\,2047)\,0)\,(p(0\,Y)+p(2047\,Y))/2\,p(X\,Y))'" -frames:v 1 -q:v 2 mercury.jpg
-ffmpeg -f lavfi -i 'color=c=0x80C8D8:s=1024x512:d=1' -vf "geq=r='126+3*sin(12*Y/512)':g='196+5*sin(12*Y/512)':b='210+6*sin(12*Y/512)'" -frames:v 1 uranus.jpg
-ffmpeg -f lavfi -i 'color=c=white:s=2048x1024:d=1' -i clouds.0201.tif -filter_complex '[1]scale=2048:1024,format=gray,eq=contrast=1.45:brightness=-0.18[a];[0][a]alphamerge' -frames:v 1 earth-clouds.png
+# Solar System Scope textures (sun, mercury, venus, earth day/night/clouds, moon, mars, jupiter, saturn, uranus, neptune)
+# were downloaded directly from https://www.solarsystemscope.com/textures/ and resampled with the sips command above.
+ffmpeg -f lavfi -i 'color=c=white:s=4096x2048:d=1' -i 8k_earth_clouds.jpg -filter_complex '[1]scale=4096:2048,format=gray[a];[0][a]alphamerge' -frames:v 1 earth-clouds.png
 ffmpeg -i PIA06175~orig.jpg -filter_complex "[0]scale=1024:1024,format=rgb24,geq=r='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)':g='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)':b='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)'[rgb];[0]scale=1024:1024,format=gray,geq=lum='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)'[a];[rgb][a]alphamerge" -frames:v 1 saturn-rings.png
 ./images/solar-system/build-relief-maps.sh
 ```
