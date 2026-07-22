@@ -569,7 +569,7 @@
       var points = 0;
       solarRoot.traverse(function (o) { if (o instanceof THREE.Points) points++; });
       ok(solarAsteroidBelt instanceof THREE.Points, 'asteroid belt is not points');
-      ok(points === 2, 'expected exactly the asteroid belt and the Sun CME points');
+      ok(points === 3, 'expected the fine belt, the coarse belt, and the Sun CME points');
       var first = solarAsteroidBelt.geometry.attributes.position.array.slice(0), oldBelt = solarAsteroidBelt;
       ok(first.length === 2000 * 3, 'asteroid belt must have 2,000 vertices');
       buildAsteroidBelt(2000);
@@ -594,7 +594,7 @@
     check('solar-pause-clock', function () {
       ok(typeof updateSolarMotion === 'function' && typeof setSolarPaused === 'function', 'solar motion API missing');
       ok(typeof SOLAR_ORBIT_RATE === 'number' && SOLAR_ORBIT_RATE === 0.18, 'Solar orbit presentation rate is missing');
-      ok(typeof SOLAR_SPIN_RATE === 'number' && SOLAR_SPIN_RATE === 0.10, 'Solar spin presentation rate is missing');
+      ok(typeof SOLAR_SPIN_RATE === 'number' && SOLAR_SPIN_RATE === 0.05, 'Solar spin presentation rate is missing');
       var elapsed = solarElapsed, shaderTime = solarShaderTime, paused = solarPaused, earth = SOLAR_OBJECTS.earth, x = earth.positionNode.position.x, z = earth.positionNode.position.z, spin = earth.spinNode.rotation.y;
       setSolarPaused(false); updateSolarMotion(0.25);
       ok(solarElapsed > elapsed, 'solar clock did not advance');
@@ -1587,7 +1587,7 @@
   // ── solar runtime: shared meshes, hierarchical orbits, and deterministic time ──
   var SOLAR_OBJECTS = {}, solarAsteroidBelt = null;
   var solarElapsed = 0, solarShaderTime = 0, solarPaused = false, solarFrameLast = 0;
-  var SOLAR_ORBIT_RATE = 0.18, SOLAR_SPIN_RATE = 0.10;
+  var SOLAR_ORBIT_RATE = 0.18, SOLAR_SPIN_RATE = 0.05;
   var solarBeltClearance = { angle: 0.18, inner: 0, outer: 0 }, solarBeltPoint = new THREE.Vector3();
   var solarSphereLow = new THREE.SphereGeometry(1, 12, 8);
   var solarSphereHigh = new THREE.SphereGeometry(1, 96, 64);
@@ -1659,7 +1659,9 @@
         'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; uniform sampler2D uMap; uniform float uHasMap; varying vec3 vNormal; varying float vViewZ; varying vec2 vUv;',
         'float spot(vec3 n, vec3 c, float s, float t, float k){',
         '  float d = 1.0 - dot(n, c);',
-        '  float r = s * (0.8 + 0.2 * sin(t * 0.04 + k));',
+        '  vec3 e1 = normalize(cross(c, vec3(0.0, 1.0, 0.0))); vec3 e2 = cross(c, e1);',
+        '  float ang = atan(dot(n, e2), dot(n, e1));', // ragged outline instead of a perfect circle
+        '  float r = s * (0.8 + 0.2 * sin(t * 0.04 + k)) * (1.0 + 0.30 * sin(ang * 3.0 + k * 5.0) + 0.16 * sin(ang * 5.0 - k * 3.0));',
         '  float dark = 0.30 + 0.70 * smoothstep(r * 0.16, r * 0.5, d);',
         '  dark *= 0.78 + 0.22 * smoothstep(r * 0.5, r, d);',
         '  float alive = 0.5 + 0.5 * sin(t * 0.05 + k * 2.4);',
@@ -1669,12 +1671,15 @@
         '  float a = sin(n.x * 9.0 + n.y * 13.0 + uTime * 0.6); float b = sin(n.y * 17.0 - n.z * 11.0 - uTime * 0.4); float c = sin(n.z * 23.0 + n.x * 19.0 + uTime * 0.5);',
         '  float granule = (a + b + c) / 3.0;',
         '  float limb = 0.72 + 0.28 * abs(vViewZ);',
-        '  float spots = 1.0;',
-        '  spots *= spot(n, normalize(vec3(0.9, 0.28, 0.34)), 0.030, uTime, 0.0);',
-        '  spots *= spot(n, normalize(vec3(-0.6, -0.22, 0.77)), 0.040, uTime, 1.7);',
-        '  spots *= spot(n, normalize(vec3(0.1, 0.34, -0.93)), 0.018, uTime, 3.1);',
-        '  spots *= spot(n, normalize(vec3(-0.85, 0.12, -0.51)), 0.026, uTime, 4.6);',
-        '  spots *= spot(n, normalize(vec3(0.45, -0.3, -0.84)), 0.022, uTime, 5.9);',
+        '  float spots = 1.0;', // sunspots come in groups: a big leader spot trailed by smaller ones
+        '  spots *= spot(n, normalize(vec3(0.9, 0.28, 0.34)), 0.022, uTime, 0.0);',
+        '  spots *= spot(n, normalize(vec3(0.87, 0.22, 0.43)), 0.012, uTime, 0.9);',
+        '  spots *= spot(n, normalize(vec3(-0.6, -0.22, 0.77)), 0.024, uTime, 1.7);',
+        '  spots *= spot(n, normalize(vec3(-0.51, -0.17, 0.84)), 0.011, uTime, 2.3);',
+        '  spots *= spot(n, normalize(vec3(0.1, 0.34, -0.93)), 0.013, uTime, 3.1);',
+        '  spots *= spot(n, normalize(vec3(0.19, 0.30, -0.92)), 0.009, uTime, 3.7);',
+        '  spots *= spot(n, normalize(vec3(-0.85, 0.12, -0.51)), 0.016, uTime, 4.6);',
+        '  spots *= spot(n, normalize(vec3(0.45, -0.3, -0.84)), 0.012, uTime, 5.9);',
         '  vec2 wob = vec2(sin(vUv.y * 34.0 + uTime * 0.7), cos(vUv.x * 30.0 - uTime * 0.55)) * 0.0018;',
         '  vec3 tex = texture2D(uMap, vUv + wob + vec2(uTime * 0.0025, 0.0)).rgb * 1.12;',
         '  vec3 base = mix(uColor * (0.94 + granule * 0.1), tex, uHasMap);',
@@ -1682,7 +1687,10 @@
       ].join('\n')
     });
     solarLoadTexture('images/solar-system/sun.jpg', true).then(function (texture) {
-      if (texture) { material.uniforms.uMap.value = texture; material.uniforms.uHasMap.value = 1; }
+      if (texture) {
+        texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping; texture.needsUpdate = true; // the shader drifts UVs past 1 — clamp would smear the edge pixels into stripes
+        material.uniforms.uMap.value = texture; material.uniforms.uHasMap.value = 1;
+      }
     });
     solarAnimatedMaterials.push(material);
     return material;
@@ -1894,32 +1902,49 @@
     });
     updateSolarMotion(0);
     return SOLAR_OBJECTS;  }
+  var solarAsteroidBeltCoarse = null;
   function buildAsteroidBelt(count) {
     if (solarAsteroidBelt) {
       solarRoot.remove(solarAsteroidBelt);
       solarAsteroidBelt.geometry.dispose(); solarAsteroidBelt.geometry.disposed = true;
       solarAsteroidBelt.material.dispose(); solarAsteroidBelt.material.disposed = true;
     }
+    if (solarAsteroidBeltCoarse) {
+      solarRoot.remove(solarAsteroidBeltCoarse);
+      solarAsteroidBeltCoarse.geometry.dispose(); solarAsteroidBeltCoarse.material.dispose();
+      solarAsteroidBeltCoarse = null;
+    }
     count = Math.max(1, Math.floor(count || 2000));
     var ceres = SOLAR_BY_ID.ceres, ceresRadius = solarOrbitDistance(ceres), clearance = 4;
     solarBeltClearance.inner = ceresRadius * (1 - ceres.eccentricity) - clearance;
     solarBeltClearance.outer = ceresRadius * (1 + ceres.eccentricity) + clearance;
-    var randomState = 0x1a2b3c4d, positions = new Float32Array(count * 3), inner = solarOrbitRadius(1.9), outer = solarOrbitRadius(3.45);
+    var randomState = 0x1a2b3c4d, inner = solarOrbitRadius(1.9), outer = solarOrbitRadius(3.45);
+    var kirkwood = solarOrbitRadius(2.5), kirkwoodHalf = (outer - inner) * 0.045; // 3:1 resonance gap
     function nextRandom() { randomState = (randomState + 0x6d2b79f5) | 0; var t = Math.imul(randomState ^ randomState >>> 15, 1 | randomState); t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
-    for (var i = 0; i < count; i++) {
-      var angle, radius, nearCeres;
-      do {
-        angle = nextRandom() * Math.PI * 2; radius = inner + (outer - inner) * Math.sqrt(nextRandom());
-        var angleGap = Math.abs(Math.atan2(Math.sin(angle), Math.cos(angle)));
-        nearCeres = angleGap < solarBeltClearance.angle && radius >= solarBeltClearance.inner && radius <= solarBeltClearance.outer;
-      } while (nearCeres);
-      positions[i * 3] = Math.cos(angle) * radius; positions[i * 3 + 1] = (nextRandom() - 0.5) * 2.2; positions[i * 3 + 2] = Math.sin(angle) * radius;
+    function fillBelt(positions, n) {
+      for (var i = 0; i < n; i++) {
+        var angle, radius, rejected;
+        do {
+          angle = nextRandom() * Math.PI * 2; radius = inner + (outer - inner) * Math.sqrt(nextRandom());
+          var angleGap = Math.abs(Math.atan2(Math.sin(angle), Math.cos(angle)));
+          rejected = angleGap < solarBeltClearance.angle && radius >= solarBeltClearance.inner && radius <= solarBeltClearance.outer;
+          if (!rejected && Math.abs(radius - kirkwood) < kirkwoodHalf && nextRandom() < 0.8) rejected = true; // Kirkwood gap: mostly (not perfectly) swept clean
+        } while (rejected);
+        var thickness = 1.2 + 1.8 * (radius - inner) / (outer - inner); // the belt fattens outward
+        positions[i * 3] = Math.cos(angle) * radius; positions[i * 3 + 1] = (nextRandom() - 0.5) * thickness; positions[i * 3 + 2] = Math.sin(angle) * radius;
+      }
     }
+    var positions = new Float32Array(count * 3); fillBelt(positions, count);
     var geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     solarAsteroidBelt = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xb8b0a4, size: 1.1, map: GLOW_TEX, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+    var coarseCount = Math.max(40, Math.floor(count * 0.08)), coarsePositions = new Float32Array(coarseCount * 3); fillBelt(coarsePositions, coarseCount);
+    var coarseGeometry = new THREE.BufferGeometry(); coarseGeometry.setAttribute('position', new THREE.BufferAttribute(coarsePositions, 3));
+    solarAsteroidBeltCoarse = new THREE.Points(coarseGeometry, new THREE.PointsMaterial({ color: 0xcdbfa8, size: 1.9, map: GLOW_TEX, transparent: true, opacity: 0.75, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
     var orbitAngle = ceres.phase + solarElapsed * SOLAR_ORBIT_RATE / solarCompressedPeriod(ceres);
     solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceres, orbitAngle);
     solarAsteroidBelt.userData.solarId = 'asteroid-belt'; solarRoot.add(solarAsteroidBelt);
+    solarAsteroidBeltCoarse.rotation.y = solarAsteroidBelt.rotation.y;
+    solarAsteroidBeltCoarse.userData.solarId = 'asteroid-belt'; solarRoot.add(solarAsteroidBeltCoarse);
     return solarAsteroidBelt;
   }
   function setSolarPaused(paused) { solarPaused = !!paused; }
@@ -1957,13 +1982,12 @@
             var R = solarCME.R, positions = solarCME.positions;
             solarCME.particles.forEach(function (particle, index) {
               var k = Math.max(0, (life - particle.delay) / (1 - particle.delay));
-              var arc = 4 * k * (1 - k);
-              var r = k <= 0 ? 0 : R * (1.02 + arc * 1.1 * particle.v);
-              var lon = solarCME.lon + particle.dl * (0.5 + k), lat = particle.dp * (0.6 + k * 0.5), cl = Math.cos(lat);
+              var r = k <= 0 ? 0 : R * (1.02 + k * k * 2.6 * particle.v); // ejected outward for good — CME material does not fall back
+              var lon = solarCME.lon + particle.dl * (0.4 + k * 1.6), lat = particle.dp * (0.5 + k * 1.4), cl = Math.cos(lat);
               positions[index * 3] = r * cl * Math.cos(lon); positions[index * 3 + 1] = r * Math.sin(lat); positions[index * 3 + 2] = r * cl * Math.sin(lon);
             });
             solarCME.points.geometry.attributes.position.needsUpdate = true;
-            solarCME.points.material.opacity = 0.85 * (1 - life * life);
+            solarCME.points.material.opacity = 0.85 * Math.pow(1 - life, 1.5); // thins out as the plume disperses
           }
         }
       }
@@ -1980,6 +2004,7 @@
     if (solarAsteroidBelt) {
       var ceresObject = SOLAR_OBJECTS.ceres;
       solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceresObject.body, ceresObject.body.phase + orbitElapsed / ceresObject.compressedPeriod);
+      if (solarAsteroidBeltCoarse) solarAsteroidBeltCoarse.rotation.y = solarAsteroidBelt.rotation.y;
     }
   }
   var selectedBeacon = null;
