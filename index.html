@@ -1902,9 +1902,9 @@
         solarCME = { points: cmePoints, positions: cmePositions, particles: cmeParticles, active: false, t0: 0, lon: 0, R: radius };
         object.specialty.cme = cmePoints;
       }
-      if (body.id === 'earth') { mesh.material.shininess = 90; mesh.material.specular = new THREE.Color(0x1f1f1f); } // ocean glint: tight and subtle, not a floodlight
+      if (body.id === 'earth') mesh.material.specular = new THREE.Color(0x000000); // no specular at all — every glint attempt read as a white blob
       if (body.id === 'earth') {
-        var clouds = new THREE.Mesh(solarSphereHigh, new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.34, depthWrite: false }));
+        var clouds = new THREE.Mesh(solarSphereHigh, new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.34, depthWrite: false })); // Lambert: clouds must not throw a specular blob
         var atmosphere = new THREE.Mesh(solarSphereHigh, solarCoronaMaterial.clone());
         [clouds, atmosphere].forEach(function (layer) { layer.scale.set(radius * 1.018, radius * 1.018, radius * 1.018); layer.userData.solarId = body.id; lodGroup.add(layer); });
         atmosphere.material.uniforms.uColor.value.set(0x7fb9ff); solarAnimatedMaterials.push(atmosphere.material);
