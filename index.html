@@ -1563,7 +1563,7 @@
           ko: { type: '구상성단 · M31 내부', facts: [['질량', '태양 약 1000만 배'], ['모은하', '안드로메다 (M31)']], desc: '국부은하군에서 가장 밝고 질량이 큰 구상성단으로, 오래된 별들이 빽빽이 모인 공 모양의 집단이 안드로메다 헤일로 바깥쪽을 돌고 있습니다. 붐비는 중심부에는 중간질량 블랙홀이 숨어 있을지도 모릅니다.', catalog: 'G1 / Mayall II' }
         },
         img: 'images/g1.jpg', credit: 'Judy Schmidt (Hubble/WFPC2)' },
-      { parent: 'NGC 5128', lp: new THREE.Vector3(24, 78, 8), feat: { kind: 'jet', dir: new THREE.Vector3(0.22, 0.95, 0.1).normalize(), len: 168 },
+      { parent: 'NGC 5128', lp: new THREE.Vector3(24, 78, 8), feat: { kind: 'jet', dir: new THREE.Vector3(0.22, 0.95, 0.1).normalize(), len: 168, plasmaOnly: true },
         t: { en: ['Relativistic jet', 'from the black hole'], hans: ['相对论喷流', '来自黑洞'], hant: ['相對論噴流', '來自黑洞'], ja: ['相対論的ジェット', 'ブラックホールから'], ko: ['상대론적 제트', '블랙홀에서'] },
         info: {
           en: { type: 'Relativistic jet · Centaurus A', facts: [['Source', 'central black hole'], ['Glows in', 'radio + X-rays']], desc: 'A beam of plasma hurled outward at nearly the speed of light by the supermassive black hole at the galaxy’s heart. It blazes in radio and X-ray light, making Centaurus A one of the brightest radio sources in the entire sky.', catalog: 'Cen A jet' },
@@ -4558,24 +4558,28 @@
       var back = dir.clone().negate(), grp = new THREE.Group();
       // per-object style (defaults = the Cen A look; M87 overrides: oneSided, blue, narrow, long spine)
       var flare = feat.flare != null ? feat.flare : 0.24, curve = feat.curve != null ? feat.curve : 0.16, sLen = feat.streamLen != null ? feat.streamLen : 0.45;
-      var lobeA = jetLobe(dir, len, e1, e2, { color: feat.lobe || 0xd08744, tip: feat.lobeTip || 0xa5642e, count: 20, flare: flare, curve: curve, op: feat.lobeOp != null ? feat.lobeOp : 0.5 });
-      var streamA = jetStream(dir, len * sLen, e1, e2, { n: feat.streamN || 900, from: feat.streamFrom || 0xfff2dc, to: feat.streamTo || 0x9fc0f0, curve: curve * sLen, gain: feat.streamGain != null ? feat.streamGain : 0.6 }); // spine ON the lobe centreline
+      var lobeA = null, streamA = null;
+      if (!feat.plasmaOnly) {
+        lobeA = jetLobe(dir, len, e1, e2, { color: feat.lobe || 0xd08744, tip: feat.lobeTip || 0xa5642e, count: 20, flare: flare, curve: curve, op: feat.lobeOp != null ? feat.lobeOp : 0.5 });
+        streamA = jetStream(dir, len * sLen, e1, e2, { n: feat.streamN || 900, from: feat.streamFrom || 0xfff2dc, to: feat.streamTo || 0x9fc0f0, curve: curve * sLen, gain: feat.streamGain != null ? feat.streamGain : 0.6 }); // spine ON the lobe centreline
+      }
       var lobeB = null, streamB = null;
-      if (!feat.oneSided) {
+      if (!feat.oneSided && !feat.plasmaOnly) {
         lobeB = jetLobe(back, len * 0.9, e1, e2, { color: feat.lobeB || 0x8fb2e8, tip: feat.lobeTipB || 0x6f92d4, count: 18, flare: flare + 0.04, curve: -(curve + 0.02), op: 0.4 }); // counter-lobe, bent the other way
         streamB = jetStream(back, len * 0.3, e1, e2, { n: 500, from: 0xf2e8da, to: 0x8aa8dd, curve: -(curve + 0.02) * 0.3, gain: 0.38 });
       }
       var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xfff6e6, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
       core.scale.set(len * 0.12, len * 0.12, 1);
       // flowing plasma streams (comet ion-tail technique): BLUE up one side, VIOLET down the other
-      var plasmaA = jetPlasma(dir, len * 0.85, e1, e2, { edge: 0x2f7dff, core: 0xa8dcff, flare: flare * 0.2, curve: curve, n: 260, seed: 977 });
-      var plasmaB = feat.oneSided ? null : jetPlasma(back, len * 0.75, e1, e2, { edge: 0x8a3cff, core: 0xdcb2ff, flare: flare * 0.22, curve: -curve, n: 240, seed: 1553 });
-      grp.add(lobeA); grp.add(streamA); if (lobeB) { grp.add(lobeB); grp.add(streamB); } grp.add(core);
+      var plasmaBoost = feat.plasmaOnly ? 1.35 : 1; // plasma-only jets carry the whole look — beef them up
+      var plasmaA = jetPlasma(dir, len * 0.85, e1, e2, { edge: 0x2f7dff, core: 0xa8dcff, flare: flare * 0.2 * plasmaBoost, curve: curve, n: Math.round(260 * plasmaBoost), seed: 977 });
+      var plasmaB = feat.oneSided ? null : jetPlasma(back, len * 0.75, e1, e2, { edge: 0x8a3cff, core: 0xdcb2ff, flare: flare * 0.22 * plasmaBoost, curve: -curve, n: Math.round(240 * plasmaBoost), seed: 1553 });
+      if (lobeA) { grp.add(lobeA); grp.add(streamA); } if (lobeB) { grp.add(lobeB); grp.add(streamB); } grp.add(core);
       grp.add(plasmaA); if (plasmaB) grp.add(plasmaB);
       grp.userData.update = function (t) {
         plasmaA.userData.step(t); if (plasmaB) plasmaB.userData.step(t);
-        streamA.material.uniforms.uTime.value = t; if (streamB) streamB.material.uniforms.uTime.value = t;
-        var pa = lobeA.userData.parts, pb = lobeB ? lobeB.userData.parts : [], i;
+        if (streamA) streamA.material.uniforms.uTime.value = t; if (streamB) streamB.material.uniforms.uTime.value = t;
+        var pa = lobeA ? lobeA.userData.parts : [], pb = lobeB ? lobeB.userData.parts : [], i;
         for (i = 0; i < pa.length; i++) { pa[i].m.opacity = pa[i].op * (0.82 + 0.18 * Math.sin(t * 0.5 + pa[i].ph)); pa[i].m.rotation = pa[i].rot + 0.06 * Math.sin(t * 0.22 + pa[i].ph); }  // clouds slowly churn + swirl
         for (i = 0; i < pb.length; i++) { pb[i].m.opacity = pb[i].op * (0.82 + 0.18 * Math.sin(t * 0.45 + pb[i].ph)); pb[i].m.rotation = pb[i].rot + 0.06 * Math.sin(t * 0.2 + pb[i].ph); }
       };
