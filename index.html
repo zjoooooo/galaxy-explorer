@@ -2440,52 +2440,6 @@
     streaks.userData.z0 = z0; streaks.userData.lengths = lengths;
     return streaks;
   }
-  var solarExitWarp = null;
-  function stepSolarExitWarp() { // plays INSIDE the galaxy view: the solar system recedes down the wormhole
-    if (!solarExitWarp) return false;
-    if (!solarExitWarp.t0) {
-      solarExitWarp.t0 = performance.now();
-      var fromT = solarControls.target.clone(), from = solarCamera.position.clone();
-      var dir = from.clone().sub(fromT).normalize();
-      var to = fromT.clone().addScaledVector(dir, from.distanceTo(fromT) * 4);
-      var axis = to.clone().sub(from), span = axis.length();
-      var side = new THREE.Vector3().crossVectors(axis, new THREE.Vector3(0, 1, 0)).normalize();
-      var lift = new THREE.Vector3().crossVectors(side, axis).normalize();
-      function bend(t2, sideAmount, liftAmount) { return from.clone().addScaledVector(axis, t2).addScaledVector(side, sideAmount * span).addScaledVector(lift, liftAmount * span); }
-      solarExitWarp.curve = new THREE.CatmullRomCurve3([from, bend(0.14, 0.012, 0.012), bend(0.32, -0.08, -0.09), bend(0.55, 0.16, 0.11), bend(0.8, -0.18, -0.09), to]);
-      solarExitWarp.lookT = fromT;
-      if (!solarWarpStreaks) { solarWarpStreaks = makeWarpStreaks(); solarScene.add(solarWarpStreaks); }
-      solarWarpStreaks.visible = true;
-      controls.enabled = false;
-    }
-    var k = Math.min(1, (performance.now() - solarExitWarp.t0) / solarExitWarp.dur);
-    var e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-    e = Math.min(e, solarExitWarp.e + 0.05); solarExitWarp.e = e;
-    solarCamera.position.copy(solarExitWarp.curve.getPoint(e));
-    solarCamera.up.set(Math.sin(e * Math.PI * 2) * 0.07, 1, 0).normalize();
-    solarCamera.lookAt(solarExitWarp.lookT); // the system holds center frame and simply falls away
-    solarCamera.fov = 60 + 10 * Math.pow(Math.sin(e * Math.PI), 2);
-    solarCamera.updateProjectionMatrix();
-    var streaks = solarWarpStreaks, roll = k * 2600, array = streaks.geometry.attributes.position.array;
-    for (var i = 0; i < streaks.userData.z0.length; i++) {
-      var wrapped = ((streaks.userData.z0[i] + roll) % 280 + 280) % 280; // reversed flow: light recedes ahead — the honest signature of flying backwards
-      var z = -(wrapped + 12);
-      array[i * 12 + 2] = z; array[i * 12 + 5] = z;
-      array[i * 12 + 8] = z - streaks.userData.lengths[i]; array[i * 12 + 11] = z - streaks.userData.lengths[i];
-    }
-    streaks.geometry.attributes.position.needsUpdate = true;
-    streaks.position.copy(solarCamera.position); streaks.quaternion.copy(solarCamera.quaternion);
-    streaks.material.opacity = Math.sin(Math.min(1, k) * Math.PI);
-    updateSolarMotion(0.016);
-    if (e >= 1) {
-      solarExitWarp = null; streaks.visible = false;
-      solarCamera.up.set(0, 1, 0);
-      solarCamera.fov = 60; solarCamera.updateProjectionMatrix();
-      controls.enabled = true;
-      return false;
-    }
-    return true;
-  }
   function cancelSolarWarp() {
     if (!solarWarp && !(solarWarpStreaks && solarWarpStreaks.visible)) return;
     solarWarp = null;
@@ -2666,7 +2620,6 @@
   }
   function enterSolar() {
     if (viewMode !== 'galaxy') return;
-    solarExitWarp = null; controls.enabled = true;
     preloadSolarMaps();
     flyState = null; // cancel a partial galaxy fly before preserving the current view
     savedGalaxyView = { position: camera.position.clone(), target: controls.target.clone(), returnVisible: !!returnBtn && returnBtn.style.display === 'block' };
@@ -2687,9 +2640,8 @@
     solarControls.update();
     if (!solarReducedMotion()) solarWarp = { t0: 0, dur: 6000, e: 0 }; // queued; the frame loop performs the wormhole entry
   }
-  function exitSolar(animated) {
+  function exitSolar() {
     if (viewMode !== 'solar') return;
-    if (animated && !solarReducedMotion()) solarExitWarp = { t0: 0, dur: 6000, e: 0 }; // reverse wormhole, queued for the galaxy frames
     cancelSolarWarp();
     solarFly = null; // an abandoned fly must not resume in the next solar session
     var galaxyView = savedGalaxyView;
@@ -2712,12 +2664,12 @@
     resetSolarPerformanceWatchdog();
     perfLast = 0;
   }
-  solarBackEl.addEventListener('click', function () { if (!leaveSolarLevel()) exitSolar(true); });
+  solarBackEl.addEventListener('click', function () { if (!leaveSolarLevel()) exitSolar(); });
   window.addEventListener('keydown', function (e) {
     if ((e.key || '').toLowerCase() !== 'escape' || viewMode !== 'solar') return;
     if (document.body.classList.contains('gx-cinema')) return; // cinema mode owns Escape first
     if (solarCardOpen) { clearSolarCard(); e.stopImmediatePropagation(); return; }
-    if (!leaveSolarLevel()) exitSolar(true);
+    if (!leaveSolarLevel()) exitSolar();
     e.stopImmediatePropagation();
   });
   var SKY_R = 1000;
@@ -3495,11 +3447,6 @@
       solarPerf.labelFrame++;
       if (solarPerf.labelFrame % solarPerf.labelEvery === 0) updateSolarLabels();
       sampleSolarPerformance(solarNow);
-      rafId = requestAnimationFrame(frame);
-      return;
-    }
-    if (solarExitWarp && stepSolarExitWarp()) { // reverse-wormhole epilogue: the solar scene recedes before the galaxy takes over
-      renderer.render(solarScene, solarCamera);
       rafId = requestAnimationFrame(frame);
       return;
     }
