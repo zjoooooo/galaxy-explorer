@@ -2527,15 +2527,12 @@
       candidates.push({ body: body, label: label, x: (projected.x * 0.5 + 0.5) * window.innerWidth, y: (-projected.y * 0.5 + 0.5) * window.innerHeight,
         priority: body.id === solarNav.selectedId ? 0 : (body.id === solarLocalParent() || body.parent === solarLocalParent() ? 1 : (body.kind === 'planet' ? 2 : 3)) });
     });
-    candidates.sort(function (a, b) { return a.priority - b.priority; });
-    var kept = [];
+    // every on-screen body keeps its name — decluttering used to hide labels whenever two
+    // came near in frame, which read as names randomly vanishing while orbiting the camera
     candidates.forEach(function (candidate) {
-      var hidden = false;
-      for (var i = 0; i < kept.length; i++) if (Math.abs(candidate.x - kept[i].x) < 108 && Math.abs(candidate.y - kept[i].y) < 28) { hidden = true; break; }
-      candidate.label.style.display = hidden ? 'none' : '';
+      candidate.label.style.display = '';
       candidate.label.classList.toggle('sel', candidate.body.id === solarNav.selectedId);
       candidate.label.style.left = candidate.x + 'px'; candidate.label.style.top = candidate.y + 'px';
-      if (!hidden) kept.push(candidate);
     });
   }
   function frameSolarForViewport() { return false; }
