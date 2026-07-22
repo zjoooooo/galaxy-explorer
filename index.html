@@ -548,7 +548,7 @@
       try {
         ok(Array.isArray(solarSunGlows) && solarSunGlows.length === 4, 'Sun does not have four galactic-core glow layers');
         ok(SOLAR_OBJECTS.sun.specialty.prominences && SOLAR_OBJECTS.sun.specialty.prominences.material.uniforms.uTime, 'Sun prominence shell missing or not animated');
-        ok(Array.isArray(SOLAR_OBJECTS.sun.specialty.flares) && SOLAR_OBJECTS.sun.specialty.flares.length === 6 && SOLAR_OBJECTS.sun.specialty.flares.every(function (plane) { return plane.material.map; }), 'Sun prominence filament planes missing');
+        ok(SOLAR_OBJECTS.sun.specialty.prominenceFlow && SOLAR_OBJECTS.sun.specialty.prominenceFlow.geometry.attributes.position.count === 540 && SOLAR_OBJECTS.sun.specialty.prominenceFlow.material.vertexColors === true, 'Sun eruptive prominence particle flow missing');
         ok(SOLAR_OBJECTS.sun.specialty.cme && SOLAR_OBJECTS.sun.specialty.cme.geometry.attributes.position.count === 240, 'Sun CME particle burst missing');
         oldScales = solarSunGlows.map(function (layer) { return layer.sprite.scale.clone(); });
         solarShaderTime = 0; solarPaused = true;
@@ -571,7 +571,7 @@
       var points = 0;
       solarRoot.traverse(function (o) { if (o instanceof THREE.Points) points++; });
       ok(solarAsteroidBelt instanceof THREE.Points, 'asteroid belt is not points');
-      ok(points === 2, 'expected the dust belt and the Sun CME points');
+      ok(points === 3, 'expected the dust belt, the Sun CME points, and the prominence flow');
       ok(solarAsteroidRocks && solarAsteroidRocks.children.length === 3 && solarAsteroidRocks.children.every(function (mesh) { return mesh.isInstancedMesh; }), 'asteroid rock layer must be three instanced meshes');
       var rockTotal = solarAsteroidRocks.children.reduce(function (sum, mesh) { return sum + mesh.count; }, 0);
       ok(rockTotal >= 300, 'asteroid rock layer is too sparse');
@@ -1710,33 +1710,7 @@
     solarAnimatedMaterials.push(material);
     return material;
   }
-  // per-pixel filament textures for prominence planes (same ImageData approach as the galaxy smoke sprites — no canvas-gradient dither)
-  function prominenceTextures() {
-    function make(seed) {
-      var S = 256, canvas = document.createElement('canvas'); canvas.width = S; canvas.height = S;
-      var ctx = canvas.getContext('2d'), image = ctx.createImageData(S, S), field = new Float32Array(S * S);
-      var state = seed; function rnd() { state = (state * 1664525 + 1013904223) >>> 0; return state / 4294967296; }
-      for (var f = 0; f < 7; f++) {
-        var x0 = S * (0.15 + 0.7 * rnd()), h = S * (0.45 + 0.45 * rnd()), curve = (rnd() - 0.5) * 0.9 * S, w0 = S * (0.02 + 0.03 * rnd());
-        for (var y = 0; y < h; y++) {
-          var k = y / h, xc = x0 + curve * k * k, w = Math.max(1.2, w0 * (1 - k * 0.85)), amp = Math.pow(1 - k, 0.65);
-          var x1 = Math.max(0, Math.floor(xc - w * 3)), x2 = Math.min(S - 1, Math.ceil(xc + w * 3));
-          for (var x = x1; x <= x2; x++) { var d = (x - xc) / w; field[(S - 1 - y) * S + x] += amp * Math.exp(-d * d); }
-        }
-      }
-      for (var i = 0; i < S * S; i++) {
-        var v = Math.min(1, field[i]), q = i * 4;
-        image.data[q] = Math.round(255 * Math.pow(v, 0.55));
-        image.data[q + 1] = Math.round(190 * Math.pow(v, 0.9));
-        image.data[q + 2] = Math.round(90 * Math.pow(v, 1.4));
-        image.data[q + 3] = Math.round(255 * Math.pow(v, 0.8));
-      }
-      ctx.putImageData(image, 0, 0);
-      var texture = new THREE.CanvasTexture(canvas); texture.needsUpdate = true; return texture;
-    }
-    return [make(11), make(47), make(83)];
-  }
-  var solarFlarePlanes = [], solarCME = null;
+  var solarProminences = null, solarCME = null;
   function solarFlareShellMaterial() {
     var material = new THREE.ShaderMaterial({
       uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 } },
@@ -1892,19 +1866,29 @@
         prominences.scale.set(radius * 1.06, radius * 1.06, radius * 1.06);
         prominences.userData.solarId = 'sun'; lodGroup.add(prominences);
         object.specialty.prominences = prominences;
-        var flareTextures = prominenceTextures();
-        for (var fi = 0; fi < 6; fi++) {
-          var holder = new THREE.Group(); holder.rotation.y = fi / 6 * Math.PI * 2 + fi * 0.35;
-          var plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: flareTextures[fi % 3], transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
-          plane.rotation.z = -Math.PI / 2; // filament tips point radially outward
-          plane.position.x = radius * 1.02; // root buried in the disc, only the upper filaments show
-          plane.userData.w = radius * (0.55 + (fi % 3) * 0.1); plane.userData.h = radius * (0.65 + (fi % 2) * 0.18);
-          plane.scale.set(plane.userData.w, plane.userData.h, 1);
-          plane.userData.solarId = 'sun'; holder.add(plane); lodGroup.add(holder);
-          solarFlarePlanes.push(plane);
+        // eruptive prominences: plasma wells up from an anchor, arcs open at the top,
+        // most of it rains back to the surface, a fifth escapes and dissipates — like
+        // water slowly poured from a cup, in slow motion on the limb
+        var promState = 77031, promAnchors = [], PROM_N = 90;
+        function promRnd() { promState = (promState * 1664525 + 1013904223) >>> 0; return promState / 4294967296; }
+        for (var ai = 0; ai < 6; ai++) {
+          var anchor = { lon: ai / 6 * Math.PI * 2 + promRnd() * 0.6, lat: (promRnd() - 0.5) * 0.9, period: 55 + promRnd() * 45, phase: promRnd() * 100, particles: [] };
+          for (var pi = 0; pi < PROM_N; pi++) anchor.particles.push({
+            delay: promRnd() * 10, life: 14 + promRnd() * 10,
+            h: radius * (0.3 + promRnd() * 0.45), side: (promRnd() - 0.5) * radius * 0.55,
+            tilt: (promRnd() - 0.5) * radius * 0.3, escape: promRnd() < 0.2
+          });
+          promAnchors.push(anchor);
         }
-        object.specialty.flares = solarFlarePlanes;
-        var cmeCount = 240, cmePositions = new Float32Array(cmeCount * 3);
+        var promTotal = 6 * PROM_N, promPositions = new Float32Array(promTotal * 3), promColors = new Float32Array(promTotal * 3);
+        var promGeometry = new THREE.BufferGeometry();
+        promGeometry.setAttribute('position', new THREE.BufferAttribute(promPositions, 3));
+        promGeometry.setAttribute('color', new THREE.BufferAttribute(promColors, 3));
+        var promPoints = new THREE.Points(promGeometry, new THREE.PointsMaterial({ map: GLOW_TEX, size: 0.5, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+        promPoints.userData.solarId = 'sun'; lodGroup.add(promPoints);
+        solarProminences = { points: promPoints, anchors: promAnchors, positions: promPositions, colors: promColors, R: radius };
+        object.specialty.prominenceFlow = promPoints;
+        var cmeCount = 240, cmePositions = new Float32Array(cmeCount * 3);        var cmeCount = 240, cmePositions = new Float32Array(cmeCount * 3);
         var cmeGeometry = new THREE.BufferGeometry(); cmeGeometry.setAttribute('position', new THREE.BufferAttribute(cmePositions, 3));
         var cmePoints = new THREE.Points(cmeGeometry, new THREE.PointsMaterial({ map: GLOW_TEX, color: 0xff6a2a, size: 0.85, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
         cmePoints.visible = false; cmePoints.userData.solarId = 'sun'; lodGroup.add(cmePoints);
@@ -2030,15 +2014,30 @@
       });
       var st = solarShaderTime;
       var burst = Math.max(0, Math.min(1, (Math.sin(st * 0.11) * Math.sin(st * 0.043 + 1.7) * 2 - 0.72) / 0.28)); // same beat as the prominence shell
-      solarFlarePlanes.forEach(function (plane, index) {
-        // prominences are occasional visitors, not permanent tentacles: each filament slowly
-        // rises and sinks on its own ~2-minute cycle, visible only near the crest
-        var activity = Math.max(0, Math.min(1, (Math.sin(st * 0.05 + index * 2.7) - 0.55) / 0.35));
-        var lift = 1 + 0.05 * Math.sin(st * 0.3 + index * 1.3) + burst * 0.5;
-        plane.scale.set(plane.userData.w * (0.7 + 0.3 * activity), plane.userData.h * (0.55 + 0.45 * activity) * lift, 1);
-        plane.material.opacity = activity * (0.4 + 0.08 * Math.sin(st * 0.25 + index * 2.1)) + burst * 0.35;
-        plane.visible = plane.material.opacity > 0.02;
-      });
+      if (solarProminences) {
+        var promPos = solarProminences.positions, promCol = solarProminences.colors, promR = solarProminences.R, promIndex = 0;
+        solarProminences.anchors.forEach(function (anchor) {
+          var cycle = (st + anchor.phase) % anchor.period;
+          var cl = Math.cos(anchor.lat), radialX = cl * Math.cos(anchor.lon), radialY = Math.sin(anchor.lat), radialZ = cl * Math.sin(anchor.lon);
+          var eastX = -Math.sin(anchor.lon), eastZ = Math.cos(anchor.lon);
+          var northX = radialY * eastZ * -1, northY = radialZ * eastX - radialX * eastZ, northZ = radialY * eastX;
+          anchor.particles.forEach(function (particle) {
+            var i3 = promIndex * 3; promIndex++;
+            var t = cycle - particle.delay;
+            if (t < 0 || t > particle.life) { promPos[i3] = 0; promPos[i3 + 1] = 0; promPos[i3 + 2] = 0; promCol[i3] = 0; promCol[i3 + 1] = 0; promCol[i3 + 2] = 0; return; }
+            var k = t / particle.life;
+            var arc = particle.escape ? particle.h * k * (2 - k) * 1.25 : particle.h * 4 * k * (1 - k); // pour up, rain back — escapees keep climbing and fade out
+            var r = promR * 0.99 + arc, sway = particle.side * k, drift = particle.tilt * k;
+            promPos[i3] = radialX * r + eastX * sway + northX * drift;
+            promPos[i3 + 1] = radialY * r + northY * drift;
+            promPos[i3 + 2] = radialZ * r + eastZ * sway + northZ * drift;
+            var glow = Math.sin(Math.min(1, k) * Math.PI) * (particle.escape ? 1 - k * 0.5 : 1);
+            promCol[i3] = glow; promCol[i3 + 1] = glow * 0.45; promCol[i3 + 2] = glow * 0.18;
+          });
+        });
+        solarProminences.points.geometry.attributes.position.needsUpdate = true;
+        solarProminences.points.geometry.attributes.color.needsUpdate = true;
+      }
       if (solarCME) {
         if (!solarCME.active && burst > 0.6) {
           solarCME.active = true; solarCME.t0 = st;
