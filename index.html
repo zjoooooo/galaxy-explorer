@@ -1688,7 +1688,7 @@
     });
     solarLoadTexture('images/solar-system/sun.jpg', true).then(function (texture) {
       if (texture) {
-        texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping; texture.needsUpdate = true; // the shader drifts UVs past 1 — clamp would smear the edge pixels into stripes
+        texture.wrapT = THREE.RepeatWrapping; texture.needsUpdate = true; // the sun shader also wobbles V slightly past the edge (wrapS comes from the loader)
         material.uniforms.uMap.value = texture; material.uniforms.uHasMap.value = 1;
       }
     });
@@ -1754,6 +1754,7 @@
     var request = new Promise(function (resolve) {
       function finish(texture) {
         settled = true;
+        if (texture) texture.wrapS = THREE.RepeatWrapping; // equirectangular maps: blend mips across the 0°/360° longitude seam
         if (texture && albedo) {
           if (typeof THREE.SRGBColorSpace !== 'undefined') texture.colorSpace = THREE.SRGBColorSpace;
           else if (typeof THREE.sRGBEncoding !== 'undefined') texture.encoding = THREE.sRGBEncoding;
