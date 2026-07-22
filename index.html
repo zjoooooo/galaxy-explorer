@@ -2409,7 +2409,6 @@
       function bend(t, sideAmount, liftAmount) { return from.clone().addScaledVector(axis, t).addScaledVector(side, sideAmount * span).addScaledVector(lift, liftAmount * span); }
       // a wormhole snakes — alternating lateral bends that settle as the Solar System nears
       solarWarp.curve = new THREE.CatmullRomCurve3([from, bend(0.2, 0.15, 0.07), bend(0.45, -0.13, -0.09), bend(0.68, 0.09, 0.1), bend(0.87, -0.04, -0.04), solarWarp.to.position.clone()]);
-      solarWarp.look = new THREE.Vector3();
       if (!solarWarpStreaks) { solarWarpStreaks = makeWarpStreaks(); solarScene.add(solarWarpStreaks); }
       solarWarpStreaks.visible = true;
       solarControls.enabled = false;
@@ -2418,10 +2417,10 @@
     var e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; // easeInOutCubic: fastest at mid-tunnel where the streaks peak
     e = Math.min(e, solarWarp.e + 0.05); solarWarp.e = e;
     solarCamera.position.copy(solarWarp.curve.getPoint(e));
-    var blend = Math.max(0, Math.min(1, (e - 0.78) / 0.22)); // last stretch: swing the gaze onto the Sun
-    solarWarp.look.copy(solarWarp.curve.getPoint(Math.min(1, e + 0.04))).lerp(solarWarp.to.target, blend);
-    solarCamera.up.set(Math.sin(e * Math.PI * 2) * 0.14, 1, 0).normalize(); // gentle roll through the bends
-    solarCamera.lookAt(solarWarp.look);
+    // gaze stays LOCKED on the Solar System: it sits steady in frame and simply grows nearer,
+    // while the snaking camera path and rolling streaks carry the wormhole feel
+    solarCamera.up.set(Math.sin(e * Math.PI * 2) * 0.07, 1, 0).normalize();
+    solarCamera.lookAt(solarWarp.to.target);
     solarControls.target.copy(solarWarp.to.target);
     solarCamera.fov = 60 + 26 * Math.sin(Math.min(1, e * 1.1) * Math.PI);
     solarCamera.updateProjectionMatrix();
