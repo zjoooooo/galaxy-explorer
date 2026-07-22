@@ -160,3 +160,26 @@ Eckhard Slawik / NOIRLab series as the zodiac cards (Wikimedia Commons).
 - `images/tarantula.jpg` — ESA/Hubble & NASA, C. Murray, E. Sabbi · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:Tarantula_Nebula_Hubble_combi.jpg)
 - `images/sn1987a.jpg` — ESA/Hubble & NASA · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:SN_1987A_HST.jpg)
 - `images/ngc346.jpg` — NASA, ESA and A. Nota (STScI/ESA) · Public domain · [source](https://commons.wikimedia.org/wiki/File:NGC_346_in_Small_magellanic_cloud.jpg)
+
+### Solar-system body card photos
+
+All 18 card photos come from one source family: NASA mission photography, via Wikimedia Commons. All are in the public domain (NASA).
+
+- `images/solar-system/cards/sun.jpg` — NASA/SDO (AIA) · Public domain · [source](https://commons.wikimedia.org/wiki/File:The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg)
+- `images/solar-system/cards/mercury.jpg` — NASA/Johns Hopkins University APL/Carnegie Institution of Washington (MESSENGER) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Mercury_in_color_-_Prockter07-edit1.jpg)
+- `images/solar-system/cards/venus.jpg` — NASA (Mariner 10, processed) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Venus-real_color.jpg)
+- `images/solar-system/cards/earth.jpg` — NASA/Apollo 17 crew · Public domain · [source](https://commons.wikimedia.org/wiki/File:The_Earth_seen_from_Apollo_17.jpg)
+- `images/solar-system/cards/moon.jpg` — NASA/GSFC/Arizona State University (LRO) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Moon_nearside_LRO.jpg)
+- `images/solar-system/cards/mars.jpg` — NASA/JPL-Caltech/USGS (Viking mosaic) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Mars_Valles_Marineris.jpeg)
+- `images/solar-system/cards/ceres.jpg` — NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn) · Public domain · [source](https://commons.wikimedia.org/wiki/File:PIA19562-Ceres-DwarfPlanet-Dawn-RC3-image19-20150506.jpg)
+- `images/solar-system/cards/jupiter.jpg` — NASA/JPL/Space Science Institute (Cassini) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Portrait_of_Jupiter_from_Cassini.jpg)
+- `images/solar-system/cards/io.jpg` — NASA/JPL/University of Arizona (Galileo) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Io_highest_resolution_true_color.jpg)
+- `images/solar-system/cards/europa.jpg` — NASA/JPL/DLR (Galileo) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Europa-moon-with-margins.jpg)
+- `images/solar-system/cards/ganymede.jpg` — NASA/JPL (Galileo) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Ganymede_g1_true-edit1.jpg)
+- `images/solar-system/cards/callisto.jpg` — NASA/JPL/DLR (Galileo) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Callisto.jpg)
+- `images/solar-system/cards/saturn.jpg` — NASA/JPL/Space Science Institute (Cassini) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Saturn_during_Equinox.jpg)
+- `images/solar-system/cards/titan.jpg` — NASA/JPL-Caltech/Space Science Institute (Cassini) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Titan_in_true_color.jpg)
+- `images/solar-system/cards/uranus.jpg` — NASA/JPL-Caltech (Voyager 2) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Uranus2.jpg)
+- `images/solar-system/cards/neptune.jpg` — NASA (Voyager 2) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Neptune_Full.jpg)
+- `images/solar-system/cards/triton.jpg` — NASA/JPL/USGS (Voyager 2) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Triton_moon_mosaic_Voyager_2_%28large%29.jpg)
+- `images/solar-system/cards/pluto.jpg` — NASA/JHU APL/SwRI (New Horizons) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Pluto_in_True_Color_-_High-Res.jpg)
