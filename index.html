@@ -2449,7 +2449,8 @@
     solarCamera.updateProjectionMatrix();
     var streaks = solarWarpStreaks, roll = k * 2600, array = streaks.geometry.attributes.position.array;
     for (var i = 0; i < streaks.userData.z0.length; i++) {
-      var z = -(((streaks.userData.z0[i] + roll) % 280) + 12), zFar = z - streaks.userData.lengths[i];
+      var wrapped = ((streaks.userData.z0[i] - roll) % 280 + 280) % 280; // streaks rush TOWARD the camera — light flying at you reads as forward motion, away reads as reverse
+      var z = -(wrapped + 12), zFar = z - streaks.userData.lengths[i];
       array[i * 12 + 2] = z; array[i * 12 + 5] = z;
       array[i * 12 + 8] = zFar; array[i * 12 + 11] = zFar;
     }
