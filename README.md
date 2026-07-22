@@ -36,7 +36,7 @@ and supernovae are all math.
 - **Solar System guide** — follow the **Solar System** beacon to **Explore the
   Solar System**, then freely orbit and zoom around the Sun, eight planets,
   Pluto, Ceres, the asteroid belt and representative moons. Select a body to
-  open its illustrated information card without moving the camera or stopping
+  immediately open its illustrated information card without moving the camera or stopping
   the Solar System; from Earth, choose **Explore Earth's sky** for the star
   dome. Orbital and axial motion are intentionally slowed for observation;
   their relative directions and periods remain a visual guide. Display scale
