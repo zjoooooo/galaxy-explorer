@@ -778,20 +778,66 @@
   solarControls.minDistance = 2;
   solarControls.maxDistance = 420;
   (function buildSolarBackdrop() {
-    var N = 1400, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), c = new THREE.Color();
+    var N = 1400, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), phs = new Float32Array(N), spd = new Float32Array(N), c = new THREE.Color();
     for (var i = 0; i < N; i++) {
       var th = Math.random() * Math.PI * 2, y = Math.random() * 2 - 1, r = Math.sqrt(1 - y * y) * (520 + Math.random() * 280);
       pos[i * 3] = Math.cos(th) * r; pos[i * 3 + 1] = y * (520 + Math.random() * 280); pos[i * 3 + 2] = Math.sin(th) * r;
       var b = 0.28 + Math.random() * 0.48;
       if (Math.random() < 0.16) c.setRGB(b, b * 0.82, b * 0.62); else c.setRGB(b * 0.78, b * 0.88, b);
       col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+      phs[i] = Math.random() * 6.28318; spd[i] = 0.5 + Math.random() * 1.4;
     }
     var g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    solarBackdrop = new THREE.Points(g, new THREE.PointsMaterial({ size: 1.5, vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false }));
+    g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+    g.setAttribute('aPhase', new THREE.BufferAttribute(phs, 1));
+    g.setAttribute('aSpd', new THREE.BufferAttribute(spd, 1));
+    // twinkling shader — same recipe as the sky view: breathing shimmer + a rare scintillation flash
+    var twinkle = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uSize: { value: 2.4 * renderer.getPixelRatio() } },
+      vertexShader: 'uniform float uTime; uniform float uSize; attribute vec3 aColor; attribute float aPhase; attribute float aSpd; varying vec3 vColor;' +
+        'void main(){ vec4 vp = modelViewMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp;' +
+        ' float tw = 0.6 + 0.4 * sin(uTime * aSpd + aPhase);' +
+        ' float flare = pow(max(0.0, sin(uTime * (0.25 + aSpd * 0.2) + aPhase * 2.3)), 24.0);' +
+        ' float br = tw + flare;' +
+        ' gl_PointSize = uSize * (0.7 + 0.6 * br); vColor = aColor * br; }',
+      fragmentShader: 'varying vec3 vColor; void main(){ float d = distance(gl_PointCoord, vec2(0.5)); if (d > 0.5) discard; float s = pow(max(0.0, 1.0 - d * 2.0), 1.4); gl_FragColor = vec4(vColor, s * 0.85); }',
+      transparent: true, depthWrite: false
+    });
+    solarBackdrop = new THREE.Points(g, twinkle);
     solarScene.add(solarBackdrop);
   })();
+  var solarFx = [], solarMeteorNext = performance.now() + 8000 + Math.random() * 10000;
+  function spawnSolarMeteor() {
+    var nx = Math.random() * 1.4 - 0.7, ny = Math.random() * 1.0 - 0.25;
+    var d0 = new THREE.Vector3(nx, ny, 0.5).unproject(solarCamera).sub(solarCamera.position).normalize();
+    var ddx = (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 0.4), ddy = -(0.25 + Math.random() * 0.4);
+    var d1 = new THREE.Vector3(nx + ddx, ny + ddy, 0.5).unproject(solarCamera).sub(solarCamera.position).normalize();
+    var from = solarCamera.position.clone().addScaledVector(d0, 460), to = solarCamera.position.clone().addScaledVector(d1, 460);
+    var dir = to.clone().sub(from), dist = dir.length(); if (dist < 1) return; dir.multiplyScalar(1 / dist);
+    var viewDir = from.clone().sub(solarCamera.position).normalize();
+    var side = new THREE.Vector3().crossVectors(dir, viewDir); if (side.lengthSq() < 1e-4) side.set(0, 1, 0); else side.normalize();
+    var normal = new THREE.Vector3().crossVectors(dir, side);
+    var m = new THREE.MeshBasicMaterial({ map: METEOR_TEX, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    var mesh = new THREE.Mesh(METEOR_GEO, m);
+    mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(dir, side, normal));
+    mesh.scale.set(0.001, 2.6, 1); mesh.frustumCulled = false;
+    solarScene.add(mesh);
+    solarFx.push({ obj: mesh, mat: m, from: from, dir: dir, dist: dist, t0: performance.now(), dur: 1100 + Math.random() * 500 });
+  }
+  function updateSolarFx(nowMs) {
+    if (viewMode !== 'solar') return;
+    if (nowMs >= solarMeteorNext) { spawnSolarMeteor(); solarMeteorNext = nowMs + 9000 + Math.random() * 15000; }
+    for (var i = solarFx.length - 1; i >= 0; i--) {
+      var f = solarFx[i], k = (nowMs - f.t0) / f.dur;
+      if (k >= 1) { solarScene.remove(f.obj); f.mat.dispose(); solarFx.splice(i, 1); continue; }
+      var kh = Math.min(1, k), kt = Math.max(0, kh - 0.4), curLen = Math.max(f.dist * (kh - kt), 0.001);
+      var hx = f.from.x + f.dir.x * f.dist * kh, hy = f.from.y + f.dir.y * f.dist * kh, hz = f.from.z + f.dir.z * f.dist * kh;
+      f.obj.position.set(hx - f.dir.x * curLen * 0.5, hy - f.dir.y * curLen * 0.5, hz - f.dir.z * curLen * 0.5);
+      f.obj.scale.x = curLen;
+      f.mat.opacity = Math.pow(Math.sin(Math.min(1, k) * Math.PI), 0.8) * 0.85;
+    }
+  }
   solarRoot.add(new THREE.AmbientLight(0x51586b, 0.85)); // strong enough that night sides stay readable for teaching
   // sunlight really comes from the Sun: point light at the origin, no falloff so Neptune stays lit
   solarRoot.add(new THREE.PointLight(0xfff2dc, 1.6, 0, 0));
@@ -1649,6 +1695,7 @@
   }
   function updateSolarBackdrop() {
     if (!solarBackdrop) return;
+    if (!solarReducedMotion() && solarBackdrop.material.uniforms) solarBackdrop.material.uniforms.uTime.value = solarShaderTime;
     solarPerf.backgroundFrame++;
     if (solarPerf.backgroundFrame % solarPerf.backgroundEvery) return;
     solarBackdrop.rotation.y = solarReducedMotion() ? 0 : solarShaderTime * 0.006;
@@ -3443,6 +3490,7 @@
       updateSolarMotion(solarDt);
       if (!stepSolarWarp() && !stepSolarFly()) { stepSolarFollow(); solarControls.update(); } // warp, then fly tween, then free orbit
         updateSolarBackdrop();
+      if (!solarReducedMotion()) updateSolarFx(solarNow);
       renderer.render(solarScene, solarCamera);
       solarPerf.labelFrame++;
       if (solarPerf.labelFrame % solarPerf.labelEvery === 0) updateSolarLabels();
