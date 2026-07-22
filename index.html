@@ -841,8 +841,8 @@
   var solarComets = [];
   (function buildSolarComets() {
     var ION_N = 70, DUST_N = 110;
-    [ { q: 16, Q: 150, incl: 0.31, phase: 1.2, rate: 0.05 },
-      { q: 24, Q: 205, incl: -0.21, phase: 4.3, rate: 0.038 } ].forEach(function (spec) {
+    [ { q: 16, Q: 150, incl: 0.31, phase: 1.2, rate: 0.065 },
+      { q: 24, Q: 205, incl: -0.21, phase: 4.3, rate: 0.05 } ].forEach(function (spec) {
       var a = (spec.q + spec.Q) / 2, e = (spec.Q - spec.q) / (spec.Q + spec.q), b = a * Math.sqrt(1 - e * e);
       var group = new THREE.Group(); group.rotation.x = spec.incl; solarRoot.add(group);
       var coma = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xcfe2d8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -865,7 +865,7 @@
     solarComets.forEach(function (comet) {
       cometPoint(comet, comet.angle, solarCometPos);
       var r = solarCometPos.length();
-      comet.angle += dt * comet.rate * Math.pow(comet.q / Math.max(r, comet.q), 1.5) * 60; // Kepler's 2nd law, visually: fast at perihelion
+      comet.angle += dt * comet.rate * Math.pow(comet.q / Math.max(r, comet.q), 1.5); // Kepler's 2nd law, visually: quickest at perihelion, stately everywhere
       var activity = Math.max(0, Math.min(1, (110 - r) / 80)); // volatiles only wake within the inner system
       comet.coma.position.copy(solarCometPos);
       var comaScale = 1 + activity * 2.6;
@@ -884,10 +884,10 @@
       }
       for (var j = 0; j < comet.DUST_N; j++) { // DUST tail: grains released earlier drift anti-sunward on their own orbits → curved, lagging
         var kd = (j + 0.5) / comet.DUST_N, j3 = (comet.ION_N + j) * 3;
-        var back = kd * 0.55; // how long ago this grain left the nucleus (in orbit angle)
+        var back = kd * 0.9; // how long ago this grain left the nucleus (in orbit angle) — a longer lagging arc
         cometPoint(comet, comet.angle - back, solarCometPast);
         solarCometAnti.copy(solarCometPast).normalize();
-        var drift = (kd * kd) * 34 * activity + kd * 2; // radiation-pressure push grows with age
+        var drift = (kd * kd) * 24 * activity + kd * 2; // radiation-pressure push grows with age
         tp[j3] = solarCometPast.x + solarCometAnti.x * drift + (Math.sin(j * 3.7) * 0.7) * kd;
         tp[j3 + 1] = solarCometPast.y + (Math.cos(j * 2.9) * 0.5) * kd;
         tp[j3 + 2] = solarCometPast.z + solarCometAnti.z * drift + (Math.cos(j * 4.1) * 0.7) * kd;
@@ -1859,7 +1859,7 @@
         '  spots *= spot(n, normalize(vec3(-0.85, 0.12, -0.51)), 0.016, uTime, 4.6);',
         '  spots *= spot(n, normalize(vec3(0.45, -0.3, -0.84)), 0.012, uTime, 5.9);',
         '  vec2 wob = vec2(sin(vUv.y * 34.0 + uTime * 0.7), cos(vUv.x * 30.0 - uTime * 0.55)) * 0.0018;',
-        '  vec3 tex = texture2D(uMap, vUv + wob + vec2(uTime * 0.0025, 0.0)).rgb * 1.12;',
+        '  vec3 tex = texture2D(uMap, vUv + wob + vec2(uTime * 0.0025, 0.0)).rgb * 1.04;',
         '  vec3 base = mix(uColor * (0.94 + granule * 0.1), tex, uHasMap);',
         '  gl_FragColor = vec4(base * limb * spots, uOpacity); }'
       ].join('\n')
@@ -1884,7 +1884,7 @@
         '  float burst = smoothstep(0.72, 1.0, sin(uTime * 0.11) * sin(uTime * 0.043 + 1.7) * 2.0);',
         '  float sector = smoothstep(0.55, 1.0, sin(lon * 1.5 + uTime * 0.02));',
         '  float storm = burst * sector;',
-        '  float a = edge * (tongue * 0.5 + storm * 1.2);',
+        '  float a = edge * (tongue * 0.25 + storm * 0.7);',
         '  vec3 color = mix(vec3(1.0, 0.45, 0.1), vec3(1.0, 0.85, 0.45), min(storm, 1.0));',
         '  gl_FragColor = vec4(color, min(a, 1.0) * uOpacity); }'
       ].join('\n')
@@ -1981,10 +1981,10 @@
   }
   function makeSolarCoreLayers(radius, parent) {
     var layers = [
-      { color: 0xfffdf6, scale: 2.7, opacity: 0.8 },
-      { color: 0xfff3da, scale: 3.6, opacity: 0.5 },
-      { color: 0xffcf78, scale: 5.0, opacity: 0.26 },
-      { color: 0xff9b3f, scale: 6.8, opacity: 0.11 }
+      { color: 0xfffdf6, scale: 2.7, opacity: 0.6 },
+      { color: 0xfff3da, scale: 3.6, opacity: 0.38 },
+      { color: 0xffcf78, scale: 5.0, opacity: 0.2 },
+      { color: 0xff9b3f, scale: 6.8, opacity: 0.09 }
     ];
     return layers.map(function (layer) {
       var sprite = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -2931,7 +2931,7 @@
       solarComposer.addPass(new THREE.RenderPass(solarScene, solarCamera));
       // high threshold: the Sun blooms, planets get a whisper, dim twinkle stars stay OUT of the
       // bloom mips (sub-threshold sparkles are what caused RGB confetti in the past)
-      solarComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.75, 0.55, 0.9));
+      solarComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.42, 0.38, 0.93)); // restrained: the Sun glows without whiting out at distance
       solarComposer.addPass(new THREE.ShaderPass(THREE.CopyShader));
       solarComposer.setSize(window.innerWidth, window.innerHeight);
     } catch (e) { solarComposer = null; }
