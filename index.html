@@ -2378,20 +2378,31 @@
   // ── card-initiated fly: ease the camera to frame the body, then enter its level (moons appear)
   var solarWarp = null, solarWarpStreaks = null;
   function makeWarpStreaks() {
-    var N = 520, positions = new Float32Array(N * 6), colors = new Float32Array(N * 6), z0 = new Float32Array(N), lengths = new Float32Array(N);
+    // WebGL lines are one physical pixel — invisible on hidpi. Each streak is a thin quad
+    // instead, widened tangentially so it faces the on-axis camera.
+    var N = 420, positions = new Float32Array(N * 12), colors = new Float32Array(N * 12), index = [];
+    var z0 = new Float32Array(N), lengths = new Float32Array(N);
     var state = 0x5eed; function rnd() { state = (state * 1664525 + 1013904223) >>> 0; return state / 4294967296; }
     for (var i = 0; i < N; i++) {
       var ang = rnd() * Math.PI * 2, rad = 3 + Math.pow(rnd(), 0.6) * 42;
       var x = Math.cos(ang) * rad, y = Math.sin(ang) * rad;
-      z0[i] = rnd() * 280; lengths[i] = 10 + rnd() * 26;
-      positions[i * 6] = x; positions[i * 6 + 1] = y; positions[i * 6 + 3] = x; positions[i * 6 + 4] = y;
+      var width = 0.28 + rnd() * 0.5, tx = -Math.sin(ang) * width / 2, ty = Math.cos(ang) * width / 2;
+      z0[i] = rnd() * 280; lengths[i] = 12 + rnd() * 28;
+      var o = i * 12;
+      positions[o] = x - tx; positions[o + 1] = y - ty;      // near edge, both z filled per frame
+      positions[o + 3] = x + tx; positions[o + 4] = y + ty;
+      positions[o + 6] = x - tx; positions[o + 7] = y - ty;  // far edge
+      positions[o + 9] = x + tx; positions[o + 10] = y + ty;
       var pick = rnd(), r = pick < 0.55 ? 0.75 : pick < 0.85 ? 1 : 0.8, g = pick < 0.55 ? 0.86 : pick < 0.85 ? 1 : 0.72, b = 1;
-      colors[i * 6] = r; colors[i * 6 + 1] = g; colors[i * 6 + 2] = b; colors[i * 6 + 3] = r; colors[i * 6 + 4] = g; colors[i * 6 + 5] = b;
+      for (var v = 0; v < 4; v++) { colors[o + v * 3] = r; colors[o + v * 3 + 1] = g; colors[o + v * 3 + 2] = b; }
+      var q = i * 4;
+      index.push(q, q + 1, q + 2, q + 2, q + 1, q + 3);
     }
     var geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    var streaks = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    geometry.setIndex(index);
+    var streaks = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, fog: false }));
     streaks.frustumCulled = false; streaks.visible = false;
     streaks.userData.z0 = z0; streaks.userData.lengths = lengths;
     return streaks;
@@ -2426,8 +2437,9 @@
     solarCamera.updateProjectionMatrix();
     var streaks = solarWarpStreaks, roll = k * 2600, array = streaks.geometry.attributes.position.array;
     for (var i = 0; i < streaks.userData.z0.length; i++) {
-      var z = -(((streaks.userData.z0[i] + roll) % 280) + 12);
-      array[i * 6 + 2] = z; array[i * 6 + 5] = z - streaks.userData.lengths[i];
+      var z = -(((streaks.userData.z0[i] + roll) % 280) + 12), zFar = z - streaks.userData.lengths[i];
+      array[i * 12 + 2] = z; array[i * 12 + 5] = z;
+      array[i * 12 + 8] = zFar; array[i * 12 + 11] = zFar;
     }
     streaks.geometry.attributes.position.needsUpdate = true;
     streaks.position.copy(solarCamera.position); streaks.quaternion.copy(solarCamera.quaternion);
