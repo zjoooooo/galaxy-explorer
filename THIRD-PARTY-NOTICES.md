@@ -76,7 +76,7 @@ Real observation photographs shown in the beacon info cards, sourced from
 Wikimedia Commons. NASA imagery is public domain; CC BY 4.0 items are
 credited as required by the license.
 
-- `images/solar-system.jpg` — NASA / Apollo 17 crew (Harrison Schmitt or Ron Evans) · Public domain · [source](https://commons.wikimedia.org/wiki/File:The_Earth_seen_from_Apollo_17.jpg)
+- `images/solar-system-family.jpg` — CactiStaccingCrane (composite of NASA mission imagery) · CC BY-SA 4.0 · [source](https://commons.wikimedia.org/wiki/File:Solar_System_true_color_(captions).jpg)
 - `images/sgr-a.jpg` — EHT Collaboration · CC BY 4.0 · [source](https://commons.wikimedia.org/wiki/File:EHT_Saggitarius_A_black_hole.tif)
 - `images/orion-nebula.jpg` — NASA, ESA, M. Robberto (STScI/ESA) and the Hubble Space Telescope Orion Treasury Project Team · Public domain · [source](https://commons.wikimedia.org/wiki/File:Orion_Nebula_-_Hubble_2006_mosaic_18000.jpg)
 - `images/crab-nebula.jpg` — NASA, ESA, J. Hester and A. Loll (Arizona State University) — Hubble · Public domain · [source](https://commons.wikimedia.org/wiki/File:Crab_Nebula.jpg)

@@ -1900,7 +1900,7 @@
         solarCME = { points: cmePoints, positions: cmePositions, particles: cmeParticles, active: false, t0: 0, lon: 0, R: radius };
         object.specialty.cme = cmePoints;
       }
-      if (body.id === 'earth') { mesh.material.shininess = 30; mesh.material.specular = new THREE.Color(0x555555); } // ocean glint
+      if (body.id === 'earth') { mesh.material.shininess = 90; mesh.material.specular = new THREE.Color(0x1f1f1f); } // ocean glint: tight and subtle, not a floodlight
       if (body.id === 'earth') {
         var clouds = new THREE.Mesh(solarSphereHigh, new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.34, depthWrite: false }));
         var atmosphere = new THREE.Mesh(solarSphereHigh, solarCoronaMaterial.clone());
@@ -2383,14 +2383,16 @@
   }
   function stepSolarFly() { // called each frame in solar view; tracks the moving body while flying
     if (!solarFly) return false;
+    solarControls.update(); // burn off any leftover drag momentum; the tween overwrites the camera below
     var object = SOLAR_OBJECTS[solarFly.id];
     object.mesh.getWorldPosition(solarFly.wp);
     var p1 = solarFly.wp.clone().addScaledVector(solarFly.dir, solarFly.dist); p1.y += solarFly.lift;
     var k = Math.min(1, (performance.now() - solarFly.start) / solarFly.dur);
     var e2 = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // easeInOutQuad
+    e2 = Math.min(e2, (solarFly.e || 0) + 0.05); solarFly.e = e2; // a dropped frame must never snap the camera to the end
     solarCamera.position.lerpVectors(solarFly.p0, p1, e2);
     solarControls.target.lerpVectors(solarFly.t0, solarFly.wp, e2);
-    if (k >= 1) {
+    if (e2 >= 1) {
       var id = solarFly.id, body = SOLAR_BY_ID[id], r = Math.max(object.radius, 0.5);
       solarFly = null;
       solarControls.enabled = true;
@@ -2446,14 +2448,18 @@
     solarRoot.updateMatrixWorld(true);
     var hits = solarRaycaster.intersectObjects(proxies, false);
     if (hits.length) {
-      // nearest-surface picking lets a big planet's proxy eclipse the small moon beside it;
-      // choose the hit whose body center is most centered on the click ray instead
-      var best = null, bestScore = Infinity, hitPoint = new THREE.Vector3();
+      // Two rules keep clicks honest: bodies of the CURRENT system beat distant planets whose
+      // huge proxies happen to sit behind them, and angular distance to the click ray decides
+      // ties (normalizing by proxy size would favor big bodies again).
+      var localParent = solarNav.level === 'overview' ? null : solarLocalParent();
+      var best = null, bestLocal = false, bestScore = Infinity, hitPoint = new THREE.Vector3();
       hits.forEach(function (hit) {
-        var object = SOLAR_OBJECTS[hit.object.userData.solarId]; if (!object) return;
+        var id = hit.object.userData.solarId, object = SOLAR_OBJECTS[id]; if (!object) return;
+        var body = SOLAR_BY_ID[id];
+        var isLocal = !!localParent && (id === localParent || body.parent === localParent);
         object.mesh.getWorldPosition(hitPoint);
-        var score = solarRaycaster.ray.distanceToPoint(hitPoint) / Math.max(hit.object.scale.x, 1e-6);
-        if (score < bestScore) { bestScore = score; best = hit.object.userData.solarId; }
+        var score = solarRaycaster.ray.distanceToPoint(hitPoint) / Math.max(solarCamera.position.distanceTo(hitPoint), 1e-6);
+        if ((isLocal && !bestLocal) || (isLocal === bestLocal && score < bestScore)) { bestLocal = isLocal; bestScore = score; best = id; }
       });
       if (best) selectSolarBody(best);
     }
@@ -2799,7 +2805,7 @@
 
   // ── real telescope photos for the beacon cards (see THIRD-PARTY-NOTICES.md) ──
   var BEACON_IMGS = [
-    {"img":"images/solar-system.jpg","credit":"NASA / Apollo 17 crew (Harrison Schmitt or Ron Evans)"},
+    {"img":"images/solar-system-family.jpg","credit":"CactiStaccingCrane, NASA imagery · CC BY-SA 4.0"},
     {"img":"images/sgr-a.jpg","credit":"EHT Collaboration"},
     {"img":"images/orion-nebula.jpg","credit":"NASA, ESA, M. Robberto (STScI/ESA) and the Hubble Space Telescope Orion Treasury Project Team"},
     {"img":"images/crab-nebula.jpg","credit":"NASA, ESA, J. Hester and A. Loll (Arizona State University) — Hubble"},
