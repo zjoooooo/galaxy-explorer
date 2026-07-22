@@ -4490,6 +4490,37 @@
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
       }));
     }
+    function jetPlasma(dir, len, e1, e2, o) { // flowing plasma stream — the comet ion-tail technique aimed down the jet axis
+      var N = o.n || 130, particles = [], state = o.seed || 977;
+      function prand() { state = (state * 1664525 + 1013904223) >>> 0; return state / 4294967296; }
+      for (var i = 0; i < N; i++) particles.push({ frac: (i + 0.5) / N, lat1: (prand() - 0.5), lat2: (prand() - 0.5), speed: 0.6 + prand() * 0.9 });
+      var positions = new Float32Array(N * 3), colors = new Float32Array(N * 3);
+      var geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      var points = new THREE.Points(geometry, new THREE.PointsMaterial({ map: GLOW_TEX, size: len * 0.045, vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+      points.frustumCulled = false;
+      var edge = new THREE.Color(o.edge), coreColor = new THREE.Color(o.core), mixed = new THREE.Color();
+      points.userData.step = function (t) {
+        for (var i = 0; i < N; i++) {
+          var particle = particles[i], i3 = i * 3;
+          var kk = (particle.frac + t * 0.045 * particle.speed) % 1;
+          var spread = len * (0.012 + kk * (o.flare || 0.1));
+          var kink = Math.sin(kk * 6.5 - t * 1.2) * len * 0.012 * kk;
+          var bend = (o.curve || 0) * len * kk * kk;
+          positions[i3] = dir.x * len * kk + e1.x * (particle.lat1 * spread + kink) + e2.x * (particle.lat2 * spread + bend);
+          positions[i3 + 1] = dir.y * len * kk + e1.y * (particle.lat1 * spread + kink) + e2.y * (particle.lat2 * spread + bend);
+          positions[i3 + 2] = dir.z * len * kk + e1.z * (particle.lat1 * spread + kink) + e2.z * (particle.lat2 * spread + bend);
+          var coreW = 1 - Math.min(1, Math.sqrt(particle.lat1 * particle.lat1 + particle.lat2 * particle.lat2) * 2.2);
+          var fade = Math.pow(1 - kk, 1.2) * (0.75 + 0.25 * Math.sin(t * 2.2 + i));
+          mixed.copy(edge).lerp(coreColor, coreW);
+          colors[i3] = mixed.r * fade; colors[i3 + 1] = mixed.g * fade; colors[i3 + 2] = mixed.b * fade;
+        }
+        geometry.attributes.position.needsUpdate = true;
+        geometry.attributes.color.needsUpdate = true;
+      };
+      return points;
+    }
     function buildJet(feat) { // bipolar jet modelled on the real Cen A composite photo: an orange billowing
       // lobe one way (submm), a translucent blue bubble lobe the other (radio/X-ray), bright filaments inside
       var len = feat.len || 150, dir = (feat.dir || new THREE.Vector3(0, 1, 0)).clone().normalize();
@@ -4507,8 +4538,13 @@
       }
       var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xfff6e6, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
       core.scale.set(len * 0.12, len * 0.12, 1);
+      // flowing plasma streams (comet ion-tail technique): BLUE up one side, VIOLET down the other
+      var plasmaA = jetPlasma(dir, len * 0.85, e1, e2, { edge: 0x2f7dff, core: 0xa8dcff, flare: flare * 0.45, curve: curve, n: 130, seed: 977 });
+      var plasmaB = feat.oneSided ? null : jetPlasma(back, len * 0.75, e1, e2, { edge: 0x8a3cff, core: 0xdcb2ff, flare: flare * 0.5, curve: -curve, n: 120, seed: 1553 });
       grp.add(lobeA); grp.add(streamA); if (lobeB) { grp.add(lobeB); grp.add(streamB); } grp.add(core);
+      grp.add(plasmaA); if (plasmaB) grp.add(plasmaB);
       grp.userData.update = function (t) {
+        plasmaA.userData.step(t); if (plasmaB) plasmaB.userData.step(t);
         streamA.material.uniforms.uTime.value = t; if (streamB) streamB.material.uniforms.uTime.value = t;
         var pa = lobeA.userData.parts, pb = lobeB ? lobeB.userData.parts : [], i;
         for (i = 0; i < pa.length; i++) { pa[i].m.opacity = pa[i].op * (0.82 + 0.18 * Math.sin(t * 0.5 + pa[i].ph)); pa[i].m.rotation = pa[i].rot + 0.06 * Math.sin(t * 0.22 + pa[i].ph); }  // clouds slowly churn + swirl
