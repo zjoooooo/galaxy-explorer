@@ -841,8 +841,8 @@
   var solarComets = [];
   (function buildSolarComets() {
     var ION_N = 70, DUST_N = 110;
-    [ { q: 16, Q: 150, incl: 0.31, phase: 1.2, rate: 0.065 },
-      { q: 24, Q: 205, incl: -0.21, phase: 4.3, rate: 0.05 } ].forEach(function (spec) {
+    [ { q: 16, Q: 150, incl: 0.31, phase: 1.2, rate: 0.014 },
+      { q: 24, Q: 205, incl: -0.21, phase: 4.3, rate: 0.011 } ].forEach(function (spec) {
       var a = (spec.q + spec.Q) / 2, e = (spec.Q - spec.q) / (spec.Q + spec.q), b = a * Math.sqrt(1 - e * e);
       var group = new THREE.Group(); group.rotation.x = spec.incl; solarRoot.add(group);
       var coma = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xcfe2d8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
