@@ -648,7 +648,7 @@
           ok(solarLabelButtons[body.id].getAttribute('aria-label') === text, body.id + ' label aria name is not localized');
         });
         var overviewProxies = solarActiveProxies();
-        ok(overviewProxies.length && overviewProxies.every(function (proxy) { return proxy.visible && proxy.userData.solarActive && !SOLAR_BY_ID[proxy.userData.solarId].parent; }), 'overview raycast includes an inactive proxy');
+        ok(overviewProxies.length && overviewProxies.every(function (proxy) { return proxy.userData.solarComet != null || (proxy.visible && proxy.userData.solarActive && !SOLAR_BY_ID[proxy.userData.solarId].parent); }), 'overview raycast includes an inactive proxy');
         var earthObject = SOLAR_OBJECTS.earth, earthPoint = new THREE.Vector3(); earthObject.mesh.getWorldPosition(earthPoint);
         var expectedProxyRadius = 2 * Math.tan(solarCamera.fov * Math.PI / 360) * solarCamera.position.distanceTo(earthPoint) / window.innerHeight * 16;
         ok(solarHitRadius(earthObject, earthPoint) >= expectedProxyRadius, 'Earth proxy is smaller than a 32 CSS-pixel target');
@@ -664,7 +664,7 @@
         updateSolarMotion(0.05);
         ok(solarElapsed > elapsedBeforeSelection && !solarPaused, 'Earth selection stopped Solar motion');
         ok(solarNav.selectedId === 'earth' && solarNav.parentId === null && solarNav.cameraStack.length === 1, 'Earth focus did not retain overview');
-        ok(solarActiveProxies().every(function (proxy) { var body = SOLAR_BY_ID[proxy.userData.solarId]; return !body.parent || body.parent === 'earth'; }), 'Earth focus raycast lost the planets or leaked foreign moons');
+        ok(solarActiveProxies().every(function (proxy) { if (proxy.userData.solarComet != null) return true; var body = SOLAR_BY_ID[proxy.userData.solarId]; return !body.parent || body.parent === 'earth'; }), 'Earth focus raycast lost the planets or leaked foreign moons');
         ok(SOLAR_OBJECTS.mars.hitProxy.userData.solarActive, 'other planets went unselectable in Earth focus');
         focusSolarBody('moon');
         ok(solarCardOpen && document.getElementById('bp-name').textContent === SOLAR_BY_ID.moon.info[beaconLang].name, 'Moon selection did not open its card immediately');
@@ -840,22 +840,83 @@
   // pushes them out — per Jewitt & the standard comet-tail model ──
   var solarComets = [];
   (function buildSolarComets() {
-    var ION_N = 70, DUST_N = 110;
+    var ION_N = 90, DUST_N = 150, state = 4242;
+    function crnd() { state = (state * 1664525 + 1013904223) >>> 0; return state / 4294967296; }
     [ { q: 16, Q: 150, incl: 0.31, phase: 1.2, rate: 0.014 },
-      { q: 24, Q: 205, incl: -0.21, phase: 4.3, rate: 0.011 } ].forEach(function (spec) {
+      { q: 24, Q: 205, incl: -0.21, phase: 4.3, rate: 0.011 } ].forEach(function (spec, cometIndex) {
       var a = (spec.q + spec.Q) / 2, e = (spec.Q - spec.q) / (spec.Q + spec.q), b = a * Math.sqrt(1 - e * e);
       var group = new THREE.Group(); group.rotation.x = spec.incl; solarRoot.add(group);
-      var coma = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xcfe2d8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
-      group.add(coma);
+      var coma = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xbcd8cf, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+      var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+      group.add(coma); group.add(core);
+      var ions = [], dust = [];
+      for (var i = 0; i < ION_N; i++) ions.push({ frac: (i + 0.5) / ION_N, lat1: (crnd() - 0.5), lat2: (crnd() - 0.5), speed: 0.6 + crnd() * 0.9 });
+      for (var j = 0; j < DUST_N; j++) dust.push({ stria: j % 6, kd: (Math.floor(j / 6) + 0.5) / (DUST_N / 6) + (crnd() - 0.5) * 0.03, jag: (crnd() - 0.5), glint: crnd() * 6.28 });
       var N = ION_N + DUST_N, tp = new Float32Array(N * 3), tc = new Float32Array(N * 3);
       var tg = new THREE.BufferGeometry();
       tg.setAttribute('position', new THREE.BufferAttribute(tp, 3));
       tg.setAttribute('color', new THREE.BufferAttribute(tc, 3));
       var tails = new THREE.Points(tg, new THREE.PointsMaterial({ map: GLOW_TEX, size: 2.3, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
       tails.frustumCulled = false; group.add(tails);
-      solarComets.push({ a: a, b: b, e: e, angle: spec.phase, rate: spec.rate, q: spec.q, group: group, coma: coma, tails: tails, positions: tp, colors: tc, ION_N: ION_N, DUST_N: DUST_N });
+      var hitProxy = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+      hitProxy.scale.setScalar(5); hitProxy.userData.solarComet = cometIndex; group.add(hitProxy);
+      solarComets.push({ a: a, b: b, e: e, angle: spec.phase, rate: spec.rate, q: spec.q, group: group, coma: coma, core: core,
+        hitProxy: hitProxy, tails: tails, positions: tp, colors: tc, ions: ions, dust: dust, index: cometIndex });
     });
   })();
+  var COMET_INFO = [
+    { img: 'images/comet-halley.jpg', credit: "NASA/W. Liller — Halley's Comet, 1986",
+      name: { en: 'Short-period Comet', hans: '短周期彗星', hant: '短週期彗星', ja: '短周期彗星', ko: '단주기 혜성' },
+      type: { en: 'Icy Solar System visitor', hans: '太阳系冰质访客', hant: '太陽系冰質訪客', ja: '太陽系の氷の訪問者', ko: '태양계의 얼음 방문자' },
+      facts: {
+        en: [['Nucleus', 'A "dirty snowball" of ice and dust'], ['Blue ion tail', 'Ionized gas glows; pinned straight anti-sunward by the solar wind'], ['White dust tail', 'Dust reflecting sunlight; curves gently along the orbit']],
+        hans: [['彗核', '冰与尘埃组成的"脏雪球"'], ['蓝色离子尾', '电离气体自身发光,被太阳风吹得笔直背向太阳'], ['黄白尘埃尾', '尘埃反射阳光,沿轨道方向平缓弯曲']],
+        hant: [['彗核', '冰與塵埃組成的「髒雪球」'], ['藍色離子尾', '電離氣體自身發光,被太陽風吹得筆直背向太陽'], ['黃白塵埃尾', '塵埃反射陽光,沿軌道方向平緩彎曲']],
+        ja: [['彗星核', '氷と塵からなる「汚れた雪玉」'], ['青いイオンの尾', '電離したガス自身が発光し、太陽風で反太陽方向へまっすぐ流される'], ['白い塵の尾', '塵が太陽光を反射し、軌道に沿って緩やかに曲がる']],
+        ko: [['혜성 핵', '얼음과 먼지로 이루어진 "더러운 눈덩이"'], ['푸른 이온 꼬리', '이온화된 가스가 스스로 빛나며 태양풍에 의해 태양 반대쪽으로 곧게 뻗음'], ['흰 먼지 꼬리', '먼지가 햇빛을 반사하며 궤도를 따라 완만하게 휘어짐']]
+      },
+      desc: {
+        en: 'A demonstration comet on a Halley-type orbit. Watch it near the Sun: the tails always point AWAY from the Sun — leaving the inner system, a comet travels tail-first.',
+        hans: '一颗哈雷型轨道的示意彗星。注意观察它靠近太阳时:彗尾永远背向太阳——离开内太阳系时,彗星其实是"尾巴朝前"倒着飞的。',
+        hant: '一顆哈雷型軌道的示意彗星。注意觀察它靠近太陽時:彗尾永遠背向太陽——離開內太陽系時,彗星其實是「尾巴朝前」倒著飛的。',
+        ja: 'ハレー型軌道のデモ彗星です。太陽に近づくときに注目:尾はつねに太陽と反対側を向くため、内太陽系を離れるとき彗星は「尾を先頭に」飛んでいきます。',
+        ko: '핼리형 궤도의 시연용 혜성입니다. 태양에 가까울 때 관찰해 보세요: 꼬리는 언제나 태양 반대쪽을 향하므로, 내태양계를 떠날 때 혜성은 "꼬리를 앞세우고" 날아갑니다.'
+      } },
+    { img: 'images/comet-hale-bopp.jpg', credit: 'E. Kolmhofer, H. Raab / Johannes Kepler Observatory · CC BY-SA 3.0 — Hale-Bopp, 1997',
+      name: { en: 'Long-period Comet', hans: '长周期彗星', hant: '長週期彗星', ja: '長周期彗星', ko: '장주기 혜성' },
+      type: { en: 'Icy Solar System visitor', hans: '太阳系冰质访客', hant: '太陽系冰質訪客', ja: '太陽系の氷の訪問者', ko: '태양계의 얼음 방문자' },
+      facts: {
+        en: [['Coma', 'A glowing gas-dust cloud that wakes only near the Sun'], ['Two tails', 'Blue = glowing ionized gas; white = sunlit dust'], ['Farther out', 'Tails and coma fade away — only a dark nucleus travels on']],
+        hans: [['彗发', '靠近太阳才苏醒的发光气体尘埃云'], ['两条彗尾', '蓝色 = 发光的电离气体;黄白 = 反光的尘埃'], ['远离太阳后', '彗发与彗尾逐渐消退——只剩暗淡的彗核继续旅行']],
+        hant: [['彗髮', '靠近太陽才甦醒的發光氣體塵埃雲'], ['兩條彗尾', '藍色 = 發光的電離氣體;黃白 = 反光的塵埃'], ['遠離太陽後', '彗髮與彗尾逐漸消退——只剩暗淡的彗核繼續旅行']],
+        ja: [['コマ', '太陽の近くでだけ目覚める、光るガスと塵の雲'], ['二本の尾', '青=発光する電離ガス、白=陽光を反射する塵'], ['太陽から離れると', '尾もコマも消えていき、暗い核だけが旅を続けます']],
+        ko: [['코마', '태양 가까이에서만 깨어나는 빛나는 가스·먼지 구름'], ['두 개의 꼬리', '파랑 = 빛나는 이온화 가스, 흰색 = 햇빛을 반사하는 먼지'], ['태양에서 멀어지면', '꼬리와 코마는 사라지고 어두운 핵만 여행을 계속합니다']]
+      },
+      desc: {
+        en: 'A demonstration comet like Hale-Bopp, whose 1997 photograph shows exactly these two tails — one blue, one white — fanning apart from the bright coma.',
+        hans: '一颗海尔-波普式的示意彗星——1997 年的真实照片里,正是这样一蓝一白的两条彗尾从明亮的彗发中张开。',
+        hant: '一顆海爾-波普式的示意彗星——1997 年的真實照片裡,正是這樣一藍一白的兩條彗尾從明亮的彗髮中張開。',
+        ja: 'ヘール・ボップ彗星型のデモ彗星です。1997年の実際の写真には、まさにこのように青と白の二本の尾が明るいコマから扇状に広がる姿が写っています。',
+        ko: '헤일-밥 혜성형 시연용 혜성입니다. 1997년의 실제 사진에는 바로 이렇게 파란 꼬리와 흰 꼬리가 밝은 코마에서 부챗살처럼 펼쳐진 모습이 담겨 있습니다.'
+      } }
+  ];
+  var solarCometSelected = null;
+  function renderCometPanel(cometIndex, lang) {
+    var info = COMET_INFO[cometIndex]; if (!info) return false;
+    var L = info.name[lang] ? lang : 'en';
+    var html = '<h2 id="bp-name">' + esc(info.name[L]) + '</h2><span id="bp-type">' + esc(info.type[L]) + '</span>' +
+      '<img id="bp-img" src="' + info.img + '" alt="' + esc(info.name[L]) + '" loading="lazy"><div id="bp-credit">' + esc(info.credit) + '</div>' +
+      '<table id="bp-facts">' + info.facts[L].map(function (row) { return '<tr><th>' + esc(row[0]) + '</th><td>' + esc(row[1]) + '</td></tr>'; }).join('') + '</table>' +
+      '<p id="bp-desc">' + esc(info.desc[L]) + '</p>';
+    bpBody.innerHTML = html;
+    bpEl.classList.add('open');
+    solarCometSelected = cometIndex; solarCardOpen = true;
+    return true;
+  }
+  function selectSolarComet(cometIndex) {
+    solarNav.selectedId = null;
+    return renderCometPanel(cometIndex, beaconLang);
+  }
   var solarCometPos = new THREE.Vector3(), solarCometPast = new THREE.Vector3(), solarCometAnti = new THREE.Vector3();
   function cometPoint(comet, angle, target) {
     target.set(Math.cos(angle) * comet.a - comet.e * comet.a, 0, Math.sin(angle) * comet.b);
@@ -867,32 +928,49 @@
       var r = solarCometPos.length();
       comet.angle += dt * comet.rate * Math.pow(comet.q / Math.max(r, comet.q), 1.5); // Kepler's 2nd law, visually: quickest at perihelion, stately everywhere
       var activity = Math.max(0, Math.min(1, (110 - r) / 80)); // volatiles only wake within the inner system
+      var st2 = solarShaderTime;
       comet.coma.position.copy(solarCometPos);
-      var comaScale = 1 + activity * 2.6;
+      var comaScale = 1 + activity * (2.6 + Math.sin(st2 * 1.7 + comet.index * 3) * 0.18); // the coma gently breathes
       comet.coma.scale.set(comaScale, comaScale, 1);
-      comet.coma.material.opacity = 0.12 + activity * 0.55;
+      comet.coma.material.opacity = 0.1 + activity * 0.45;
+      comet.core.position.copy(solarCometPos);
+      comet.hitProxy.position.copy(solarCometPos);
+      var coreScale = 0.5 + activity * 0.9;
+      comet.core.scale.set(coreScale, coreScale, 1);
+      comet.core.material.opacity = 0.25 + activity * 0.6; // bright inner core inside the diffuse coma
       solarCometAnti.copy(solarCometPos).normalize(); // anti-solar direction (from the Sun through the comet)
+      // orthogonal frame across the tail axis, for lateral structure
+      var e1x = -solarCometAnti.z, e1z = solarCometAnti.x; // horizontal perpendicular
       var tp = comet.positions, tc = comet.colors, ionLen = (12 + 34 * activity);
-      for (var i = 0; i < comet.ION_N; i++) { // ION tail: narrow, straight, dead anti-sunward, blue glow
-        var k = (i + 0.5) / comet.ION_N, i3 = i * 3;
-        var wig = Math.sin(k * 9 + comet.angle * 7) * 0.5 * k; // faint magnetic kinks
-        tp[i3] = solarCometPos.x + solarCometAnti.x * ionLen * k + wig;
-        tp[i3 + 1] = solarCometPos.y + wig * 0.6;
-        tp[i3 + 2] = solarCometPos.z + solarCometAnti.z * ionLen * k - wig;
-        var fade = Math.pow(1 - k, 1.3) * activity;
-        tc[i3] = 0.35 * fade; tc[i3 + 1] = 0.55 * fade; tc[i3 + 2] = 1.0 * fade;
+      for (var i = 0; i < comet.ions.length; i++) {
+        // ION tail: plasma streams DOWN the tail (flowing phase), bright cyan core, blue fringe,
+        // widening toward the tip, with drifting magnetic kinks
+        var ion = comet.ions[i], i3 = i * 3;
+        var kk = (ion.frac + st2 * 0.05 * ion.speed) % 1;
+        var spread2 = 0.25 + kk * 1.9;
+        var kink = Math.sin(kk * 7 - st2 * 1.4) * 0.7 * kk;
+        tp[i3] = solarCometPos.x + solarCometAnti.x * ionLen * kk + e1x * (ion.lat1 * spread2 + kink);
+        tp[i3 + 1] = solarCometPos.y + ion.lat2 * spread2 + kink * 0.4;
+        tp[i3 + 2] = solarCometPos.z + solarCometAnti.z * ionLen * kk + e1z * (ion.lat1 * spread2 + kink);
+        var coreW = 1 - Math.min(1, Math.sqrt(ion.lat1 * ion.lat1 + ion.lat2 * ion.lat2) * 2.2);
+        var fade = Math.pow(1 - kk, 1.25) * activity * (0.75 + 0.25 * Math.sin(st2 * 2.4 + i));
+        tc[i3] = (0.22 + 0.5 * coreW) * fade; tc[i3 + 1] = (0.42 + 0.45 * coreW) * fade; tc[i3 + 2] = 1.0 * fade;
       }
-      for (var j = 0; j < comet.DUST_N; j++) { // DUST tail: grains released earlier drift anti-sunward on their own orbits → curved, lagging
-        var kd = (j + 0.5) / comet.DUST_N, j3 = (comet.ION_N + j) * 3;
-        var back = kd * kd * 0.22; // orbital lag builds up only far down the tail — near the head the fan leaves straight anti-solar (no hook)
+      for (var j = 0; j < comet.dust.length; j++) {
+        // DUST tail: six synchronic striae fan out — grains leave anti-solar immediately,
+        // orbital lag bends only the far tail, and each stria glints softly
+        var grain = comet.dust[j], j3 = (comet.ions.length + j) * 3, kd = grain.kd;
+        var back = kd * kd * 0.22;
         cometPoint(comet, comet.angle - back, solarCometPast);
         solarCometAnti.copy(solarCometPast).normalize();
-        var drift = kd * 26 * activity + kd * kd * 8; // linear from the very root: dust departs anti-solar immediately, widening smoothly
-        tp[j3] = solarCometPast.x + solarCometAnti.x * drift + (Math.sin(j * 3.7) * 0.7) * kd;
-        tp[j3 + 1] = solarCometPast.y + (Math.cos(j * 2.9) * 0.5) * kd;
-        tp[j3 + 2] = solarCometPast.z + solarCometAnti.z * drift + (Math.cos(j * 4.1) * 0.7) * kd;
-        var fd = Math.pow(1 - kd, 1.5) * activity;
-        tc[j3] = 1.0 * fd; tc[j3 + 1] = 0.93 * fd; tc[j3 + 2] = 0.78 * fd;
+        var drift = kd * 26 * activity + kd * kd * 8;
+        var striaOff = (grain.stria / 5 - 0.5) * (1.5 + kd * 7) + grain.jag * 0.6; // the fan's radial streaks
+        tp[j3] = solarCometPast.x + solarCometAnti.x * drift + e1x * striaOff;
+        tp[j3 + 1] = solarCometPast.y + grain.jag * 0.8 * kd;
+        tp[j3 + 2] = solarCometPast.z + solarCometAnti.z * drift + e1z * striaOff;
+        var striaW = 1 - Math.abs(grain.stria / 5 - 0.5) * 0.8; // center streaks brightest
+        var fd = Math.pow(1 - kd, 1.5) * activity * striaW * (0.8 + 0.2 * Math.sin(st2 * 2 + grain.glint));
+        tc[j3] = 1.0 * fd; tc[j3 + 1] = 0.92 * fd; tc[j3 + 2] = 0.74 * fd;
       }
       comet.tails.geometry.attributes.position.needsUpdate = true;
       comet.tails.geometry.attributes.color.needsUpdate = true;
@@ -1271,6 +1349,7 @@
     if (typeof viewMode !== 'undefined' && viewMode === 'solar') {
       if (typeof updateSolarLabels === 'function') updateSolarLabels();
       if (typeof solarNav !== 'undefined' && solarNav && solarCardOpen && solarNav.selectedId && typeof renderSolarPanel === 'function') renderSolarPanel(solarNav.selectedId, lang);
+      if (typeof solarCometSelected !== 'undefined' && solarCometSelected !== null && typeof renderCometPanel === 'function') renderCometPanel(solarCometSelected, lang);
     }
   }
   (function buildBeacons() {
@@ -2534,9 +2613,41 @@
       candidate.label.classList.toggle('sel', candidate.body.id === solarNav.selectedId);
       candidate.label.style.left = candidate.x + 'px'; candidate.label.style.top = candidate.y + 'px';
     });
+    solarComets.forEach(function (comet, cometIndex) { // comet name labels, same treatment as the bodies
+      var label = solarCometLabelFor(cometIndex);
+      comet.coma.getWorldPosition(solarLabelPoint);
+      var projected = solarLabelProjected.copy(solarLabelPoint).project(solarCamera);
+      if (projected.z < -1 || projected.z > 1 || projected.x < -1 || projected.x > 1 || projected.y < -1 || projected.y > 1) { label.style.display = 'none'; return; }
+      label.style.display = '';
+      label.classList.toggle('sel', solarCometSelected === cometIndex);
+      label.style.left = ((projected.x * 0.5 + 0.5) * window.innerWidth) + 'px';
+      label.style.top = ((-projected.y * 0.5 + 0.5) * window.innerHeight) + 'px';
+    });
+  }
+  var solarCometLabels = {};
+  function solarCometLabelFor(cometIndex) {
+    var label = solarCometLabels[cometIndex];
+    if (!label) {
+      label = document.createElement('button'); label.type = 'button'; label.className = 'solar-label';
+      label.addEventListener('pointerdown', function (e) {
+        e.stopPropagation();
+        if (label.setPointerCapture) try { label.setPointerCapture(e.pointerId); } catch (err) {}
+        label.dataset.px = e.clientX; label.dataset.py = e.clientY;
+      });
+      label.addEventListener('pointerup', function (e) {
+        e.stopPropagation();
+        if (Math.abs(e.clientX - (+label.dataset.px || e.clientX)) < 8 && Math.abs(e.clientY - (+label.dataset.py || e.clientY)) < 8) selectSolarComet(cometIndex);
+      });
+      label.addEventListener('click', function (e) { e.stopPropagation(); });
+      solarLabelsEl.appendChild(label); solarCometLabels[cometIndex] = label;
+    }
+    var L = typeof beaconLang === 'string' && COMET_INFO[cometIndex].name[beaconLang] ? beaconLang : 'en';
+    var text = COMET_INFO[cometIndex].name[L];
+    if (label.dataset.txt !== text) { label.dataset.txt = text; label.textContent = text; label.setAttribute('aria-label', text); }
+    return label;
   }
   function frameSolarForViewport() { return false; }
-  function clearSolarCard() { solarCardOpen = false; bpEl.classList.remove('open'); bpBody.innerHTML = ''; }
+  function clearSolarCard() { solarCardOpen = false; solarCometSelected = null; bpEl.classList.remove('open'); bpBody.innerHTML = ''; }
   function enterSolarSky() {
     return enterSkyFromEarth();
   }
@@ -2704,7 +2815,8 @@
   }
   function solarActiveProxies() {
     return SOLAR_BODIES.map(function (body) { return SOLAR_OBJECTS[body.id].hitProxy; })
-      .filter(function (proxy) { return proxy.visible && proxy.userData.solarActive; });
+      .filter(function (proxy) { return proxy.visible && proxy.userData.solarActive; })
+      .concat(solarComets.map(function (comet) { return comet.hitProxy; }));
   }
   function leaveSolarLevel() {
     if (viewMode === 'sky' && skyReturnContext) return returnSkyToEarth();
@@ -2751,15 +2863,24 @@
       // ties (normalizing by proxy size would favor big bodies again).
       var localParent = solarNav.level === 'overview' ? null : solarLocalParent();
       var best = null, bestLocal = false, bestScore = Infinity, hitPoint = new THREE.Vector3();
+      var bestComet = null;
       hits.forEach(function (hit) {
+        var cometIndex = hit.object.userData.solarComet;
+        if (cometIndex != null) {
+          solarComets[cometIndex].hitProxy.getWorldPosition(hitPoint);
+          var cometScore = solarRaycaster.ray.distanceToPoint(hitPoint) / Math.max(solarCamera.position.distanceTo(hitPoint), 1e-6);
+          if (!bestLocal && cometScore < bestScore) { bestScore = cometScore; best = null; bestComet = cometIndex; }
+          return;
+        }
         var id = hit.object.userData.solarId, object = SOLAR_OBJECTS[id]; if (!object) return;
         var body = SOLAR_BY_ID[id];
         var isLocal = !!localParent && (id === localParent || body.parent === localParent);
         object.mesh.getWorldPosition(hitPoint);
         var score = solarRaycaster.ray.distanceToPoint(hitPoint) / Math.max(solarCamera.position.distanceTo(hitPoint), 1e-6);
-        if ((isLocal && !bestLocal) || (isLocal === bestLocal && score < bestScore)) { bestLocal = isLocal; bestScore = score; best = id; }
+        if ((isLocal && !bestLocal) || (isLocal === bestLocal && score < bestScore)) { bestLocal = isLocal; bestScore = score; best = id; bestComet = null; }
       });
-      if (best) selectSolarBody(best);
+      if (bestComet != null) selectSolarComet(bestComet);
+      else if (best) selectSolarBody(best);
     }
   });
   var solarMapsPreloaded = false;

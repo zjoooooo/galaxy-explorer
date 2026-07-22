@@ -182,3 +182,8 @@ All 18 card photos come from one source family: NASA mission photography, via Wi
 - `images/solar-system/cards/neptune.jpg` — NASA (Voyager 2) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Neptune_Full.jpg)
 - `images/solar-system/cards/triton.jpg` — NASA/JPL/USGS (Voyager 2) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Triton_moon_mosaic_Voyager_2_%28large%29.jpg)
 - `images/solar-system/cards/pluto.jpg` — NASA/JHU APL/SwRI (New Horizons) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Pluto_in_True_Color_-_High-Res.jpg)
+
+### Comet card images
+
+- `images/comet-halley.jpg` — NASA/W. Liller (Halley's Comet, 1986, Large Scale Phenomena Network) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Lspn_comet_halley.jpg)
+- `images/comet-hale-bopp.jpg` — E. Kolmhofer, H. Raab; Johannes Kepler Observatory, Linz · CC BY-SA 3.0 · [source](https://commons.wikimedia.org/wiki/File:Comet_Hale-Bopp_1995O1.jpg)
