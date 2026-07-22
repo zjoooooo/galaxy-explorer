@@ -884,10 +884,10 @@
       }
       for (var j = 0; j < comet.DUST_N; j++) { // DUST tail: grains released earlier drift anti-sunward on their own orbits → curved, lagging
         var kd = (j + 0.5) / comet.DUST_N, j3 = (comet.ION_N + j) * 3;
-        var back = kd * 0.32; // short lagging arc: long ones kink sharply where the orbit whips around perihelion
+        var back = kd * kd * 0.22; // orbital lag builds up only far down the tail — near the head the fan leaves straight anti-solar (no hook)
         cometPoint(comet, comet.angle - back, solarCometPast);
         solarCometAnti.copy(solarCometPast).normalize();
-        var drift = (kd * kd) * 30 * activity + kd * 2; // radiation-pressure push dominates — a smooth anti-solar fan
+        var drift = kd * 26 * activity + kd * kd * 8; // linear from the very root: dust departs anti-solar immediately, widening smoothly
         tp[j3] = solarCometPast.x + solarCometAnti.x * drift + (Math.sin(j * 3.7) * 0.7) * kd;
         tp[j3 + 1] = solarCometPast.y + (Math.cos(j * 2.9) * 0.5) * kd;
         tp[j3 + 2] = solarCometPast.z + solarCometAnti.z * drift + (Math.cos(j * 4.1) * 0.7) * kd;
