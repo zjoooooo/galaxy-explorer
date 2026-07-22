@@ -1603,7 +1603,7 @@
   var SOLAR_OBJECTS = {}, solarAsteroidBelt = null;
   var solarElapsed = 0, solarShaderTime = 0, solarPaused = false, solarFrameLast = 0;
   var SOLAR_ORBIT_RATE = 0.18, SOLAR_SPIN_RATE = 0.05;
-  var solarBeltClearance = { angle: 0.18, inner: 0, outer: 0 }, solarBeltPoint = new THREE.Vector3();
+  var solarBeltClearance = { angle: 0.06, inner: 0, outer: 0 }, solarBeltPoint = new THREE.Vector3();
   var solarSphereLow = new THREE.SphereGeometry(1, 12, 8);
   var solarSphereHigh = new THREE.SphereGeometry(1, 96, 64);
   var solarRingGeometry = new THREE.RingGeometry(1, 2, 48, 1);
@@ -1962,7 +1962,7 @@
       solarAsteroidRocks = null;
     }
     count = Math.max(1, Math.floor(count || 2000));
-    var ceres = SOLAR_BY_ID.ceres, ceresRadius = solarOrbitDistance(ceres), clearance = 4;
+    var ceres = SOLAR_BY_ID.ceres, ceresRadius = solarOrbitDistance(ceres), clearance = 1.5;
     solarBeltClearance.inner = ceresRadius * (1 - ceres.eccentricity) - clearance;
     solarBeltClearance.outer = ceresRadius * (1 + ceres.eccentricity) + clearance;
     var randomState = 0x1a2b3c4d, inner = solarOrbitRadius(2.06), outer = solarOrbitRadius(3.15); // true main-belt span; keeps clear of Mars and (with the tightened moons) Jupiter
@@ -2431,7 +2431,7 @@
       var lift = new THREE.Vector3().crossVectors(side, axis).normalize();
       function bend(t, sideAmount, liftAmount) { return from.clone().addScaledVector(axis, t).addScaledVector(side, sideAmount * span).addScaledVector(lift, liftAmount * span); }
       // a wormhole snakes — alternating lateral bends that settle as the Solar System nears
-      solarWarp.curve = new THREE.CatmullRomCurve3([from, bend(0.2, 0.15, 0.07), bend(0.45, -0.13, -0.09), bend(0.68, 0.09, 0.1), bend(0.87, -0.04, -0.04), solarWarp.to.position.clone()]);
+      solarWarp.curve = new THREE.CatmullRomCurve3([from, bend(0.2, 0.15, 0.07), bend(0.45, -0.13, -0.09), bend(0.68, 0.07, 0.08), bend(0.86, -0.012, -0.012), solarWarp.to.position.clone()]); // bends die out early so arrival is dead straight
       if (!solarWarpStreaks) { solarWarpStreaks = makeWarpStreaks(); solarScene.add(solarWarpStreaks); }
       solarWarpStreaks.visible = true;
       solarControls.enabled = false;
@@ -2445,7 +2445,7 @@
     solarCamera.up.set(Math.sin(e * Math.PI * 2) * 0.07, 1, 0).normalize();
     solarCamera.lookAt(solarWarp.to.target);
     solarControls.target.copy(solarWarp.to.target);
-    solarCamera.fov = 60 + 26 * Math.sin(Math.min(1, e * 1.1) * Math.PI);
+    solarCamera.fov = 60 + 10 * Math.pow(Math.sin(e * Math.PI), 2); // gentle: widening must never outweigh the approach, or it reads as flying backwards
     solarCamera.updateProjectionMatrix();
     var streaks = solarWarpStreaks, roll = k * 2600, array = streaks.geometry.attributes.position.array;
     for (var i = 0; i < streaks.userData.z0.length; i++) {
