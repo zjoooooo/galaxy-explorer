@@ -545,6 +545,7 @@
       var oldMotionOverride = solarMotionOverride, oldShaderTime = solarShaderTime, oldPaused = solarPaused, oldScales;
       try {
         ok(Array.isArray(solarSunGlows) && solarSunGlows.length === 4, 'Sun does not have four galactic-core glow layers');
+        ok(SOLAR_OBJECTS.sun.specialty.prominences && SOLAR_OBJECTS.sun.specialty.stormShell && SOLAR_OBJECTS.sun.specialty.prominences.material.uniforms.uTime && SOLAR_OBJECTS.sun.specialty.stormShell.material.uniforms.uTime, 'Sun prominence/storm shells missing or not animated');
         oldScales = solarSunGlows.map(function (layer) { return layer.sprite.scale.clone(); });
         solarShaderTime = 0; solarPaused = true;
         solarSunGlows.forEach(function (layer) { layer.sprite.scale.set(layer.baseScale, layer.baseScale, 1); });
@@ -1652,7 +1653,52 @@
       uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(0xffd36b) } },
       transparent: true,
       vertexShader: 'varying vec3 vNormal; varying float vViewZ; void main(){ vNormal = normal; vViewZ = normalize(normalMatrix * normal).z; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: 'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; varying vec3 vNormal; varying float vViewZ; void main(){ float a = sin(vNormal.x * 9.0 + vNormal.y * 13.0 + uTime * 0.6); float b = sin(vNormal.y * 17.0 - vNormal.z * 11.0 - uTime * 0.4); float c = sin(vNormal.z * 23.0 + vNormal.x * 19.0 + uTime * 0.5); float granule = (a + b + c) / 3.0; float limb = 0.72 + 0.28 * abs(vViewZ); gl_FragColor = vec4(uColor * (0.94 + granule * 0.1) * limb, uOpacity); }'
+      fragmentShader: [
+        'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; varying vec3 vNormal; varying float vViewZ;',
+        'float spot(vec3 n, vec3 c, float s, float t, float k){',
+        '  float d = 1.0 - dot(n, c);',
+        '  float r = s * (0.8 + 0.2 * sin(t * 0.04 + k));',
+        '  float dark = 0.30 + 0.70 * smoothstep(r * 0.16, r * 0.5, d);',
+        '  dark *= 0.78 + 0.22 * smoothstep(r * 0.5, r, d);',
+        '  float alive = 0.5 + 0.5 * sin(t * 0.05 + k * 2.4);',
+        '  return mix(1.0, dark, alive); }',
+        'void main(){',
+        '  vec3 n = normalize(vNormal);',
+        '  float a = sin(n.x * 9.0 + n.y * 13.0 + uTime * 0.6); float b = sin(n.y * 17.0 - n.z * 11.0 - uTime * 0.4); float c = sin(n.z * 23.0 + n.x * 19.0 + uTime * 0.5);',
+        '  float granule = (a + b + c) / 3.0;',
+        '  float limb = 0.72 + 0.28 * abs(vViewZ);',
+        '  float spots = 1.0;',
+        '  spots *= spot(n, normalize(vec3(0.9, 0.28, 0.34)), 0.030, uTime, 0.0);',
+        '  spots *= spot(n, normalize(vec3(-0.6, -0.22, 0.77)), 0.040, uTime, 1.7);',
+        '  spots *= spot(n, normalize(vec3(0.1, 0.34, -0.93)), 0.018, uTime, 3.1);',
+        '  spots *= spot(n, normalize(vec3(-0.85, 0.12, -0.51)), 0.026, uTime, 4.6);',
+        '  spots *= spot(n, normalize(vec3(0.45, -0.3, -0.84)), 0.022, uTime, 5.9);',
+        '  gl_FragColor = vec4(uColor * (0.94 + granule * 0.1) * limb * spots, uOpacity); }'
+      ].join('\n')
+    });
+    solarAnimatedMaterials.push(material);
+    return material;
+  }
+  function solarFlareShellMaterial(outer) {
+    var material = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 } },
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: 'varying vec3 vNormal; varying float vViewZ; void main(){ vNormal = normal; vViewZ = normalize(normalMatrix * normal).z; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: [
+        'uniform float uTime; uniform float uOpacity; varying vec3 vNormal; varying float vViewZ;',
+        'void main(){',
+        '  vec3 n = normalize(vNormal);',
+        '  float lon = atan(n.z, n.x), lat = asin(clamp(n.y, -1.0, 1.0));',
+        '  float edge = pow(1.0 - abs(vViewZ), 3.0);',
+        '  float tongue = 0.5 + 0.5 * sin(lon * 11.0 + uTime * 0.5) * sin(lat * 9.0 + lon * 2.0 - uTime * 0.31);',
+        '  tongue *= 0.6 + 0.4 * sin(lon * 5.0 - uTime * 0.22);',
+        '  float burst = smoothstep(0.72, 1.0, sin(uTime * 0.11) * sin(uTime * 0.043 + 1.7) * 2.0);',
+        '  float sector = smoothstep(0.55, 1.0, sin(lon * 1.5 + uTime * 0.02));',
+        '  float storm = burst * sector;',
+        '  float a = ' + (outer ? 'edge * storm * (0.35 + 0.65 * pow(max(tongue, 0.0), 2.0)) * exp(-lat * lat * 2.5) * 1.8;' : 'edge * (tongue * 0.5 + storm * 1.2);'),
+        '  vec3 color = mix(vec3(1.0, 0.45, 0.1), vec3(1.0, 0.85, 0.45), min(storm, 1.0));',
+        '  gl_FragColor = vec4(color, min(a, 1.0) * uOpacity); }'
+      ].join('\n')
     });
     solarAnimatedMaterials.push(material);
     return material;
@@ -1778,7 +1824,15 @@
       var orbitLine = orbitPivot.children[0];
       SOLAR_OBJECTS[body.id] = { body: body, orbitPivot: orbitPivot, positionNode: positionNode, tiltNode: tiltNode, spinNode: spinNode, lodGroup: lodGroup, hitProxy: hitProxy, orbitLine: orbitLine, mesh: mesh, specialty: {}, radius: radius, compressedPeriod: solarCompressedPeriod(body) };
       var object = SOLAR_OBJECTS[body.id];
-      if (body.id === 'sun') solarSunGlows = makeSolarCoreLayers(radius, lodGroup);
+      if (body.id === 'sun') {
+        solarSunGlows = makeSolarCoreLayers(radius, lodGroup);
+        var prominences = new THREE.Mesh(solarSphereHigh, solarFlareShellMaterial(false));
+        prominences.scale.set(radius * 1.06, radius * 1.06, radius * 1.06);
+        var stormShell = new THREE.Mesh(solarSphereHigh, solarFlareShellMaterial(true));
+        stormShell.scale.set(radius * 1.30, radius * 1.30, radius * 1.30);
+        [prominences, stormShell].forEach(function (shell) { shell.userData.solarId = 'sun'; lodGroup.add(shell); });
+        object.specialty.prominences = prominences; object.specialty.stormShell = stormShell;
+      }
       if (body.id === 'earth') {
         var clouds = new THREE.Mesh(solarSphereHigh, new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.34, depthWrite: false }));
         var atmosphere = new THREE.Mesh(solarSphereHigh, solarCoronaMaterial.clone());
