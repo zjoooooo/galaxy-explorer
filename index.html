@@ -569,7 +569,13 @@
       var points = 0;
       solarRoot.traverse(function (o) { if (o instanceof THREE.Points) points++; });
       ok(solarAsteroidBelt instanceof THREE.Points, 'asteroid belt is not points');
-      ok(points === 3, 'expected the fine belt, the coarse belt, and the Sun CME points');
+      ok(points === 2, 'expected the dust belt and the Sun CME points');
+      ok(solarAsteroidRocks && solarAsteroidRocks.children.length === 3 && solarAsteroidRocks.children.every(function (mesh) { return mesh.isInstancedMesh; }), 'asteroid rock layer must be three instanced meshes');
+      var rockTotal = solarAsteroidRocks.children.reduce(function (sum, mesh) { return sum + mesh.count; }, 0);
+      ok(rockTotal >= 300, 'asteroid rock layer is too sparse');
+      var jupiterRadius = SOLAR_OBJECTS.jupiter.radius;
+      ok(SOLAR_BODIES.filter(function (b) { return b.parent === 'jupiter'; }).every(function (b) { return SOLAR_OBJECTS[b.id].radius < jupiterRadius * 0.25; }), 'Galilean moons are out of proportion with Jupiter');
+      ok(solarOrbitDistance(SOLAR_BY_ID.io) - solarOrbitDistance(SOLAR_BY_ID.europa) < 0 && solarOrbitDistance(SOLAR_BY_ID.europa) < solarOrbitDistance(SOLAR_BY_ID.ganymede) && solarOrbitDistance(SOLAR_BY_ID.ganymede) < solarOrbitDistance(SOLAR_BY_ID.callisto), 'moon orbits are not ordered');
       var first = solarAsteroidBelt.geometry.attributes.position.array.slice(0), oldBelt = solarAsteroidBelt;
       ok(first.length === 2000 * 3, 'asteroid belt must have 2,000 vertices');
       buildAsteroidBelt(2000);
@@ -1548,6 +1554,13 @@
 
   function solarOrbitRadius(au) { return au <= 0 ? 0 : 25 + Math.log(1 + au * 1.8) * 42; }
   function solarDisplayRadius(km) { return km <= 0 ? 0 : 0.8 + Math.pow(km / 4879, 0.38) * 1.55; }
+  function solarBodyDisplayRadius(body) {
+    if (body.id === 'sun') return 9.5;
+    if (!body.parent) return solarDisplayRadius(body.radiusKm);
+    // moons scale RELATIVE to their parent: the true ratio, compressed just enough to stay visible
+    var parent = SOLAR_BY_ID[body.parent];
+    return solarDisplayRadius(parent.radiusKm) * Math.pow(body.radiusKm / parent.radiusKm, 0.55);
+  }
 
   function assertSolarData() {
     var expected = ['sun', 'mercury', 'venus', 'earth', 'moon', 'mars', 'ceres', 'jupiter', 'io', 'europa', 'ganymede', 'callisto', 'saturn', 'titan', 'uranus', 'neptune', 'triton', 'pluto'];
@@ -1790,7 +1803,11 @@
   }
   function solarOrbitDistance(body) {
     if (!body.parent) return solarOrbitRadius(body.distanceAu);
-    return 6 + Math.sqrt(body.distanceAu / 0.002) * 5.5;
+    // moon orbits scale with the true semi-major axis in parent radii, compressed; clamped clear of the parent's surface
+    var parent = SOLAR_BY_ID[body.parent];
+    var parentRadius = solarDisplayRadius(parent.radiusKm);
+    var ratio = body.distanceAu * 149597870 / parent.radiusKm;
+    return Math.max(parentRadius * 2.2 + solarBodyDisplayRadius(body) * 2, parentRadius * Math.pow(ratio, 0.62) * 0.8);
   }
   function solarCompressedPeriod(body) {
     if (body.id === 'sun') return 1;
@@ -1848,7 +1865,7 @@
       parent.add(orbitPivot); orbitPivot.add(solarOrbitLine(body)); orbitPivot.add(positionNode); positionNode.add(tiltNode); tiltNode.add(spinNode); spinNode.add(lodGroup);
       var material = body.id === 'sun' ? solarSunNoiseMaterial() : solarMaterialFor(body);
       var mesh = new THREE.Mesh(solarSphereHigh, material);
-      var radius = body.id === 'sun' ? 9.5 : solarDisplayRadius(body.radiusKm);
+      var radius = solarBodyDisplayRadius(body);
       mesh.scale.set(radius, radius, radius); mesh.userData.solarId = body.id; lodGroup.add(mesh);
             var hitProxy = new THREE.Mesh(solarSphereLow, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
       hitProxy.scale.set(radius * 1.6, radius * 1.6, radius * 1.6); hitProxy.userData.solarId = body.id; lodGroup.add(hitProxy);
@@ -1903,17 +1920,32 @@
     });
     updateSolarMotion(0);
     return SOLAR_OBJECTS;  }
-  var solarAsteroidBeltCoarse = null;
+  var solarAsteroidRocks = null;
+  function makeAsteroidGeometries(nextRandom) {
+    // three lumpy rock variants: icosahedra with deterministic radial noise per vertex
+    return [0, 1, 2].map(function () {
+      var geometry = new THREE.IcosahedronGeometry(1, 2), position = geometry.attributes.position;
+      var seen = {};
+      for (var i = 0; i < position.count; i++) {
+        var key = position.getX(i).toFixed(3) + ',' + position.getY(i).toFixed(3) + ',' + position.getZ(i).toFixed(3);
+        if (!(key in seen)) seen[key] = 0.55 + nextRandom() * 0.75; // same displacement for shared corners → watertight lumps
+        var k = seen[key];
+        position.setXYZ(i, position.getX(i) * k, position.getY(i) * k, position.getZ(i) * k);
+      }
+      geometry.computeVertexNormals();
+      return geometry;
+    });
+  }
   function buildAsteroidBelt(count) {
     if (solarAsteroidBelt) {
       solarRoot.remove(solarAsteroidBelt);
       solarAsteroidBelt.geometry.dispose(); solarAsteroidBelt.geometry.disposed = true;
       solarAsteroidBelt.material.dispose(); solarAsteroidBelt.material.disposed = true;
     }
-    if (solarAsteroidBeltCoarse) {
-      solarRoot.remove(solarAsteroidBeltCoarse);
-      solarAsteroidBeltCoarse.geometry.dispose(); solarAsteroidBeltCoarse.material.dispose();
-      solarAsteroidBeltCoarse = null;
+    if (solarAsteroidRocks) {
+      solarRoot.remove(solarAsteroidRocks);
+      solarAsteroidRocks.children.forEach(function (mesh) { mesh.geometry.dispose(); mesh.material.dispose(); });
+      solarAsteroidRocks = null;
     }
     count = Math.max(1, Math.floor(count || 2000));
     var ceres = SOLAR_BY_ID.ceres, ceresRadius = solarOrbitDistance(ceres), clearance = 4;
@@ -1937,15 +1969,34 @@
     }
     var positions = new Float32Array(count * 3); fillBelt(positions, count);
     var geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    solarAsteroidBelt = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xb8b0a4, size: 1.1, map: GLOW_TEX, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
-    var coarseCount = Math.max(40, Math.floor(count * 0.08)), coarsePositions = new Float32Array(coarseCount * 3); fillBelt(coarsePositions, coarseCount);
-    var coarseGeometry = new THREE.BufferGeometry(); coarseGeometry.setAttribute('position', new THREE.BufferAttribute(coarsePositions, 3));
-    solarAsteroidBeltCoarse = new THREE.Points(coarseGeometry, new THREE.PointsMaterial({ color: 0xcdbfa8, size: 1.9, map: GLOW_TEX, transparent: true, opacity: 0.75, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+    // fine layer: unlit dust, kept subtle (normal blending — additive read as fireflies)
+    solarAsteroidBelt = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0x8a8378, size: 0.8, map: GLOW_TEX, transparent: true, opacity: 0.4, depthWrite: false, sizeAttenuation: true }));
+    // rock layer: instanced lumpy meshes, lit by the sun like everything else
+    var rockCount = Math.max(60, Math.floor(count * 0.2)), rockPositions = new Float32Array(rockCount * 3); fillBelt(rockPositions, rockCount);
+    var rockGeometries = makeAsteroidGeometries(nextRandom), rockColors = [0x9a8f80, 0x857a6c, 0x6f6a63];
+    var perMesh = Math.ceil(rockCount / rockGeometries.length), matrix = new THREE.Matrix4(), quaternion = new THREE.Quaternion(), euler = new THREE.Euler(), scale = new THREE.Vector3(), position = new THREE.Vector3();
+    solarAsteroidRocks = new THREE.Group();
+    rockGeometries.forEach(function (rockGeometry, meshIndex) {
+      var first = meshIndex * perMesh, n = Math.min(perMesh, rockCount - first); if (n <= 0) return;
+      var instanced = new THREE.InstancedMesh(rockGeometry, new THREE.MeshLambertMaterial({ color: rockColors[meshIndex] }), n);
+      for (var i = 0; i < n; i++) {
+        var j = first + i;
+        position.set(rockPositions[j * 3], rockPositions[j * 3 + 1], rockPositions[j * 3 + 2]);
+        euler.set(nextRandom() * Math.PI * 2, nextRandom() * Math.PI * 2, nextRandom() * Math.PI * 2);
+        var size = 0.22 + Math.pow(nextRandom(), 2.2) * 0.55; // many small, a few big
+        scale.set(size * (0.7 + nextRandom() * 0.6), size * (0.7 + nextRandom() * 0.6), size * (0.7 + nextRandom() * 0.6));
+        matrix.compose(position, quaternion.setFromEuler(euler), scale);
+        instanced.setMatrixAt(i, matrix);
+      }
+      instanced.instanceMatrix.needsUpdate = true;
+      instanced.userData.solarId = 'asteroid-belt';
+      solarAsteroidRocks.add(instanced);
+    });
     var orbitAngle = ceres.phase + solarElapsed * SOLAR_ORBIT_RATE / solarCompressedPeriod(ceres);
     solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceres, orbitAngle);
     solarAsteroidBelt.userData.solarId = 'asteroid-belt'; solarRoot.add(solarAsteroidBelt);
-    solarAsteroidBeltCoarse.rotation.y = solarAsteroidBelt.rotation.y;
-    solarAsteroidBeltCoarse.userData.solarId = 'asteroid-belt'; solarRoot.add(solarAsteroidBeltCoarse);
+    solarAsteroidRocks.rotation.y = solarAsteroidBelt.rotation.y;
+    solarAsteroidRocks.userData.solarId = 'asteroid-belt'; solarRoot.add(solarAsteroidRocks);
     return solarAsteroidBelt;
   }
   function setSolarPaused(paused) { solarPaused = !!paused; }
@@ -2005,7 +2056,7 @@
     if (solarAsteroidBelt) {
       var ceresObject = SOLAR_OBJECTS.ceres;
       solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceresObject.body, ceresObject.body.phase + orbitElapsed / ceresObject.compressedPeriod);
-      if (solarAsteroidBeltCoarse) solarAsteroidBeltCoarse.rotation.y = solarAsteroidBelt.rotation.y;
+      if (solarAsteroidRocks) solarAsteroidRocks.rotation.y = solarAsteroidBelt.rotation.y;
     }
   }
   var selectedBeacon = null;
