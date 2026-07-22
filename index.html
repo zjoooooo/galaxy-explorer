@@ -2298,6 +2298,11 @@
       object.hitProxy.visible = active;
       object.hitProxy.userData.solarActive = active;
     });
+    // in close-up the background belt reads as if the moons sat inside it (pure perspective
+    // overlap) — dim it like a depth of field, except when Ceres itself is the destination
+    var dimBelt = localP !== null && localP !== 'ceres';
+    if (solarAsteroidBelt) solarAsteroidBelt.material.opacity = dimBelt ? 0.12 : 0.4;
+    if (solarAsteroidRocks) solarAsteroidRocks.visible = !dimBelt;
   }
   function solarLabelText(body) {
     var L = typeof beaconLang === 'string' ? beaconLang : 'en';
