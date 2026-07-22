@@ -577,8 +577,8 @@
       ok(SOLAR_BODIES.filter(function (b) { return b.parent === 'jupiter'; }).every(function (b) { return SOLAR_OBJECTS[b.id].radius < jupiterRadius * 0.25; }), 'Galilean moons are out of proportion with Jupiter');
       ok(solarOrbitDistance(SOLAR_BY_ID.io) - solarOrbitDistance(SOLAR_BY_ID.europa) < 0 && solarOrbitDistance(SOLAR_BY_ID.europa) < solarOrbitDistance(SOLAR_BY_ID.ganymede) && solarOrbitDistance(SOLAR_BY_ID.ganymede) < solarOrbitDistance(SOLAR_BY_ID.callisto), 'moon orbits are not ordered');
       var first = solarAsteroidBelt.geometry.attributes.position.array.slice(0), oldBelt = solarAsteroidBelt;
-      ok(first.length === 2000 * 3, 'asteroid belt must have 2,000 vertices');
-      buildAsteroidBelt(2000);
+      ok(first.length === 4500 * 3, 'asteroid belt must have 4,500 vertices');
+      buildAsteroidBelt(4500);
       var second = solarAsteroidBelt.geometry.attributes.position.array;
       ok(first.length === second.length && first.every(function (v, i) { return v === second[i]; }), 'asteroid belt positions are not deterministic');
       ok(oldBelt.geometry.disposed && oldBelt.material.disposed, 'replaced belt resources were not disposed');
@@ -2445,7 +2445,18 @@
     var proxies = solarActiveProxies();
     solarRoot.updateMatrixWorld(true);
     var hits = solarRaycaster.intersectObjects(proxies, false);
-    if (hits.length) selectSolarBody(hits[0].object.userData.solarId);
+    if (hits.length) {
+      // nearest-surface picking lets a big planet's proxy eclipse the small moon beside it;
+      // choose the hit whose body center is most centered on the click ray instead
+      var best = null, bestScore = Infinity, hitPoint = new THREE.Vector3();
+      hits.forEach(function (hit) {
+        var object = SOLAR_OBJECTS[hit.object.userData.solarId]; if (!object) return;
+        object.mesh.getWorldPosition(hitPoint);
+        var score = solarRaycaster.ray.distanceToPoint(hitPoint) / Math.max(hit.object.scale.x, 1e-6);
+        if (score < bestScore) { bestScore = score; best = hit.object.userData.solarId; }
+      });
+      if (best) selectSolarBody(best);
+    }
   });
   function enterSolar() {
     if (viewMode !== 'galaxy') return;
@@ -3191,7 +3202,7 @@
     }
   }
   buildSolarBodies();
-  buildAsteroidBelt(Math.max(400, Math.floor(2000 * perfScale)));
+  buildAsteroidBelt(Math.max(500, Math.floor(4500 * perfScale)));
   applySolarPerformanceTier(0);
   function frame() {
     rafId = null;
