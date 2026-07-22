@@ -4527,14 +4527,14 @@
       var geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      var points = new THREE.Points(geometry, new THREE.PointsMaterial({ map: GLOW_TEX, size: len * 0.045, vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+      var points = new THREE.Points(geometry, new THREE.PointsMaterial({ map: GLOW_TEX, size: len * 0.06, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
       points.frustumCulled = false;
       var edge = new THREE.Color(o.edge), coreColor = new THREE.Color(o.core), mixed = new THREE.Color();
       points.userData.step = function (t) {
         for (var i = 0; i < N; i++) {
           var particle = particles[i], i3 = i * 3;
-          var kk = (particle.frac + t * 0.045 * particle.speed) % 1;
-          var spread = len * (0.012 + kk * (o.flare || 0.1));
+          var kk = (particle.frac + t * 0.085 * particle.speed) % 1;
+          var spread = len * (0.008 + kk * (o.flare || 0.05)); // a tight beam: overlap is what fuses sprites into fluid
           var kink = Math.sin(kk * 6.5 - t * 1.2) * len * 0.012 * kk;
           var bend = (o.curve || 0) * len * kk * kk;
           positions[i3] = dir.x * len * kk + e1.x * (particle.lat1 * spread + kink) + e2.x * (particle.lat2 * spread + bend);
@@ -4568,8 +4568,8 @@
       var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xfff6e6, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
       core.scale.set(len * 0.12, len * 0.12, 1);
       // flowing plasma streams (comet ion-tail technique): BLUE up one side, VIOLET down the other
-      var plasmaA = jetPlasma(dir, len * 0.85, e1, e2, { edge: 0x2f7dff, core: 0xa8dcff, flare: flare * 0.45, curve: curve, n: 130, seed: 977 });
-      var plasmaB = feat.oneSided ? null : jetPlasma(back, len * 0.75, e1, e2, { edge: 0x8a3cff, core: 0xdcb2ff, flare: flare * 0.5, curve: -curve, n: 120, seed: 1553 });
+      var plasmaA = jetPlasma(dir, len * 0.85, e1, e2, { edge: 0x2f7dff, core: 0xa8dcff, flare: flare * 0.2, curve: curve, n: 260, seed: 977 });
+      var plasmaB = feat.oneSided ? null : jetPlasma(back, len * 0.75, e1, e2, { edge: 0x8a3cff, core: 0xdcb2ff, flare: flare * 0.22, curve: -curve, n: 240, seed: 1553 });
       grp.add(lobeA); grp.add(streamA); if (lobeB) { grp.add(lobeB); grp.add(streamB); } grp.add(core);
       grp.add(plasmaA); if (plasmaB) grp.add(plasmaB);
       grp.userData.update = function (t) {
