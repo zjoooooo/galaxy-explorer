@@ -866,7 +866,7 @@
   })();
   var COMET_INFO = [
     { img: 'images/comet-halley.jpg', credit: "NASA/W. Liller — Halley's Comet, 1986",
-      name: { en: 'Short-period Comet', hans: '短周期彗星', hant: '短週期彗星', ja: '短周期彗星', ko: '단주기 혜성' },
+      name: { en: 'Comet', hans: '彗星', hant: '彗星', ja: '彗星', ko: '혜성' },
       type: { en: 'Icy Solar System visitor', hans: '太阳系冰质访客', hant: '太陽系冰質訪客', ja: '太陽系の氷の訪問者', ko: '태양계의 얼음 방문자' },
       facts: {
         en: [['Nucleus', 'A "dirty snowball" of ice and dust'], ['Blue ion tail', 'Ionized gas glows; pinned straight anti-sunward by the solar wind'], ['White dust tail', 'Dust reflecting sunlight; curves gently along the orbit']],
@@ -883,7 +883,7 @@
         ko: '핼리형 궤도의 시연용 혜성입니다. 태양에 가까울 때 관찰해 보세요: 꼬리는 언제나 태양 반대쪽을 향하므로, 내태양계를 떠날 때 혜성은 "꼬리를 앞세우고" 날아갑니다.'
       } },
     { img: 'images/comet-hale-bopp.jpg', credit: 'E. Kolmhofer, H. Raab / Johannes Kepler Observatory · CC BY-SA 3.0 — Hale-Bopp, 1997',
-      name: { en: 'Long-period Comet', hans: '长周期彗星', hant: '長週期彗星', ja: '長周期彗星', ko: '장주기 혜성' },
+      name: { en: 'Comet', hans: '彗星', hant: '彗星', ja: '彗星', ko: '혜성' },
       type: { en: 'Icy Solar System visitor', hans: '太阳系冰质访客', hant: '太陽系冰質訪客', ja: '太陽系の氷の訪問者', ko: '태양계의 얼음 방문자' },
       facts: {
         en: [['Coma', 'A glowing gas-dust cloud that wakes only near the Sun'], ['Two tails', 'Blue = glowing ionized gas; white = sunlit dust'], ['Farther out', 'Tails and coma fade away — only a dark nucleus travels on']],
@@ -907,10 +907,22 @@
     var html = '<h2 id="bp-name">' + esc(info.name[L]) + '</h2><span id="bp-type">' + esc(info.type[L]) + '</span>' +
       '<img id="bp-img" src="' + info.img + '" alt="' + esc(info.name[L]) + '" loading="lazy"><div id="bp-credit">' + esc(info.credit) + '</div>' +
       '<table id="bp-facts">' + info.facts[L].map(function (row) { return '<tr><th>' + esc(row[0]) + '</th><td>' + esc(row[1]) + '</td></tr>'; }).join('') + '</table>' +
-      '<p id="bp-desc">' + esc(info.desc[L]) + '</p>';
+      '<p id="bp-desc">' + esc(info.desc[L]) + '</p>' +
+      '<div id="bp-flyto">' + esc({ en: '\uD83D\uDE80 Chase this comet \u2192', hans: '\uD83D\uDE80 追上这颗彗星 \u2192', hant: '\uD83D\uDE80 追上這顆彗星 \u2192', ja: '\uD83D\uDE80 この彗星を追いかける \u2192', ko: '\uD83D\uDE80 이 혜성을 쫓아가기 \u2192' }[L]) + '</div>';
     bpBody.innerHTML = html;
     bpEl.classList.add('open');
     solarCometSelected = cometIndex; solarCardOpen = true;
+    return true;
+  }
+  function flySolarToComet(cometIndex) {
+    if (solarFly || solarWarp) return false;
+    var comet = solarComets[cometIndex]; if (!comet) return false;
+    var wp = new THREE.Vector3(); comet.coma.getWorldPosition(wp);
+    var dir = solarCamera.position.clone().sub(wp); dir.y = 0;
+    if (dir.lengthSq() < 1e-4) dir.set(0.6, 0, 1); dir.normalize();
+    solarNav.cameraStack.push(solarSnapshot());
+    solarControls.enabled = false;
+    solarFly = { cometIndex: cometIndex, dir: dir, dist: 15, lift: 4, p0: solarCamera.position.clone(), t0: solarControls.target.clone(), start: performance.now(), dur: 2000, wp: wp };
     return true;
   }
   function selectSolarComet(cometIndex) {
@@ -2420,6 +2432,7 @@
   bpBody.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'bp-solar-link') enterSolar();
     else if (e.target && e.target.id === 'bp-earth-sky-link' && viewMode === 'solar' && solarNav.selectedId === 'earth' && solarNav.parentId === null) enterSkyFromEarth();
+    else if (e.target && e.target.id === 'bp-flyto' && viewMode === 'solar' && solarCometSelected !== null) flySolarToComet(solarCometSelected);
     else if (e.target && e.target.id === 'bp-flyto' && viewMode === 'solar' && solarNav.selectedId) flySolarTo(solarNav.selectedId);
     else if (e.target && e.target.id === 'bp-flyto' && selectedBeacon !== null) flyToBeacon(selectedBeacon);
   });
@@ -2768,8 +2781,12 @@
   var solarFly = null, solarFollow = null, solarFollowPos = new THREE.Vector3(), solarFollowDelta = new THREE.Vector3();
   function stepSolarFollow() {
     if (!solarFollow) return;
-    var object = SOLAR_OBJECTS[solarFollow.id]; if (!object) { solarFollow = null; return; }
-    object.mesh.getWorldPosition(solarFollowPos);
+    if (solarFollow.comet != null) {
+      solarComets[solarFollow.comet].coma.getWorldPosition(solarFollowPos);
+    } else {
+      var object = SOLAR_OBJECTS[solarFollow.id]; if (!object) { solarFollow = null; return; }
+      object.mesh.getWorldPosition(solarFollowPos);
+    }
     if (solarFollow.last) {
       solarFollowDelta.subVectors(solarFollowPos, solarFollow.last);
       solarCamera.position.add(solarFollowDelta); solarControls.target.add(solarFollowDelta);
@@ -2791,8 +2808,8 @@
   function stepSolarFly() { // called each frame in solar view; tracks the moving body while flying
     if (!solarFly) return false;
     solarControls.update(); // burn off any leftover drag momentum; the tween overwrites the camera below
-    var object = SOLAR_OBJECTS[solarFly.id];
-    object.mesh.getWorldPosition(solarFly.wp);
+    if (solarFly.cometIndex != null) solarComets[solarFly.cometIndex].coma.getWorldPosition(solarFly.wp);
+    else SOLAR_OBJECTS[solarFly.id].mesh.getWorldPosition(solarFly.wp);
     var p1 = solarFly.wp.clone().addScaledVector(solarFly.dir, solarFly.dist); p1.y += solarFly.lift;
     var k = Math.min(1, (performance.now() - solarFly.start) / solarFly.dur);
     var e2 = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // easeInOutQuad
@@ -2800,7 +2817,19 @@
     solarCamera.position.lerpVectors(solarFly.p0, p1, e2);
     solarControls.target.lerpVectors(solarFly.t0, solarFly.wp, e2);
     if (e2 >= 1) {
-      var id = solarFly.id, body = SOLAR_BY_ID[id], r = Math.max(object.radius, 0.5);
+      if (solarFly.cometIndex != null) { // arrived at a comet: ride along with it
+        var cometIndex = solarFly.cometIndex;
+        solarFly = null;
+        solarControls.enabled = true;
+        solarControls.minDistance = 3;
+        solarNav.level = 'focus'; solarNav.selectedId = null; solarNav.parentId = null; solarNav.focusId = null;
+        solarFollow = { comet: cometIndex, last: null };
+        updateSolarVisibility();
+        updateSolarNavigationText();
+        renderCometPanel(cometIndex, beaconLang);
+        return true;
+      }
+      var id = solarFly.id, body = SOLAR_BY_ID[id], r = Math.max(SOLAR_OBJECTS[id].radius, 0.5);
       solarFly = null;
       solarControls.enabled = true;
       solarControls.minDistance = r * 1.8;
