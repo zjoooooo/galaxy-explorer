@@ -260,15 +260,28 @@
       ok(!document.getElementById('bp-' + 'zodiac-link'), 'legacy sky link must not appear on the Solar System card');
     });
     check('solar-card-rendering', function () {
-      var fields = ['distance', 'diameter', 'orbit', 'rotation', 'temperature', 'moons'];
+      var fields = ['distance', 'diameter', 'orbit', 'rotation', 'temperature', 'moons'], expectedCardCredits = {
+        sun: 'Procedural visualization', mercury: 'USGS Astrogeology · NASA/JHU APL/ASU', venus: 'NASA/JPL · Magellan', earth: 'NASA/JPL', moon: 'NASA SVS · LROC/LOLA', mars: 'NASA/JPL · Viking/USGS', ceres: 'USGS Astrogeology · Dawn FC', jupiter: 'NASA/JPL · Voyager', io: 'NASA/JPL · USGS/Voyager', europa: 'NASA/JPL · USGS/Voyager', ganymede: 'NASA/JPL · USGS/Voyager', callisto: 'NASA/JPL · USGS/Voyager', saturn: 'NASA/JPL', titan: 'NASA/JPL', uranus: 'NASA/JPL · Voyager 2 reference', neptune: 'NASA/JPL-Caltech · Don Davis', triton: 'NASA/JPL-Caltech · USGS/Tammy Becker', pluto: 'NASA/JPL · David Seal/Pat Rawlings'
+      };
+      ok(Object.keys(expectedCardCredits).length === SOLAR_BODIES.length, 'card credit map is incomplete');
+      var sunCardImage = solarSunCardImage();
+      ok(typeof sunCardImage === 'string' && sunCardImage.indexOf('data:image/png') === 0, 'sun card image is not a PNG data URL');
+      ok(solarSunCardImage() === sunCardImage, 'sun card image URL was not cached');
       SOLAR_BODIES.forEach(function (body) {
         ok(typeof body.cardCredit === 'string' && body.cardCredit.length > 0, body.id + ' card credit missing');
+        ok(body.cardCredit === expectedCardCredits[body.id], body.id + ' card credit does not match the required credit');
         renderSolarPanel(body.id, 'en');
         var image = document.getElementById('bp-img'), credit = document.getElementById('bp-credit');
         ok(image && credit, body.id + ' card image structure missing');
         ok(image.getAttribute('alt') === body.info.en.name, body.id + ' card image alt is not localized');
         ok(credit.textContent === body.cardCredit, body.id + ' card credit mismatch');
-        ok(image.src.indexOf(location.origin + '/') === 0 || image.src.indexOf('data:image/png') === 0, body.id + ' card image is not local');
+        if (body.id === 'sun') {
+          ok(image.src.indexOf('data:image/png') === 0, 'sun card image is not local');
+        } else {
+          var expectedImageURL = solarMapValue(body.maps && body.maps.albedo, 2);
+          ok(image.getAttribute('src') === expectedImageURL, body.id + ' card image source does not match albedo map');
+          ok(image.src.indexOf(location.origin + '/') === 0, body.id + ' card image is not local');
+        }
         SOLAR_LANGS.forEach(function (L) {
           var info = body.info[L];
           renderSolarPanel(body.id, L);
