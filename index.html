@@ -2291,7 +2291,18 @@
     if (label) return label;
     label = document.createElement('button'); label.type = 'button'; label.className = 'solar-label';
     label.setAttribute('aria-label', solarLabelText(body)); label.dataset.solarId = body.id;
-    label.addEventListener('click', function (e) { e.stopPropagation(); selectSolarBody(body.id); });
+    // labels chase their moving planets, so down/up land on different elements and 'click' never
+    // fires — capture the pointer on press so release always comes back to this button
+    label.addEventListener('pointerdown', function (e) {
+      e.stopPropagation();
+      if (label.setPointerCapture) try { label.setPointerCapture(e.pointerId); } catch (err) {}
+      label.dataset.px = e.clientX; label.dataset.py = e.clientY;
+    });
+    label.addEventListener('pointerup', function (e) {
+      e.stopPropagation();
+      if (Math.abs(e.clientX - (+label.dataset.px || e.clientX)) < 8 && Math.abs(e.clientY - (+label.dataset.py || e.clientY)) < 8) selectSolarBody(body.id);
+    });
+    label.addEventListener('click', function (e) { e.stopPropagation(); }); // swallow the ghost click
     solarLabelsEl.appendChild(label); solarLabelButtons[body.id] = label;
     return label;
   }
