@@ -25,26 +25,27 @@ that availability does not erase a source record's attribution instruction.
 
 | Local file | Direct primary source and credit | Source → delivery transformation |
 | --- | --- | --- |
-| `mercury.jpg` | USGS Astro Web Maps, [MESSENGER Global Mosaic May 2016](https://www.usgs.gov/tools/astro-web-maps), serving the [MDIS Basemap BDR global mosaic](https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_global_basemap_bdr_166m); Applied Coherent Technology Corporation, NASA/JHU APL/Arizona State University/Carnegie Science, MESSENGER MDIS NAC/WAC 750-nm reflectance | WMS `GetMap`, 0°–360° simple-cylindrical extent, 2048×1024 JPEG; one-pixel longitude-edge blend. The product record says **Access Constraints: None; Use Constraints: Please cite authors**. |
-| `venus.jpg` | NASA/JPL, [Venus](https://science.nasa.gov/3d-resources/venus/), Magellan radar mosaic | 1440×720 JPEG → 2048×1024 JPEG. |
-| `earth.jpg` | NASA Earth Observatory / Visible Earth, [Blue Marble Next Generation (August 2004)](https://visibleearth.nasa.gov/images/74117/august-blue-marble-next-generation), Reto Stöckli, NASA GSFC (`world.topo.bathy.200408.3x5400x2700.jpg`) | 5400×2700 JPEG → 2048×1024 JPEG. |
-| `earth-night.jpg` | NASA Earth Observatory, [Earth at Night (Black Marble) 2016 Color Maps](https://visibleearth.nasa.gov/images/144898/earth-at-night-black-marble-2016-color-maps/144957l), Joshua Stevens using Suomi NPP VIIRS data from Miguel Román, NASA GSFC | 3600×1800 JPEG → 2048×1024 JPEG. |
-| `earth-clouds.png` | NASA SVS, [Clouds frame listing](https://svs.gsfc.nasa.gov/vis/a000000/a003800/a003837/frames/2048x1024_2x1_30p/Clouds/); NASA GSFC | 2048×1024 TIFF → 2048×1024 RGBA PNG. RGB is white; processed source luminance is alpha. |
-| `moon.jpg` | NASA SVS, [CGI Moon Kit](https://svs.gsfc.nasa.gov/4720/); visualizer Ernie Wright (USRA), scientist Noah Petro (NASA/GSFC), LROC and LOLA teams | `lroc_color_2k.jpg`, 2048×1024 JPEG copied at native size. Centered at 0° longitude. |
+| `sun.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_sun.jpg` | 4096×2048 JPEG. |
+| `mercury.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `2k_mercury.jpg` | 2048×1024 JPEG. |
+| `venus.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `4k_venus_atmosphere.jpg (cloud tops)` | 2048×1024 JPEG. |
+| `earth.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_earth_daymap.jpg` | 4096×2048 JPEG. |
+| `earth-night.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_earth_nightmap.jpg` | 4096×2048 JPEG. |
+| `earth-clouds.png` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_earth_clouds.jpg` | 2048×1024 RGBA PNG; source luminance is alpha. |
+| `moon.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_moon.jpg` | 4096×2048 JPEG. |
 | `moon-normal.png` | NASA SVS, [CGI Moon Kit (LOLA displacement map)](https://svs.gsfc.nasa.gov/4720/); Ernie Wright (USRA), Noah Petro (NASA/GSFC), LOLA team | `ldem_4_uint.tif`, a 1440×720 unsigned 16-bit LOLA elevation/displacement map (half-metre units), → 1024×512 RGB tangent-space normal PNG. |
-| `mars.jpg` | NASA/JPL, [Mars](https://science.nasa.gov/3d-resources/mars/), Viking imagery processed at USGS | 1440×720 JPEG → 2048×1024 JPEG. |
+| `mars.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_mars.jpg` | 4096×2048 JPEG. |
 | `mars-normal.png` | USGS Astrogeology, [MGS MOLA Global DEM 463m](https://astrogeology.usgs.gov/search/map/mars_mgs_mola_dem_463m), MOLA Team and NASA GSFC; **CC0 (public domain)** in source metadata | Official 1024×501 DEM browse raster → 1024×512 RGB tangent-space normal PNG. The source is an elevation product, not the Mars albedo map. |
 | `ceres.jpg` | USGS Astrogeology, [Ceres Dawn FC Global Mosaic 140m](https://astrogeology.usgs.gov/search/map/ceres_dawn_fc_global_mosaic_140m), Dawn FC global mosaic | Official 1024×512 browse mosaic copied at native size. Global simple-cylindrical map. Source metadata says **Access Constraints: None; Use Constraints: Please cite authors**. |
-| `jupiter.jpg` | NASA/JPL, [Jupiter](https://science.nasa.gov/3d-resources/jupiter/), Voyager images | 720×360 JPEG → 2048×1024 JPEG. |
+| `jupiter.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_jupiter.jpg` | 4096×2048 JPEG. |
 | `io.jpg` | NASA/JPL, [Jupiter – Io (A)](https://science.nasa.gov/3d-resources/jupiter-io-a/), USGS/Voyager mosaic | 1440×720 JPEG → 2048×1024 JPEG. |
 | `europa.jpg` | NASA/JPL, [Jupiter – Europa](https://science.nasa.gov/3d-resources/jupiter-europa/), USGS/Voyager mosaic | 1440×720 JPEG → 2048×1024 JPEG. |
 | `ganymede.jpg` | NASA/JPL, [Jupiter – Ganymede](https://science.nasa.gov/3d-resources/jupiter-ganymede/), USGS/Voyager mosaic | 1440×720 JPEG → 2048×1024 JPEG. |
 | `callisto.jpg` | NASA/JPL, [Jupiter – Callisto](https://science.nasa.gov/3d-resources/jupiter-callisto/), USGS/Voyager mosaic | 1440×720 JPEG → 2048×1024 JPEG. |
-| `saturn.jpg` | NASA/JPL, [Saturn](https://science.nasa.gov/3d-resources/saturn/) | 720×360 JPEG → 2048×1024 JPEG. |
+| `saturn.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_saturn.jpg` | 4096×2048 JPEG. |
 | `saturn-rings.png` | NASA/JPL/Space Science Institute, [Panoramic Rings (PIA06175)](https://science.nasa.gov/resource/panoramic-rings/) | The full central horizontal scanline of the 5890×1000 Cassini panorama is resampled across the 256–512-pixel radial interval used by `RingGeometry(1, 2)`. The center (`r < 256`) is transparent; the texture outside its usable annulus is transparent. |
 | `titan.jpg` | NASA/JPL, [Saturn – Titan](https://science.nasa.gov/3d-resources/saturn-titan/) | 720×360 JPEG → 2048×1024 JPEG. |
-| `uranus.jpg` | NASA/JPL, [Voyager 2 color observation PIA01391](https://images.nasa.gov/details-PIA01391) | 1024×512 seamless procedural visualization: the documented Voyager color supplies the cyan base; a small latitude-only sinusoid supplies subtle bands. It is not a surface mosaic and no crescent observation is wrapped. |
-| `neptune.jpg` | NASA/JPL, [Neptune](https://science.nasa.gov/3d-resources/neptune/), Don Davis & JPL/Caltech | 720×360 JPEG → 2048×1024 JPEG. |
+| `uranus.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `2k_uranus.jpg` | 2048×1024 JPEG. |
+| `neptune.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `2k_neptune.jpg` | 2048×1024 JPEG. |
 | `triton.jpg` | NASA/JPL, [Neptune – Triton](https://science.nasa.gov/3d-resources/neptune-triton/), USGS/Tammy Becker & JPL/Caltech | 1440×720 JPEG → 2048×1024 JPEG. |
 | `pluto.jpg` | NASA/JPL, [Pluto](https://science.nasa.gov/3d-resources/pluto/) | 720×360 JPEG → 2048×1024 JPEG. The source page identifies this as a fictional texture stitched by David Seal from a Pat Rawlings painting; it is retained only with that explicit credit. |
 

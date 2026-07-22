@@ -6,8 +6,11 @@ license notices are reproduced below. The project itself is under the
 
 ## Solar-system textures (`images/solar-system/`)
 
-All local delivery textures in this directory are from NASA or USGS source
-records. NASA 3D Resources describes its assets as free to download and use;
+Local delivery textures come from three source families: [Solar System Scope
+textures](https://www.solarsystemscope.com/textures/) (CC BY 4.0, based on NASA
+imagery and elevation data — the Sun, major planets, the Moon, and Earth
+day/night/cloud maps), and NASA or USGS source records for the remaining
+bodies. NASA 3D Resources describes its assets as free to download and use;
 NASA SVS material is public domain unless otherwise noted. For USGS products,
 the [USGS data-licensing policy](https://www.usgs.gov/data-management/data-licensing)
 and each product record determine status: Mars MOLA is explicitly CC0; Mercury

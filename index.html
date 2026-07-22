@@ -545,7 +545,9 @@
       var oldMotionOverride = solarMotionOverride, oldShaderTime = solarShaderTime, oldPaused = solarPaused, oldScales;
       try {
         ok(Array.isArray(solarSunGlows) && solarSunGlows.length === 4, 'Sun does not have four galactic-core glow layers');
-        ok(SOLAR_OBJECTS.sun.specialty.prominences && SOLAR_OBJECTS.sun.specialty.stormShell && SOLAR_OBJECTS.sun.specialty.prominences.material.uniforms.uTime && SOLAR_OBJECTS.sun.specialty.stormShell.material.uniforms.uTime, 'Sun prominence/storm shells missing or not animated');
+        ok(SOLAR_OBJECTS.sun.specialty.prominences && SOLAR_OBJECTS.sun.specialty.prominences.material.uniforms.uTime, 'Sun prominence shell missing or not animated');
+        ok(Array.isArray(SOLAR_OBJECTS.sun.specialty.flares) && SOLAR_OBJECTS.sun.specialty.flares.length === 6 && SOLAR_OBJECTS.sun.specialty.flares.every(function (plane) { return plane.material.map; }), 'Sun prominence filament planes missing');
+        ok(SOLAR_OBJECTS.sun.specialty.cme && SOLAR_OBJECTS.sun.specialty.cme.geometry.attributes.position.count === 240, 'Sun CME particle burst missing');
         oldScales = solarSunGlows.map(function (layer) { return layer.sprite.scale.clone(); });
         solarShaderTime = 0; solarPaused = true;
         solarSunGlows.forEach(function (layer) { layer.sprite.scale.set(layer.baseScale, layer.baseScale, 1); });
@@ -567,7 +569,7 @@
       var points = 0;
       solarRoot.traverse(function (o) { if (o instanceof THREE.Points) points++; });
       ok(solarAsteroidBelt instanceof THREE.Points, 'asteroid belt is not points');
-      ok(points === 1, 'asteroid belt must use one points object');
+      ok(points === 2, 'expected exactly the asteroid belt and the Sun CME points');
       var first = solarAsteroidBelt.geometry.attributes.position.array.slice(0), oldBelt = solarAsteroidBelt;
       ok(first.length === 2000 * 3, 'asteroid belt must have 2,000 vertices');
       buildAsteroidBelt(2000);
@@ -1650,11 +1652,11 @@
   }
   function solarSunNoiseMaterial() {
     var material = new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(0xffd36b) } },
+      uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(0xffd36b) }, uMap: { value: null }, uHasMap: { value: 0 } },
       transparent: true,
-      vertexShader: 'varying vec3 vNormal; varying float vViewZ; void main(){ vNormal = normal; vViewZ = normalize(normalMatrix * normal).z; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      vertexShader: 'varying vec3 vNormal; varying float vViewZ; varying vec2 vUv; void main(){ vNormal = normal; vViewZ = normalize(normalMatrix * normal).z; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: [
-        'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; varying vec3 vNormal; varying float vViewZ;',
+        'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; uniform sampler2D uMap; uniform float uHasMap; varying vec3 vNormal; varying float vViewZ; varying vec2 vUv;',
         'float spot(vec3 n, vec3 c, float s, float t, float k){',
         '  float d = 1.0 - dot(n, c);',
         '  float r = s * (0.8 + 0.2 * sin(t * 0.04 + k));',
@@ -1673,13 +1675,46 @@
         '  spots *= spot(n, normalize(vec3(0.1, 0.34, -0.93)), 0.018, uTime, 3.1);',
         '  spots *= spot(n, normalize(vec3(-0.85, 0.12, -0.51)), 0.026, uTime, 4.6);',
         '  spots *= spot(n, normalize(vec3(0.45, -0.3, -0.84)), 0.022, uTime, 5.9);',
-        '  gl_FragColor = vec4(uColor * (0.94 + granule * 0.1) * limb * spots, uOpacity); }'
+        '  vec2 wob = vec2(sin(vUv.y * 34.0 + uTime * 0.7), cos(vUv.x * 30.0 - uTime * 0.55)) * 0.0018;',
+        '  vec3 tex = texture2D(uMap, vUv + wob + vec2(uTime * 0.0025, 0.0)).rgb * 1.12;',
+        '  vec3 base = mix(uColor * (0.94 + granule * 0.1), tex, uHasMap);',
+        '  gl_FragColor = vec4(base * limb * spots, uOpacity); }'
       ].join('\n')
+    });
+    solarLoadTexture('images/solar-system/sun.jpg', true).then(function (texture) {
+      if (texture) { material.uniforms.uMap.value = texture; material.uniforms.uHasMap.value = 1; }
     });
     solarAnimatedMaterials.push(material);
     return material;
   }
-  function solarFlareShellMaterial(outer) {
+  // per-pixel filament textures for prominence planes (same ImageData approach as the galaxy smoke sprites — no canvas-gradient dither)
+  function prominenceTextures() {
+    function make(seed) {
+      var S = 256, canvas = document.createElement('canvas'); canvas.width = S; canvas.height = S;
+      var ctx = canvas.getContext('2d'), image = ctx.createImageData(S, S), field = new Float32Array(S * S);
+      var state = seed; function rnd() { state = (state * 1664525 + 1013904223) >>> 0; return state / 4294967296; }
+      for (var f = 0; f < 7; f++) {
+        var x0 = S * (0.15 + 0.7 * rnd()), h = S * (0.45 + 0.45 * rnd()), curve = (rnd() - 0.5) * 0.9 * S, w0 = S * (0.02 + 0.03 * rnd());
+        for (var y = 0; y < h; y++) {
+          var k = y / h, xc = x0 + curve * k * k, w = Math.max(1.2, w0 * (1 - k * 0.85)), amp = Math.pow(1 - k, 0.65);
+          var x1 = Math.max(0, Math.floor(xc - w * 3)), x2 = Math.min(S - 1, Math.ceil(xc + w * 3));
+          for (var x = x1; x <= x2; x++) { var d = (x - xc) / w; field[(S - 1 - y) * S + x] += amp * Math.exp(-d * d); }
+        }
+      }
+      for (var i = 0; i < S * S; i++) {
+        var v = Math.min(1, field[i]), q = i * 4;
+        image.data[q] = Math.round(255 * Math.pow(v, 0.55));
+        image.data[q + 1] = Math.round(190 * Math.pow(v, 0.9));
+        image.data[q + 2] = Math.round(90 * Math.pow(v, 1.4));
+        image.data[q + 3] = Math.round(255 * Math.pow(v, 0.8));
+      }
+      ctx.putImageData(image, 0, 0);
+      var texture = new THREE.CanvasTexture(canvas); texture.needsUpdate = true; return texture;
+    }
+    return [make(11), make(47), make(83)];
+  }
+  var solarFlarePlanes = [], solarCME = null;
+  function solarFlareShellMaterial() {
     var material = new THREE.ShaderMaterial({
       uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 } },
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -1695,22 +1730,11 @@
         '  float burst = smoothstep(0.72, 1.0, sin(uTime * 0.11) * sin(uTime * 0.043 + 1.7) * 2.0);',
         '  float sector = smoothstep(0.55, 1.0, sin(lon * 1.5 + uTime * 0.02));',
         '  float storm = burst * sector;',
-        '  float a = ' + (outer ? 'edge * storm * (0.35 + 0.65 * pow(max(tongue, 0.0), 2.0)) * exp(-lat * lat * 2.5) * 1.8;' : 'edge * (tongue * 0.5 + storm * 1.2);'),
+        '  float a = edge * (tongue * 0.5 + storm * 1.2);',
         '  vec3 color = mix(vec3(1.0, 0.45, 0.1), vec3(1.0, 0.85, 0.45), min(storm, 1.0));',
         '  gl_FragColor = vec4(color, min(a, 1.0) * uOpacity); }'
       ].join('\n')
     });
-    solarAnimatedMaterials.push(material);
-    return material;
-  }
-  function solarGiantMaterial(body) {
-    var material = solarMaterialFor(body);
-    material.onBeforeCompile = function (shader) {
-      shader.uniforms.uSolarTime = { value: solarShaderTime };
-      material.userData.solarShader = shader;
-      shader.vertexShader = 'uniform float uSolarTime;\n' + shader.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = vec3(position); transformed += normal * sin(position.y * 8.0 + uSolarTime * 0.16) * 0.018;');
-      shader.fragmentShader = 'uniform float uSolarTime;\n' + shader.fragmentShader.replace('#include <output_fragment>', 'outgoingLight += sin(vViewPosition.y * 7.0 + uSolarTime * 0.16) * 0.018;\n#include <output_fragment>');
-    };
     solarAnimatedMaterials.push(material);
     return material;
   }
@@ -1813,9 +1837,7 @@
       orbitPivot.rotation.x = body.inclinationDeg * Math.PI / 180;
       tiltNode.rotation.z = body.tiltDeg * Math.PI / 180;
       parent.add(orbitPivot); orbitPivot.add(solarOrbitLine(body)); orbitPivot.add(positionNode); positionNode.add(tiltNode); tiltNode.add(spinNode); spinNode.add(lodGroup);
-      var material = body.id === 'sun' ? solarSunNoiseMaterial()
-        : (body.id === 'jupiter' || body.id === 'saturn' || body.id === 'uranus' || body.id === 'neptune') ? solarGiantMaterial(body)
-        : solarMaterialFor(body);
+      var material = body.id === 'sun' ? solarSunNoiseMaterial() : solarMaterialFor(body);
       var mesh = new THREE.Mesh(solarSphereHigh, material);
       var radius = body.id === 'sun' ? 9.5 : solarDisplayRadius(body.radiusKm);
       mesh.scale.set(radius, radius, radius); mesh.userData.solarId = body.id; lodGroup.add(mesh);
@@ -1826,13 +1848,33 @@
       var object = SOLAR_OBJECTS[body.id];
       if (body.id === 'sun') {
         solarSunGlows = makeSolarCoreLayers(radius, lodGroup);
-        var prominences = new THREE.Mesh(solarSphereHigh, solarFlareShellMaterial(false));
+        var prominences = new THREE.Mesh(solarSphereHigh, solarFlareShellMaterial());
         prominences.scale.set(radius * 1.06, radius * 1.06, radius * 1.06);
-        var stormShell = new THREE.Mesh(solarSphereHigh, solarFlareShellMaterial(true));
-        stormShell.scale.set(radius * 1.30, radius * 1.30, radius * 1.30);
-        [prominences, stormShell].forEach(function (shell) { shell.userData.solarId = 'sun'; lodGroup.add(shell); });
-        object.specialty.prominences = prominences; object.specialty.stormShell = stormShell;
+        prominences.userData.solarId = 'sun'; lodGroup.add(prominences);
+        object.specialty.prominences = prominences;
+        var flareTextures = prominenceTextures();
+        for (var fi = 0; fi < 6; fi++) {
+          var holder = new THREE.Group(); holder.rotation.y = fi / 6 * Math.PI * 2 + fi * 0.35;
+          var plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: flareTextures[fi % 3], transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+          plane.rotation.z = -Math.PI / 2; // filament tips point radially outward
+          plane.position.x = radius * 1.02; // root buried in the disc, only the upper filaments show
+          plane.userData.w = radius * (0.55 + (fi % 3) * 0.1); plane.userData.h = radius * (0.65 + (fi % 2) * 0.18);
+          plane.scale.set(plane.userData.w, plane.userData.h, 1);
+          plane.userData.solarId = 'sun'; holder.add(plane); lodGroup.add(holder);
+          solarFlarePlanes.push(plane);
+        }
+        object.specialty.flares = solarFlarePlanes;
+        var cmeCount = 240, cmePositions = new Float32Array(cmeCount * 3);
+        var cmeGeometry = new THREE.BufferGeometry(); cmeGeometry.setAttribute('position', new THREE.BufferAttribute(cmePositions, 3));
+        var cmePoints = new THREE.Points(cmeGeometry, new THREE.PointsMaterial({ map: GLOW_TEX, color: 0xff6a2a, size: 0.85, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+        cmePoints.visible = false; cmePoints.userData.solarId = 'sun'; lodGroup.add(cmePoints);
+        var cmeState = 20260722, cmeParticles = [];
+        function cmeRnd() { cmeState = (cmeState * 1664525 + 1013904223) >>> 0; return cmeState / 4294967296; }
+        for (var ci = 0; ci < cmeCount; ci++) cmeParticles.push({ dl: (cmeRnd() - 0.5) * 0.55, dp: (cmeRnd() - 0.5) * 0.4, v: 0.75 + cmeRnd() * 0.5, delay: cmeRnd() * 0.35 });
+        solarCME = { points: cmePoints, positions: cmePositions, particles: cmeParticles, active: false, t0: 0, lon: 0, R: radius };
+        object.specialty.cme = cmePoints;
       }
+      if (body.id === 'earth') { mesh.material.shininess = 30; mesh.material.specular = new THREE.Color(0x555555); } // ocean glint
       if (body.id === 'earth') {
         var clouds = new THREE.Mesh(solarSphereHigh, new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.34, depthWrite: false }));
         var atmosphere = new THREE.Mesh(solarSphereHigh, solarCoronaMaterial.clone());
@@ -1895,6 +1937,36 @@
         var phaseScale = breath + index * 0.002;
         layer.sprite.scale.set(layer.baseScale * phaseScale, layer.baseScale * phaseScale, 1);
       });
+      var st = solarShaderTime;
+      var burst = Math.max(0, Math.min(1, (Math.sin(st * 0.11) * Math.sin(st * 0.043 + 1.7) * 2 - 0.72) / 0.28)); // same beat as the prominence shell
+      solarFlarePlanes.forEach(function (plane, index) {
+        var lick = 1 + 0.12 * Math.sin(st * 0.5 + index * 1.3) + burst * 0.55;
+        plane.scale.set(plane.userData.w * (1 + 0.08 * Math.sin(st * 0.35 + index * 2.1)), plane.userData.h * lick, 1);
+        plane.material.opacity = 0.42 + 0.16 * Math.sin(st * 0.4 + index * 2.1) + burst * 0.3;
+      });
+      if (solarCME) {
+        if (!solarCME.active && burst > 0.6) {
+          solarCME.active = true; solarCME.t0 = st;
+          solarCME.lon = (Math.floor(st * 0.05) % 6) / 6 * Math.PI * 2; // erupt from one of the prominence longitudes
+          solarCME.points.visible = true;
+        }
+        if (solarCME.active) {
+          var life = (st - solarCME.t0) / 7;
+          if (life >= 1) { solarCME.active = false; solarCME.points.visible = false; }
+          else {
+            var R = solarCME.R, positions = solarCME.positions;
+            solarCME.particles.forEach(function (particle, index) {
+              var k = Math.max(0, (life - particle.delay) / (1 - particle.delay));
+              var arc = 4 * k * (1 - k);
+              var r = k <= 0 ? 0 : R * (1.02 + arc * 1.1 * particle.v);
+              var lon = solarCME.lon + particle.dl * (0.5 + k), lat = particle.dp * (0.6 + k * 0.5), cl = Math.cos(lat);
+              positions[index * 3] = r * cl * Math.cos(lon); positions[index * 3 + 1] = r * Math.sin(lat); positions[index * 3 + 2] = r * cl * Math.sin(lon);
+            });
+            solarCME.points.geometry.attributes.position.needsUpdate = true;
+            solarCME.points.material.opacity = 0.85 * (1 - life * life);
+          }
+        }
+      }
     }
     if (solarPaused || solarReducedMotion()) return;
     solarElapsed += dt;
