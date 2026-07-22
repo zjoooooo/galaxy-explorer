@@ -549,7 +549,7 @@
         ok(Array.isArray(solarSunGlows) && solarSunGlows.length === 4, 'Sun does not have four galactic-core glow layers');
         ok(SOLAR_OBJECTS.sun.specialty.prominences && SOLAR_OBJECTS.sun.specialty.prominences.material.uniforms.uTime, 'Sun prominence shell missing or not animated');
         ok(SOLAR_OBJECTS.sun.specialty.prominenceFlow && SOLAR_OBJECTS.sun.specialty.prominenceFlow.geometry.attributes.position.count === 540 && SOLAR_OBJECTS.sun.specialty.prominenceFlow.material.vertexColors === true, 'Sun eruptive prominence particle flow missing');
-        ok(SOLAR_OBJECTS.sun.specialty.cme && SOLAR_OBJECTS.sun.specialty.cme.geometry.attributes.position.count === 240, 'Sun CME particle burst missing');
+        ok(SOLAR_OBJECTS.sun.specialty.cme && SOLAR_OBJECTS.sun.specialty.cme.geometry.attributes.position.count === 360, 'Sun CME particle burst missing');
         oldScales = solarSunGlows.map(function (layer) { return layer.sprite.scale.clone(); });
         solarShaderTime = 0; solarPaused = true;
         solarSunGlows.forEach(function (layer) { layer.sprite.scale.set(layer.baseScale, layer.baseScale, 1); });
@@ -1869,32 +1869,38 @@
         // eruptive prominences: plasma wells up from an anchor, arcs open at the top,
         // most of it rains back to the surface, a fifth escapes and dissipates — like
         // water slowly poured from a cup, in slow motion on the limb
-        var promState = 77031, promAnchors = [], PROM_N = 90;
+        var promState = 77031, promAnchors = [];
         function promRnd() { promState = (promState * 1664525 + 1013904223) >>> 0; return promState / 4294967296; }
         for (var ai = 0; ai < 6; ai++) {
           var anchor = { lon: ai / 6 * Math.PI * 2 + promRnd() * 0.6, lat: (promRnd() - 0.5) * 0.9, period: 55 + promRnd() * 45, phase: promRnd() * 100, particles: [] };
-          for (var pi = 0; pi < PROM_N; pi++) anchor.particles.push({
-            delay: promRnd() * 10, life: 14 + promRnd() * 10,
-            h: radius * (0.3 + promRnd() * 0.45), side: (promRnd() - 0.5) * radius * 0.55,
-            tilt: (promRnd() - 0.5) * radius * 0.3, escape: promRnd() < 0.2
+          for (var si = 0; si < 3; si++) for (var pi = 0; pi < 30; pi++) anchor.particles.push({
+            // stream ribbons: particles pour out in order along each stream, so overlapping
+            // soft sprites fuse into a continuous fluid instead of loose dots
+            delay: pi / 30 * 7 + si * 1.5 + promRnd() * 0.4, life: 16 + promRnd() * 6,
+            h: radius * (0.5 + promRnd() * 0.35) * (0.85 + si * 0.12),
+            dir: (si - 1) * 0.35 + (promRnd() - 0.5) * 0.12,
+            curl: (promRnd() - 0.5) * 0.5, spread: (promRnd() - 0.5) * 0.6
           });
           promAnchors.push(anchor);
         }
-        var promTotal = 6 * PROM_N, promPositions = new Float32Array(promTotal * 3), promColors = new Float32Array(promTotal * 3);
+        var promTotal = 6 * 90, promPositions = new Float32Array(promTotal * 3), promColors = new Float32Array(promTotal * 3);
         var promGeometry = new THREE.BufferGeometry();
         promGeometry.setAttribute('position', new THREE.BufferAttribute(promPositions, 3));
         promGeometry.setAttribute('color', new THREE.BufferAttribute(promColors, 3));
-        var promPoints = new THREE.Points(promGeometry, new THREE.PointsMaterial({ map: GLOW_TEX, size: 0.5, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+        var promPoints = new THREE.Points(promGeometry, new THREE.PointsMaterial({ map: GLOW_TEX, size: 1.5, vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
         promPoints.userData.solarId = 'sun'; lodGroup.add(promPoints);
         solarProminences = { points: promPoints, anchors: promAnchors, positions: promPositions, colors: promColors, R: radius };
         object.specialty.prominenceFlow = promPoints;
-        var cmeCount = 240, cmePositions = new Float32Array(cmeCount * 3);        var cmeCount = 240, cmePositions = new Float32Array(cmeCount * 3);
+        var cmeCount = 360, cmePositions = new Float32Array(cmeCount * 3);
         var cmeGeometry = new THREE.BufferGeometry(); cmeGeometry.setAttribute('position', new THREE.BufferAttribute(cmePositions, 3));
-        var cmePoints = new THREE.Points(cmeGeometry, new THREE.PointsMaterial({ map: GLOW_TEX, color: 0xff6a2a, size: 0.85, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+        var cmePoints = new THREE.Points(cmeGeometry, new THREE.PointsMaterial({ map: GLOW_TEX, color: 0xff6a2a, size: 1.7, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
         cmePoints.visible = false; cmePoints.userData.solarId = 'sun'; lodGroup.add(cmePoints);
         var cmeState = 20260722, cmeParticles = [];
         function cmeRnd() { cmeState = (cmeState * 1664525 + 1013904223) >>> 0; return cmeState / 4294967296; }
-        for (var ci = 0; ci < cmeCount; ci++) cmeParticles.push({ dl: (cmeRnd() - 0.5) * 0.55, dp: (cmeRnd() - 0.5) * 0.4, v: 0.75 + cmeRnd() * 0.5, delay: cmeRnd() * 0.35 });
+        for (var ci = 0; ci < cmeCount; ci++) {
+          var cmeStream = ci % 6; // six coherent filaments inside the plume — fluid, not confetti
+          cmeParticles.push({ dl: (cmeStream / 6 - 0.5) * 0.7 + (cmeRnd() - 0.5) * 0.16, dp: ((cmeStream % 3) / 3 - 0.33) * 0.5 + (cmeRnd() - 0.5) * 0.14, v: 0.75 + cmeRnd() * 0.5, delay: cmeRnd() * 0.35 });
+        }
         solarCME = { points: cmePoints, positions: cmePositions, particles: cmeParticles, active: false, t0: 0, lon: 0, R: radius };
         object.specialty.cme = cmePoints;
       }
@@ -2026,12 +2032,14 @@
             var t = cycle - particle.delay;
             if (t < 0 || t > particle.life) { promPos[i3] = 0; promPos[i3 + 1] = 0; promPos[i3 + 2] = 0; promCol[i3] = 0; promCol[i3 + 1] = 0; promCol[i3 + 2] = 0; return; }
             var k = t / particle.life;
-            var arc = particle.escape ? particle.h * k * (2 - k) * 1.25 : particle.h * 4 * k * (1 - k); // pour up, rain back — escapees keep climbing and fade out
-            var r = promR * 0.99 + arc, sway = particle.side * k, drift = particle.tilt * k;
+            var rise = 1 - Math.pow(1 - k, 2.2); // decelerating climb — ejected material never falls back, it disperses
+            var r = promR * 0.99 + particle.h * rise;
+            var sway = (particle.dir + particle.curl * k) * promR * 0.5 * k + particle.spread * promR * 0.7 * k * k;
+            var drift = particle.curl * promR * 0.35 * k + particle.spread * promR * 0.4 * k * k;
             promPos[i3] = radialX * r + eastX * sway + northX * drift;
             promPos[i3 + 1] = radialY * r + northY * drift;
             promPos[i3 + 2] = radialZ * r + eastZ * sway + northZ * drift;
-            var glow = Math.sin(Math.min(1, k) * Math.PI) * (particle.escape ? 1 - k * 0.5 : 1);
+            var glow = Math.pow(Math.sin(Math.min(1, k) * Math.PI), 0.7) * (1 - 0.4 * k); // bright surge, slow dissolve
             promCol[i3] = glow; promCol[i3 + 1] = glow * 0.45; promCol[i3 + 2] = glow * 0.18;
           });
         });
