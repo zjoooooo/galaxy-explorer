@@ -612,7 +612,7 @@
       var second = solarAsteroidBelt.geometry.attributes.position.array;
       ok(first.length === second.length && first.every(function (v, i) { return v === second[i]; }), 'asteroid belt positions are not deterministic');
       ok(oldBelt.geometry.disposed && oldBelt.material.disposed, 'replaced belt resources were not disposed');
-      var ceres = SOLAR_OBJECTS.ceres, angle = solarBeltCenterAngle(ceres.body, ceres.body.phase + solarElapsed * SOLAR_ORBIT_RATE / ceres.compressedPeriod), gap = solarBeltClearance.angle;
+      var ceres = SOLAR_OBJECTS.ceres, angle = solarBeltCenterAngle(ceres.body, solarFutureAngle(ceres.body, ceres, solarElapsed)), gap = solarBeltClearance.angle;
       for (var i = 0; i < second.length; i += 3) {
         var x = second[i], z = second[i + 2], radius = Math.sqrt(x * x + z * z), beltAngle = Math.atan2(z, x) + solarAsteroidBelt.rotation.y;
         if (Math.abs(Math.atan2(Math.sin(beltAngle - angle), Math.cos(beltAngle - angle))) < gap) ok(radius < solarBeltClearance.inner || radius > solarBeltClearance.outer, 'belt point enters Ceres clearance');
@@ -643,7 +643,7 @@
       updateSolarMotion(0.15);
       ok(earth.positionNode.position.x === x && earth.positionNode.position.z === z && earth.spinNode.rotation.y === spin, 'paused transforms advanced');
       setSolarPaused(false); updateSolarMotion(0.15);
-      var expected = new THREE.Vector3(); solarOrbitPoint(earth.body, earth.body.phase + solarElapsed * SOLAR_ORBIT_RATE / earth.compressedPeriod, expected);
+      var expected = new THREE.Vector3(); solarOrbitPoint(earth.body, solarFutureAngle(earth.body, earth, solarElapsed), expected);
       ok(earth.positionNode.position.x === expected.x && earth.positionNode.position.z === expected.z, 'resume transformed Earth with a clock jump');
       setSolarPaused(paused);
     });
@@ -2064,6 +2064,21 @@
     if (maps.albedo) { material.map = maps.albedo; material.color.set(0xffffff); }
     if (maps.normal) material.normalMap = maps.normal;
     if (maps.night) { material.emissiveMap = maps.night; material.emissive = new THREE.Color(0xffffff); }
+    if (object.body && object.body.id === 'earth' && maps.albedo && maps.albedo.image && !material.specularMap) {
+      try { // ocean-only glint: the old whole-globe specular read as a white blob — the fix is a water mask, not killing specular
+        var oceanCanvas = document.createElement('canvas'); oceanCanvas.width = 1024; oceanCanvas.height = 512;
+        var oceanCtx = oceanCanvas.getContext('2d');
+        oceanCtx.drawImage(maps.albedo.image, 0, 0, 1024, 512);
+        var oceanPixels = oceanCtx.getImageData(0, 0, 1024, 512), oceanData = oceanPixels.data;
+        for (var oi = 0; oi < oceanData.length; oi += 4) {
+          var water = oceanData[oi + 2] > oceanData[oi] * 1.12 && oceanData[oi + 2] > oceanData[oi + 1] && oceanData[oi] + oceanData[oi + 1] + oceanData[oi + 2] < 420 ? 220 : 0;
+          oceanData[oi] = oceanData[oi + 1] = oceanData[oi + 2] = water; // dark, blue-dominant = ocean
+        }
+        oceanCtx.putImageData(oceanPixels, 0, 0);
+        material.specularMap = new THREE.CanvasTexture(oceanCanvas);
+        material.specular = new THREE.Color(0x2e2c26); material.shininess = 110; // tight, restrained glint — anything brighter re-creates the old white blob under bloom
+      } catch (oceanError) {} // canvas tainted (file://) — keep the matte Earth
+    }
     material.needsUpdate = true;
     if (object.specialty.clouds && maps.clouds) { var clouds = object.specialty.clouds.material; clouds.map = maps.clouds; clouds.opacity = 0.85; clouds.needsUpdate = true; }
     if (object.specialty.rings && maps.ring) {
@@ -2394,7 +2409,7 @@
       instanced.userData.solarId = 'asteroid-belt';
       solarAsteroidRocks.add(instanced);
     });
-    var orbitAngle = ceres.phase + solarElapsed * SOLAR_ORBIT_RATE / solarCompressedPeriod(ceres);
+    var orbitAngle = solarFutureAngle(ceres, { compressedPeriod: solarCompressedPeriod(ceres) }, solarElapsed);
     solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceres, orbitAngle);
     solarAsteroidBelt.userData.solarId = 'asteroid-belt'; solarRoot.add(solarAsteroidBelt);
     solarAsteroidRocks.rotation.y = solarAsteroidBelt.rotation.y;
@@ -2470,7 +2485,10 @@
   }
   // ── event rides: planet angles are pure functions of solarElapsed, so "when is the next
   // conjunction / transit?" is just a scan of future clock values — then ease the clock there
-  function solarFutureAngle(body, object, elapsed) { return body.phase + elapsed * SOLAR_ORBIT_RATE / object.compressedPeriod; }
+  function solarFutureAngle(body, object, elapsed) { // Kepler's 2nd law via the eccentric-anomaly series — visibly faster at perihelion
+    var M = body.phase + elapsed * SOLAR_ORBIT_RATE / object.compressedPeriod, e = body.eccentricity;
+    return e ? M + e * Math.sin(M) + 0.5 * e * e * Math.sin(2 * M) : M;
+  }
   function solarWorldAt(body, object, elapsed, target) { // orbitPivot's inclination applied by hand
     solarOrbitPoint(body, solarFutureAngle(body, object, elapsed), target);
     var inc = body.inclinationDeg * Math.PI / 180, z = target.z;
@@ -2619,10 +2637,9 @@
     dt *= solarTimeScale; // fast-forward affects orbits/spins/comets only, never the Sun's shader clock above
     updateSolarComets(dt);
     if (!solarEventRide) solarElapsed += dt; // an event ride owns the clock while active
-    var orbitElapsed = solarElapsed * SOLAR_ORBIT_RATE;
     SOLAR_BODIES.forEach(function (body) {
       var object = SOLAR_OBJECTS[body.id]; if (!object) return;
-      if (body.id !== 'sun') solarOrbitPoint(body, body.phase + orbitElapsed / object.compressedPeriod, object.positionNode.position);
+      if (body.id !== 'sun') solarOrbitPoint(body, solarFutureAngle(body, object, solarElapsed), object.positionNode.position);
       object.spinNode.rotation.y = solarElapsed * SOLAR_SPIN_RATE / Math.max(0.3, Math.abs(body.rotationHours) / 120);
       // retrograde is double-encoded in NASA data (tilt > 90° AND negative period); the tilt already
       // flips the axis geometrically, so only flip the spin when exactly one encoding applies (e.g. Triton)
@@ -2636,7 +2653,7 @@
     }
     if (solarAsteroidBelt) {
       var ceresObject = SOLAR_OBJECTS.ceres;
-      solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceresObject.body, ceresObject.body.phase + orbitElapsed / ceresObject.compressedPeriod);
+      solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceresObject.body, solarFutureAngle(ceresObject.body, ceresObject, solarElapsed));
       if (solarAsteroidRocks) solarAsteroidRocks.rotation.y = solarAsteroidBelt.rotation.y;
     }
   }
