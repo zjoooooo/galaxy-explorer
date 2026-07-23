@@ -2010,7 +2010,7 @@
   }
   var solarProminences = null, solarCME = null;
   var solarRingFx = null, solarRingQuat = new THREE.Quaternion(); // Saturn's analytic ring/planet shadow rig
-  var solarSunSpikes = null, solarSunOcclusion = { frame: 0, target: 1, value: 1 }; // diffraction spikes + eclipse blackout
+  var solarSunOcclusion = { frame: 0, target: 1, value: 1 }; // eclipse blackout: sun glows fade behind an occluding planet
   var solarTrojans = null, solarJupiterShadow = null, solarEarthPatch = null, solarPromFrame = 0;
   var solarArrivalSpin = null, solarIdleSince = performance.now(); // orbital settle on arrival + idle attract drift
   function solarFlareShellMaterial() {
@@ -2185,9 +2185,6 @@
       var object = SOLAR_OBJECTS[body.id];
       if (body.id === 'sun') {
         solarSunGlows = makeSolarCoreLayers(radius, lodGroup);
-        var sunSpikes = new THREE.Sprite(new THREE.SpriteMaterial({ map: crossTexture(), color: 0xfff3d6, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
-        sunSpikes.scale.set(radius * 7.5, radius * 7.5, 1); sunSpikes.userData.solarId = 'sun'; lodGroup.add(sunSpikes);
-        solarSunSpikes = { sprite: sunSpikes, baseOpacity: 0.5 }; // kept OUT of solarSunGlows — a self-check pins that array at 4
         var prominences = new THREE.Mesh(solarSphereHigh, solarFlareShellMaterial());
         prominences.scale.set(radius * 1.06, radius * 1.06, radius * 1.06);
         prominences.userData.solarId = 'sun'; lodGroup.add(prominences);
@@ -2663,10 +2660,6 @@
     solarSunOcclusion.value += (solarSunOcclusion.target - solarSunOcclusion.value) * 0.12;
     var visibleShare = solarSunOcclusion.value;
     solarSunGlows.forEach(function (layer) { layer.sprite.material.opacity = layer.baseOpacity * visibleShare; });
-    if (solarSunSpikes) {
-      solarSunSpikes.sprite.material.opacity = solarSunSpikes.baseOpacity * visibleShare;
-      if (!solarReducedMotion()) solarSunSpikes.sprite.material.rotation = solarShaderTime * 0.02;
-    }
   }
   function updateSolarCameraLife() { // 3s decaying orbit-insertion sweep on arrival; slow attract drift when idle
     var now = performance.now(), spinning = false;
