@@ -2262,42 +2262,18 @@
       if (body.id === 'jupiter') {
         // Galilean shadow transits: the four moons' shadow dots crawl across the disc whenever
         // their system is in focus — the phenomenon amateur telescopes chase, fully analytic
-        var jupiterShadow = { uOcc: { value: [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()] }, uStorm: { value: 0 } };
+        // NOTE: an animated Great Red Spot (differential UV swirl) was tried here — the sphere's
+        // V axis runs opposite to the image scan, the wind-up grows unbounded, and it read as a
+        // second fake red spot. Removed on request; the real GRS stays as the map paints it.
+        var jupiterShadow = { uOcc: { value: [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()] } };
         mesh.material.onBeforeCompile = function (shader) {
           shader.uniforms.uOcc = jupiterShadow.uOcc;
-          shader.uniforms.uStormTime = jupiterShadow.uStorm;
           shader.vertexShader = shader.vertexShader
             .replace('#include <common>', '#include <common>\nvarying vec3 vJovWP;')
             .replace('#include <begin_vertex>', '#include <begin_vertex>\nvJovWP = (modelMatrix * vec4(position, 1.0)).xyz;');
           shader.fragmentShader = shader.fragmentShader
-            .replace('#include <common>', '#include <common>\nvarying vec3 vJovWP;\nuniform vec4 uOcc[4];\nuniform float uStormTime;')
-            // the Great Red Spot churns: a differential rotation of the map's UVs around the storm,
-            // strongest at the eye and dying out with an exponential falloff — the spiral winds live
-            .replace('#include <map_fragment>', [
-              '#ifdef USE_MAP',
-              '  vec2 grsD = vUv - vec2(0.373, 0.613); grsD.x *= 2.0;',
-              '  float grsFall = exp(-dot(grsD, grsD) / 0.0011);',
-              '  float grsAng = grsFall * uStormTime * 0.3;',
-              '  float grsC = cos(grsAng), grsS = sin(grsAng);',
-              '  grsD = vec2(grsD.x * grsC - grsD.y * grsS, grsD.x * grsS + grsD.y * grsC);',
-              '  grsD.x *= 0.5;',
-              '  vec4 texelColor = texture2D(map, vec2(0.373, 0.613) + grsD);',
-              '  texelColor = mapTexelToLinear(texelColor);',
-              '  diffuseColor *= texelColor;',
-              '#endif',
-              'vec3 jsD = normalize(-vJovWP);',
-              'for (int oi = 0; oi < 4; oi++) {',
-              '  if (uOcc[oi].w > 0.0) {',
-              '    vec3 toOcc = uOcc[oi].xyz - vJovWP;',
-              '    float jsAlong = dot(toOcc, jsD);',
-              '    if (jsAlong > 0.0) {',
-              '      float jsMiss = dot(toOcc, toOcc) - jsAlong * jsAlong;',
-              '      float jsRR = uOcc[oi].w * uOcc[oi].w;',
-              '      diffuseColor.rgb *= 1.0 - 0.85 * (1.0 - smoothstep(jsRR * 0.4, jsRR * 1.3, jsMiss));',
-              '    }',
-              '  }',
-              '}'
-            ].join('\n'));
+            .replace('#include <common>', '#include <common>\nvarying vec3 vJovWP;\nuniform vec4 uOcc[4];')
+            .replace('#include <map_fragment>', '#include <map_fragment>\nvec3 jsD = normalize(-vJovWP);\nfor (int oi = 0; oi < 4; oi++) {\n  if (uOcc[oi].w > 0.0) {\n    vec3 toOcc = uOcc[oi].xyz - vJovWP;\n    float jsAlong = dot(toOcc, jsD);\n    if (jsAlong > 0.0) {\n      float jsMiss = dot(toOcc, toOcc) - jsAlong * jsAlong;\n      float jsRR = uOcc[oi].w * uOcc[oi].w;\n      diffuseColor.rgb *= 1.0 - 0.85 * (1.0 - smoothstep(jsRR * 0.4, jsRR * 1.3, jsMiss));\n    }\n  }\n}');
         };
         solarJupiterShadow = jupiterShadow;
       }
@@ -2765,7 +2741,6 @@
     });
     if (solarEarthPatch) solarEarthPatch.uCloudShift.value = solarElapsed * 0.012 / (Math.PI * 2); // the ground shadow tracks the drift
     if (solarJupiterShadow) { // Galilean shadow dots: live only while the Jovian system is revealed
-      solarJupiterShadow.uStorm.value = solarShaderTime; // the Great Red Spot churns on the shader clock
       var jupiterMoonIds = ['io', 'europa', 'ganymede', 'callisto'];
       for (var omi = 0; omi < 4; omi++) {
         var jovMoon = SOLAR_OBJECTS[jupiterMoonIds[omi]], occSlot = solarJupiterShadow.uOcc.value[omi];
