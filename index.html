@@ -2159,6 +2159,17 @@
         var clouds = new THREE.Mesh(solarSphereHigh, new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.34, depthWrite: false })); // Lambert: clouds must not throw a specular blob
         clouds.scale.set(radius * 1.018, radius * 1.018, radius * 1.018); clouds.userData.solarId = body.id; lodGroup.add(clouds);
         object.specialty.clouds = clouds;
+        // city lights belong to the night: mask the emissive night map to the dark hemisphere
+        // (the Sun sits at the world origin, so -worldPos IS the sun direction), plus a thin
+        // warm twilight band right along the terminator
+        mesh.material.onBeforeCompile = function (shader) {
+          shader.vertexShader = shader.vertexShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vSunWN; varying vec3 vSunWP;')
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSunWN = mat3(modelMatrix) * normal; vSunWP = (modelMatrix * vec4(position, 1.0)).xyz;');
+          shader.fragmentShader = shader.fragmentShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vSunWN; varying vec3 vSunWP;')
+            .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nfloat sunDot = dot(normalize(vSunWN), normalize(-vSunWP));\ntotalEmissiveRadiance *= (1.0 - smoothstep(-0.12, 0.08, sunDot)) * 1.6;\ntotalEmissiveRadiance += vec3(1.0, 0.42, 0.18) * (1.0 - smoothstep(0.0, 0.1, abs(sunDot))) * 0.12;');
+        };
       }
       // translucent limb atmospheres, tinted per world (thin worlds get faint ones)
       var ATMOS = { venus: [0xf3e3b8, 3.2, 0.5], earth: [0x7fb9ff, 3.0, 0.55], mars: [0xd9a07a, 4.2, 0.16], jupiter: [0xe8d2ac, 3.4, 0.34], saturn: [0xf0e0b6, 3.4, 0.3], titan: [0xe8b060, 2.8, 0.5], uranus: [0xa8e6e6, 3.2, 0.35], neptune: [0x86a8f0, 3.2, 0.35] };
