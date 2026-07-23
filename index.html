@@ -1960,9 +1960,9 @@
     var material = new THREE.ShaderMaterial({
       uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(0xffd36b) }, uMap: { value: null }, uHasMap: { value: 0 } },
       transparent: true,
-      vertexShader: 'varying vec3 vNormal; varying float vViewZ; varying vec2 vUv; void main(){ vNormal = normal; vViewZ = normalize(normalMatrix * normal).z; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      vertexShader: 'varying vec3 vNormal; varying float vViewZ; varying vec2 vUv; varying float vCamDist; void main(){ vNormal = normal; vViewZ = normalize(normalMatrix * normal).z; vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); vCamDist = length(mv.xyz); gl_Position = projectionMatrix * mv; }',
       fragmentShader: [
-        'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; uniform sampler2D uMap; uniform float uHasMap; varying vec3 vNormal; varying float vViewZ; varying vec2 vUv;',
+        'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; uniform sampler2D uMap; uniform float uHasMap; varying vec3 vNormal; varying float vViewZ; varying vec2 vUv; varying float vCamDist;',
         'float spot(vec3 n, vec3 c, float s, float t, float k){',
         '  float d = 1.0 - dot(n, c);',
         '  vec3 e1 = normalize(cross(c, vec3(0.0, 1.0, 0.0))); vec3 e2 = cross(c, e1);',
@@ -1989,6 +1989,7 @@
         '  vec2 wob = vec2(sin(vUv.y * 34.0 + uTime * 0.7), cos(vUv.x * 30.0 - uTime * 0.55)) * 0.0018;',
         '  vec3 tex = texture2D(uMap, vUv + wob + vec2(uTime * 0.0025, 0.0)).rgb * 1.04;',
         '  vec3 base = mix(uColor * (0.94 + granule * 0.1), tex, uHasMap);',
+        '  base = mix(base, uColor, smoothstep(45.0, 170.0, vCamDist) * 0.92);', // the map's low mips run dark red — hold the far disc at one constant warm color
         '  gl_FragColor = vec4(base * limb * spots, uOpacity); }'
       ].join('\n')
     });
@@ -2164,20 +2165,30 @@
         prominences.scale.set(radius * 1.06, radius * 1.06, radius * 1.06);
         prominences.userData.solarId = 'sun'; lodGroup.add(prominences);
         object.specialty.prominences = prominences;
-        // eruptive prominences: plasma wells up from an anchor, arcs open at the top,
-        // most of it rains back to the surface, a fifth escapes and dissipates — like
-        // water slowly poured from a cup, in slow motion on the limb
+        // prominences follow the real life cycle seen in SDO/AIA 304Å footage: cool plasma
+        // CONDENSES into a low magnetic ARCH between two footpoints (formation), hangs there
+        // for most of its life with material counter-streaming along the loop and draining
+        // into the feet (quiescent phase), then — on eruptive cycles — rises slowly, kicks
+        // into a fast accelerating eruption whose threads visibly untwist, and disperses
+        // outward for good; non-eruptive cycles simply fade back down. H-alpha pink-red.
         var promState = 77031, promAnchors = [];
         function promRnd() { promState = (promState * 1664525 + 1013904223) >>> 0; return promState / 4294967296; }
         for (var ai = 0; ai < 6; ai++) {
-          var anchor = { lon: ai / 6 * Math.PI * 2 + promRnd() * 0.6, lat: (promRnd() - 0.5) * 0.9, period: 55 + promRnd() * 45, phase: promRnd() * 100, particles: [] };
-          for (var si = 0; si < 3; si++) for (var pi = 0; pi < 30; pi++) anchor.particles.push({
-            // stream ribbons: particles pour out in order along each stream, so overlapping
-            // soft sprites fuse into a continuous fluid instead of loose dots
-            delay: pi / 30 * 7 + si * 1.5 + promRnd() * 0.4, life: 16 + promRnd() * 6,
-            h: radius * (0.5 + promRnd() * 0.35) * (0.85 + si * 0.12),
-            dir: (si - 1) * 0.35 + (promRnd() - 0.5) * 0.12,
-            curl: (promRnd() - 0.5) * 0.5, spread: (promRnd() - 0.5) * 0.6
+          var anchor = {
+            lon: ai / 6 * Math.PI * 2 + promRnd() * 0.6, lat: (promRnd() - 0.5) * 0.9,
+            footSep: 0.24 + promRnd() * 0.2,            // angular separation of the two footpoints
+            tilt: promRnd() * Math.PI,                  // orientation of the arch on the surface
+            apex: radius * (0.2 + promRnd() * 0.16),    // quiescent arches are low — the drama is saved for eruptions
+            period: 70 + promRnd() * 50, phase: promRnd() * 120,
+            erupts: promRnd() < 0.6,                    // some cycles only condense and quietly fade
+            particles: []
+          };
+          for (var pi = 0; pi < 90; pi++) anchor.particles.push({
+            s: promRnd(),                               // arc position along the loop
+            thread: promRnd() - 0.5,                    // which fine thread of the bundle
+            lift: promRnd(),                            // vertical scatter inside the bundle
+            flow: (promRnd() < 0.5 ? 1 : -1) * (0.01 + promRnd() * 0.018), // counter-streaming; wrapping = drain at one foot, condense at the other
+            jitter: promRnd() * 6.28
           });
           promAnchors.push(anchor);
         }
@@ -2673,25 +2684,42 @@
       var promThrottled = solarCamera.position.length() > 260 && (solarPromFrame % 4) !== 0;
       if (solarProminences && !promThrottled) {
         var promPos = solarProminences.positions, promCol = solarProminences.colors, promR = solarProminences.R, promIndex = 0;
-        solarProminences.anchors.forEach(function (anchor) {
-          var cycle = (st + anchor.phase) % anchor.period;
+        solarProminences.anchors.forEach(function (anchor, anchorIndex) {
+          var k = ((st + anchor.phase) % anchor.period) / anchor.period;
           var cl = Math.cos(anchor.lat), radialX = cl * Math.cos(anchor.lon), radialY = Math.sin(anchor.lat), radialZ = cl * Math.sin(anchor.lon);
           var eastX = -Math.sin(anchor.lon), eastZ = Math.cos(anchor.lon);
           var northX = radialY * eastZ * -1, northY = radialZ * eastX - radialX * eastZ, northZ = radialY * eastX;
+          var ct = Math.cos(anchor.tilt), stl = Math.sin(anchor.tilt);
+          var dirX = eastX * ct + northX * stl, dirY = northY * stl, dirZ = eastZ * ct + northZ * stl; // arch direction on the surface
+          var binX = radialY * dirZ - radialZ * dirY, binY = radialZ * dirX - radialX * dirZ, binZ = radialX * dirY - radialY * dirX; // arch-plane normal
+          // life cycle envelopes — formation → quiescent → (slow rise → fast eruption → dispersal) | quiet fade
+          var heightMul, alpha, spreadMul = 1, untwist = 0;
+          if (k < 0.18) { var grow = k / 0.18; heightMul = 0.25 + 0.75 * grow * grow; alpha = grow; } // condensation: the arch brightens as it fills
+          else if (k < 0.62 || !anchor.erupts) {
+            heightMul = 1 + 0.05 * Math.sin(st * 0.3 + anchorIndex * 2.1); // quiescent: the arch breathes while plasma streams along it
+            alpha = k < 0.62 ? 1 : Math.max(0, 1 - (k - 0.62) / 0.38);
+          }
+          else if (k < 0.72) { heightMul = 1 + (k - 0.62) * 6; alpha = 1; } // slow rise: the whole structure lifts off gently
+          else if (k < 0.86) { var er = (k - 0.72) / 0.14, erq = er * er; heightMul = 1.6 + erq * 6; spreadMul = 1 + erq * 0.9; untwist = erq * 4; alpha = 1 - er * 0.25; } // fast eruption: accelerating, expanding, untwisting
+          else { var dec = (k - 0.86) / 0.14; heightMul = 7.6 + dec * 2.5; spreadMul = 1.9; untwist = 4 + dec; alpha = Math.max(0, 0.75 * (1 - dec)); } // dispersal: ejected material keeps going as it fades — never falls back
           anchor.particles.forEach(function (particle) {
             var i3 = promIndex * 3; promIndex++;
-            var t = cycle - particle.delay;
-            if (t < 0 || t > particle.life) { promPos[i3] = 0; promPos[i3 + 1] = 0; promPos[i3 + 2] = 0; promCol[i3] = 0; promCol[i3 + 1] = 0; promCol[i3 + 2] = 0; return; }
-            var k = t / particle.life;
-            var rise = 1 - Math.pow(1 - k, 2.2); // decelerating climb — ejected material never falls back, it disperses
-            var r = promR * 0.99 + particle.h * rise;
-            var sway = (particle.dir + particle.curl * k) * promR * 0.5 * k + particle.spread * promR * 0.7 * k * k;
-            var drift = particle.curl * promR * 0.35 * k + particle.spread * promR * 0.4 * k * k;
-            promPos[i3] = radialX * r + eastX * sway + northX * drift;
-            promPos[i3 + 1] = radialY * r + northY * drift;
-            promPos[i3 + 2] = radialZ * r + eastZ * sway + northZ * drift;
-            var glow = Math.pow(Math.sin(Math.min(1, k) * Math.PI), 0.7) * (1 - 0.4 * k); // bright surge, slow dissolve
-            promCol[i3] = glow; promCol[i3 + 1] = glow * 0.45; promCol[i3 + 2] = glow * 0.18;
+            if (alpha <= 0.004) { promPos[i3] = 0; promPos[i3 + 1] = 0; promPos[i3 + 2] = 0; promCol[i3] = 0; promCol[i3 + 1] = 0; promCol[i3 + 2] = 0; return; }
+            var sNow = (particle.s + st * particle.flow) % 1; if (sNow < 0) sNow += 1;
+            var u = (sNow - 0.5) * anchor.footSep * spreadMul;
+            var topness = Math.sin(Math.PI * sNow);
+            var height = anchor.apex * heightMul * topness + particle.lift * promR * 0.03;
+            var cu = Math.cos(u), su = Math.sin(u);
+            var px = radialX * cu + dirX * su, py = radialY * cu + dirY * su, pz = radialZ * cu + dirZ * su;
+            var lateral = particle.thread * promR * 0.05 * (1 + untwist * 0.3) + Math.sin(particle.jitter + untwist + st * 0.25) * promR * 0.012;
+            var rad = promR * 0.995 + height;
+            promPos[i3] = px * rad + binX * lateral;
+            promPos[i3 + 1] = py * rad + binY * lateral;
+            promPos[i3 + 2] = pz * rad + binZ * lateral;
+            var legFade = 0.5 + 0.5 * topness; // the crest outshines the draining legs
+            var flick = 0.8 + 0.2 * Math.sin(st * 1.6 + particle.jitter);
+            var glow = alpha * legFade * flick;
+            promCol[i3] = glow; promCol[i3 + 1] = glow * 0.34; promCol[i3 + 2] = glow * 0.3; // H-alpha pink-red
           });
         });
         solarProminences.points.geometry.attributes.position.needsUpdate = true;
