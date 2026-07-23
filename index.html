@@ -133,10 +133,18 @@
   #bp-img { display: block; width: 100%; height: 150px; object-fit: cover; border-radius: 8px;
     margin: 10px 0 3px; background: rgba(255,255,255,.04); }
   #bp-credit { font-size: 9px; line-height: 1.35; color: #5b6578; margin-bottom: 6px; }
-  #bp-solar-link, #bp-earth-sky-link, #bp-flyto { display: block; width: 100%; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(255,255,255,.07);
+  #bp-solar-link, #bp-earth-sky-link, #bp-flyto, #bp-compare { display: block; width: 100%; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(255,255,255,.07);
     color: #9cc0ff; cursor: pointer; font-size: 13px; }
   #bp-solar-link, #bp-earth-sky-link { font: inherit; text-align: left; background: transparent; }
-  #bp-solar-link:hover, #bp-earth-sky-link:hover, #bp-flyto:hover { color: #cfe2ff; }
+  #bp-solar-link:hover, #bp-earth-sky-link:hover, #bp-flyto:hover, #bp-compare:hover { color: #cfe2ff; }
+  /* true-size comparison overlay */
+  #scalecmp { position: fixed; inset: 0; z-index: 40; background: rgba(4,6,12,.95); display: none; }
+  #scalecmp.open { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  #scalecmp h3 { font-size: 16px; color: #e5ecff; font-weight: 600; margin: 0 16px; text-align: center; }
+  #scalecmp .note { font-size: 12px; color: #8fa3c8; margin: 0 16px; text-align: center; }
+  #scalecmp svg { width: min(96vw, 1500px); height: auto; }
+  #scalecmp-close { position: absolute; top: 10px; right: 14px; cursor: pointer; font: inherit; font-size: 22px; color: #cbd5e1; background: none; border: 0; padding: 6px 10px; }
+  #scalecmp-close:hover { color: #fff; }
   #return-mw { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 50; display: none;
     padding: 8px 16px; border-radius: 20px; cursor: pointer; background: rgba(20,26,40,.72);
     border: 1px solid rgba(255,255,255,.14); color: #cfe0ff; font-size: 13px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
@@ -187,6 +195,7 @@
 <div id="solarlabels" aria-live="polite" style="display:none"><div id="solarstrip" role="group" aria-label="Bodies"></div><div id="solartime" role="group" aria-label="Time speed"><button type="button" data-scale="0" aria-label="Pause">⏸</button><button type="button" data-scale="1" class="on" aria-label="Normal speed">1×</button><button type="button" data-scale="16" aria-label="16x speed">16×</button><button type="button" data-scale="128" aria-label="128x speed">128×</button></div></div>
 
 <div id="msg" class="overlay"></div>
+<div id="scalecmp" role="dialog" aria-modal="true" aria-label="True sizes"><button id="scalecmp-close" type="button" aria-label="Close">×</button><h3></h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1820 560"></svg><div class="note"></div></div>
 <div id="skyveil" aria-hidden="true"></div>
 
 <div id="beacon-panel" class="overlay" aria-live="polite">
@@ -2512,6 +2521,7 @@
       '<div id="bp-desc">' + esc(info.desc) + '</div>' +
       (body.id === 'earth' ? '<button id="bp-earth-sky-link" type="button" aria-label="' + esc({ en: 'Explore Earth\'s sky →', hans: '探索地球的天空 →', hant: '探索地球的天空 →', ja: '地球の空を探索する →', ko: '지구의 하늘 탐험하기 →' }[L]) + '">' + esc({ en: 'Explore Earth\'s sky →', hans: '探索地球的天空 →', hant: '探索地球的天空 →', ja: '地球の空を探索する →', ko: '지구의 하늘 탐험하기 →' }[L]) + '</button>' : '') +
       '<div id="bp-flyto">' + esc({ en: '🚀 Fly to this world →', hans: '🚀 飞跃到此星球 →', hant: '🚀 飛越到此星球 →', ja: '🚀 この天体へ飛ぶ →', ko: '🚀 이 천체로 날아가기 →' }[L]) + '</div>' +
+      '<div id="bp-compare">' + esc({ en: '⚖ Compare real sizes →', hans: '⚖ 对比真实大小 →', hant: '⚖ 對比真實大小 →', ja: '⚖ 実際の大きさを比べる →', ko: '⚖ 실제 크기 비교 →' }[L]) + '</div>' +
       '<div id="bp-cat">' + esc(info.catalog) + '</div>';
     solarCardOpen = true;
     bpEl.classList.add('open');
@@ -2559,6 +2569,7 @@
   bpBody.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'bp-solar-link') enterSolar();
     else if (e.target && e.target.id === 'bp-earth-sky-link' && viewMode === 'solar' && solarNav.selectedId === 'earth' && solarNav.parentId === null) enterSkyFromEarth();
+    else if (e.target && e.target.id === 'bp-compare' && viewMode === 'solar') openSolarScaleOverlay();
     else if (e.target && e.target.id === 'bp-flyto' && viewMode === 'solar' && solarCometSelected !== null) flySolarToComet(solarCometSelected);
     else if (e.target && e.target.id === 'bp-flyto' && viewMode === 'solar' && solarNav.selectedId) flySolarTo(solarNav.selectedId);
     else if (e.target && e.target.id === 'bp-flyto' && selectedBeacon !== null) flyToBeacon(selectedBeacon);
@@ -3110,6 +3121,41 @@
     perfLast = 0;
   }
   solarBackEl.addEventListener('click', function () { if (!leaveSolarLevel()) exitSolar(); });
+  var scaleCmpEl = document.getElementById('scalecmp');
+  function openSolarScaleOverlay() {
+    if (!scaleCmpEl) return;
+    var L = typeof beaconLang === 'string' ? beaconLang : 'en';
+    scaleCmpEl.querySelector('h3').textContent = {
+      en: 'True sizes — the Sun is 109 Earths wide', hans: '真实大小对比 —— 太阳的直径约等于 109 个地球',
+      hant: '真實大小對比 —— 太陽的直徑約等於 109 個地球', ja: '実際の大きさ — 太陽の直径は地球109個分',
+      ko: '실제 크기 — 태양의 지름은 지구 109개'
+    }[L];
+    scaleCmpEl.querySelector('.note').textContent = {
+      en: 'Sizes are to scale; the spacing here is not. In the 3D scene, sizes are compressed so every world stays visible.',
+      hans: '图中大小为真实比例,间距不是。3D 场景中的大小经过压缩,以便每个天体都清晰可见。',
+      hant: '圖中大小為真實比例,間距不是。3D 場景中的大小經過壓縮,以便每個天體都清晰可見。',
+      ja: '大きさは実際の比率です(間隔は違います)。3Dシーンでは見やすさのため大きさを圧縮しています。',
+      ko: '크기는 실제 비율입니다(간격은 아님). 3D 장면에서는 가시성을 위해 크기를 압축했습니다.'
+    }[L];
+    var k = 130 / SOLAR_BY_ID.jupiter.radiusKm, sunR = SOLAR_BY_ID.sun.radiusKm * k, base = 452;
+    var parts = ['<circle cx="' + (170 - sunR).toFixed(0) + '" cy="' + base + '" r="' + sunR.toFixed(0) + '" fill="#ffd36b" opacity="0.92"/>',
+      '<text x="64" y="120" fill="#ffe2a8" font-size="15" text-anchor="middle">' + esc((SOLAR_BY_ID.sun.info[L] || SOLAR_BY_ID.sun.info.en).name) + '</text>'];
+    var x = 245;
+    ['jupiter', 'saturn', 'uranus', 'neptune', 'earth', 'venus', 'mars', 'mercury', 'moon', 'pluto', 'ceres'].forEach(function (id, index) {
+      var body = SOLAR_BY_ID[id], r = Math.max(body.radiusKm * k, 0.35), info = body.info[L] || body.info.en;
+      var pad = Math.max(r, 34) + 14; // small worlds still need label room
+      x += pad;
+      var hex = '#' + ('00000' + body.color.toString(16)).slice(-6);
+      var sel = solarNav.selectedId === id;
+      parts.push('<circle cx="' + x.toFixed(1) + '" cy="' + (base - r).toFixed(1) + '" r="' + r.toFixed(2) + '" fill="' + hex + '"' + (sel ? ' stroke="#9cc0ff" stroke-width="3"' : '') + '/>');
+      parts.push('<text x="' + x.toFixed(1) + '" y="' + (base + 26 + (index % 2) * 38) + '" fill="' + (sel ? '#ffffff' : '#cfe0ff') + '" font-size="14" text-anchor="middle">' + esc(info.name) + '</text>');
+      parts.push('<text x="' + x.toFixed(1) + '" y="' + (base + 44 + (index % 2) * 38) + '" fill="#8fa3c8" font-size="11" text-anchor="middle">' + esc(info.diameter) + '</text>');
+      x += pad;
+    });
+    scaleCmpEl.querySelector('svg').innerHTML = parts.join('');
+    scaleCmpEl.classList.add('open');
+  }
+  document.getElementById('scalecmp-close').addEventListener('click', function () { scaleCmpEl.classList.remove('open'); });
   var solarStripEl = document.getElementById('solarstrip');
   function buildSolarStrip() {
     if (!solarStripEl) return;
@@ -3145,6 +3191,7 @@
   window.addEventListener('keydown', function (e) {
     if ((e.key || '').toLowerCase() !== 'escape' || viewMode !== 'solar') return;
     if (document.body.classList.contains('gx-cinema')) return; // cinema mode owns Escape first
+    if (scaleCmpEl && scaleCmpEl.classList.contains('open')) { scaleCmpEl.classList.remove('open'); e.stopImmediatePropagation(); return; }
     if (solarCardOpen) { clearSolarCard(); e.stopImmediatePropagation(); return; }
     if (!leaveSolarLevel()) exitSolar();
     e.stopImmediatePropagation();
