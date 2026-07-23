@@ -2211,6 +2211,34 @@
         rings.rotation.x = Math.PI / 2; rings.scale.set(radius * 1.58, radius * 1.58, 1); rings.userData.solarId = body.id; spinNode.add(rings);
         object.specialty.rings = rings;
       }
+      if (body.id !== 'sun') {
+        // axial tilt made visible: a pole-to-pole axis (blue = north, amber = south, so Venus's
+        // 177° flip reads instantly) plus an equator hoop whose brightness sweep carries the
+        // spin direction; both appear only for the system you flew into
+        var axisGeometry = new THREE.BufferGeometry();
+        axisGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, radius * 1.8, 0, 0, -radius * 1.8, 0], 3));
+        axisGeometry.setAttribute('color', new THREE.Float32BufferAttribute([0.55, 0.75, 1, 1, 0.72, 0.35], 3));
+        var axis = new THREE.Line(axisGeometry, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 1, depthWrite: false }));
+        var poleN = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0x9cc4ff, transparent: true, opacity: 0.9, depthWrite: false }));
+        poleN.scale.set(radius * 0.22, radius * 0.22, 1); poleN.position.y = radius * 1.8;
+        var poleS = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xffb063, transparent: true, opacity: 0.9, depthWrite: false }));
+        poleS.scale.set(radius * 0.22, radius * 0.22, 1); poleS.position.y = -radius * 1.8;
+        axis.add(poleN); axis.add(poleS); // pole beacons: a 1px line alone is invisible at typical zoom
+        axis.visible = false; axis.userData.solarId = body.id; tiltNode.add(axis);
+        object.specialty.axis = axis;
+        var eqSegments = 64, eqPositions = [], eqColors = [];
+        for (var ei = 0; ei < eqSegments; ei++) {
+          var ea = ei / eqSegments * Math.PI * 2, eqGlow = 0.15 + 0.85 * (ei / (eqSegments - 1));
+          eqPositions.push(Math.cos(ea) * radius * 1.12, 0, Math.sin(ea) * radius * 1.12);
+          eqColors.push(0.62 * eqGlow, 0.86 * eqGlow, eqGlow);
+        }
+        var eqGeometry = new THREE.BufferGeometry();
+        eqGeometry.setAttribute('position', new THREE.Float32BufferAttribute(eqPositions, 3));
+        eqGeometry.setAttribute('color', new THREE.Float32BufferAttribute(eqColors, 3));
+        var equator = new THREE.LineLoop(eqGeometry, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.75, depthWrite: false }));
+        equator.visible = false; equator.userData.solarId = body.id; spinNode.add(equator);
+        object.specialty.equator = equator;
+      }
     });
     updateSolarMotion(0);
     return SOLAR_OBJECTS;  }
@@ -2603,6 +2631,11 @@
       if (object.orbitLine.material) object.orbitLine.material.opacity = body.parent ? 0.12 : (localP ? (body.id === localP ? 0.08 : 0.04) : 0.3);
       object.hitProxy.visible = active;
       object.hitProxy.userData.solarActive = active;
+      if (object.specialty.axis) { // tilt axis + equator hoop: only on the primary of the system you flew into
+        var showAxis = body.id === localP;
+        object.specialty.axis.visible = showAxis;
+        object.specialty.equator.visible = showAxis;
+      }
     });
     // the belt stays understated everywhere (the close-up treatment, always on);
     // only flying to Ceres — who lives there — reveals it in full
