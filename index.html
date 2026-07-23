@@ -60,7 +60,7 @@
   .skylabel.sel { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 14px rgba(150,190,255,.9); }
   .skylabel.skygal { font-size: 12px; color: #bfe6ff; margin-top: 14px; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 12px rgba(150,210,255,.6); } /* the galaxy markers — offset below their glow */
   .skylabel.skygal.sel { color: #fff; }
-  .solar-label { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
+  .solar-label { position: absolute; transform: translate(-50%, -100%); pointer-events: auto; cursor: pointer; /* anchored ABOVE the body — names must not sit on the disc */
     font: inherit; font-size: 13px; letter-spacing: .08em; color: #ffe5a9; white-space: nowrap; text-align: center;
     background: transparent; border: 0; min-width: 24px; min-height: 24px; padding: 2px 8px;
     text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(255,190,100,.45); transition: opacity .2s ease; }
@@ -3105,7 +3105,11 @@
       object.hitProxy.scale.setScalar(solarHitRadius(object, solarLabelPoint) / (object.radiusScale || 1)); // proxy lives inside the scaled tiltNode
       var projected = solarLabelProjected.copy(solarLabelPoint).project(solarCamera);
       if (projected.z < -1 || projected.z > 1 || projected.x < -1 || projected.x > 1 || projected.y < -1 || projected.y > 1) { label.style.display = 'none'; return; }
-      candidates.push({ body: body, label: label, x: (projected.x * 0.5 + 0.5) * window.innerWidth, y: (-projected.y * 0.5 + 0.5) * window.innerHeight,
+      // lift the label clear of the disc: name floats just above the body's screen-space rim
+      var labelDistance = solarCamera.position.distanceTo(solarLabelPoint);
+      var screenRadius = object.radius / (2 * Math.tan(solarCamera.fov * Math.PI / 360) * Math.max(labelDistance, 0.001)) * window.innerHeight;
+      var labelLift = Math.min(screenRadius + 8, window.innerHeight * 0.4);
+      candidates.push({ body: body, label: label, x: (projected.x * 0.5 + 0.5) * window.innerWidth, y: (-projected.y * 0.5 + 0.5) * window.innerHeight - labelLift,
         priority: body.id === solarNav.selectedId ? 0 : (body.id === solarLocalParent() || body.parent === solarLocalParent() ? 1 : (body.kind === 'planet' ? 2 : 3)) });
     });
     // every on-screen body keeps its name — decluttering used to hide labels whenever two
@@ -3123,8 +3127,10 @@
       if (projected.z < -1 || projected.z > 1 || projected.x < -1 || projected.x > 1 || projected.y < -1 || projected.y > 1) { label.style.display = 'none'; return; }
       label.style.display = '';
       label.classList.toggle('sel', solarCometSelected === cometIndex);
+      var cometDistance = solarCamera.position.distanceTo(solarLabelPoint);
+      var cometScreenRadius = (comet.coma.scale.x * 0.6 + 1) / (2 * Math.tan(solarCamera.fov * Math.PI / 360) * Math.max(cometDistance, 0.001)) * window.innerHeight;
       label.style.left = ((projected.x * 0.5 + 0.5) * window.innerWidth) + 'px';
-      label.style.top = ((-projected.y * 0.5 + 0.5) * window.innerHeight) + 'px';
+      label.style.top = ((-projected.y * 0.5 + 0.5) * window.innerHeight - Math.min(cometScreenRadius + 8, window.innerHeight * 0.4)) + 'px';
     });
   }
   var solarCometLabels = {};
