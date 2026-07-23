@@ -4572,8 +4572,8 @@
       core.scale.set(len * 0.12, len * 0.12, 1);
       // flowing plasma streams (comet ion-tail technique): BLUE up one side, VIOLET down the other
       var plasmaBoost = feat.plasmaOnly ? 1.35 : 1; // plasma-only jets carry the whole look — beef them up
-      var plasmaA = jetPlasma(dir, len * 0.85, e1, e2, { edge: 0x2f7dff, core: 0xa8dcff, flare: flare * 0.2 * plasmaBoost, curve: curve, n: Math.round(260 * plasmaBoost), seed: 977 });
-      var plasmaB = feat.oneSided ? null : jetPlasma(back, len * 0.75, e1, e2, { edge: 0x8a3cff, core: 0xdcb2ff, flare: flare * 0.22 * plasmaBoost, curve: -curve, n: Math.round(240 * plasmaBoost), seed: 1553 });
+      var plasmaA = jetPlasma(dir, len * 0.85, e1, e2, { edge: 0x2f7dff, core: 0xa8dcff, flare: flare * (feat.plasmaOnly ? 0.03 : 0.2) * plasmaBoost, curve: curve, n: Math.round(260 * plasmaBoost), seed: 977 }); // plasma-only: a needle-tight beam (~5 units wide at the tip)
+      var plasmaB = feat.oneSided ? null : jetPlasma(back, len * 0.75, e1, e2, { edge: 0x8a3cff, core: 0xdcb2ff, flare: flare * (feat.plasmaOnly ? 0.033 : 0.22) * plasmaBoost, curve: -curve, n: Math.round(240 * plasmaBoost), seed: 1553 });
       if (lobeA) { grp.add(lobeA); grp.add(streamA); } if (lobeB) { grp.add(lobeB); grp.add(streamB); } grp.add(core);
       grp.add(plasmaA); if (plasmaB) grp.add(plasmaB);
       grp.userData.update = function (t) {
