@@ -601,7 +601,7 @@
       var points = 0;
       solarRoot.traverse(function (o) { if (o instanceof THREE.Points) points++; });
       ok(solarAsteroidBelt instanceof THREE.Points, 'asteroid belt is not points');
-      ok(points === 5, 'expected the dust belt, the Sun CME points, the prominence flow, and two comet tails');
+      ok(points === 6, 'expected the dust belt, the Trojan swarms, the Sun CME points, the prominence flow, and two comet tails');
       ok(solarAsteroidRocks && solarAsteroidRocks.children.length === 3 && solarAsteroidRocks.children.every(function (mesh) { return mesh.isInstancedMesh; }), 'asteroid rock layer must be three instanced meshes');
       var rockTotal = solarAsteroidRocks.children.reduce(function (sum, mesh) { return sum + mesh.count; }, 0);
       ok(rockTotal >= 300, 'asteroid rock layer is too sparse');
@@ -887,7 +887,7 @@
       group.add(coma); group.add(core);
       var ions = [], dust = [];
       for (var i = 0; i < ION_N; i++) ions.push({ frac: (i + 0.5) / ION_N, lat1: (crnd() - 0.5), lat2: (crnd() - 0.5), speed: 0.6 + crnd() * 0.9 });
-      for (var j = 0; j < DUST_N; j++) dust.push({ stria: j % 6, kd: (Math.floor(j / 6) + 0.5) / (DUST_N / 6) + (crnd() - 0.5) * 0.03, jag: (crnd() - 0.5), glint: crnd() * 6.28 });
+      for (var j = 0; j < DUST_N; j++) { var kdv = (Math.floor(j / 6) + 0.5) / (DUST_N / 6) + (crnd() - 0.5) * 0.03; dust.push({ stria: j % 6, kd: kdv, back: kdv * kdv * 0.22, jag: (crnd() - 0.5), glint: crnd() * 6.28 }); }
       var N = ION_N + DUST_N, tp = new Float32Array(N * 3), tc = new Float32Array(N * 3);
       var tg = new THREE.BufferGeometry();
       tg.setAttribute('position', new THREE.BufferAttribute(tp, 3));
@@ -987,6 +987,11 @@
       var coreScale = 0.5 + activity * 0.9;
       comet.core.scale.set(coreScale, coreScale, 1);
       comet.core.material.opacity = 0.25 + activity * 0.6; // bright inner core inside the diffuse coma
+      if (activity <= 0) { // aphelion coast: every tail color multiplies to zero anyway — skip ~240 particles and two buffer uploads
+        if (!comet.tailsDormant) { comet.tailsDormant = true; comet.tails.visible = false; }
+        return;
+      }
+      if (comet.tailsDormant) { comet.tailsDormant = false; comet.tails.visible = true; }
       solarCometAnti.copy(solarCometPos).normalize(); // anti-solar direction (from the Sun through the comet)
       // orthogonal frame across the tail axis, for lateral structure
       var e1x = -solarCometAnti.z, e1z = solarCometAnti.x; // horizontal perpendicular
@@ -1009,7 +1014,7 @@
         // DUST tail: six synchronic striae fan out — grains leave anti-solar immediately,
         // orbital lag bends only the far tail, and each stria glints softly
         var grain = comet.dust[j], j3 = (comet.ions.length + j) * 3, kd = grain.kd;
-        var back = kd * kd * 0.22;
+        var back = grain.back;
         cometPoint(comet, comet.angle - back, solarCometPast);
         solarCometAnti.copy(solarCometPast).normalize();
         var drift = kd * 26 * activity + kd * kd * 8;
@@ -2006,6 +2011,7 @@
   var solarProminences = null, solarCME = null;
   var solarRingFx = null, solarRingQuat = new THREE.Quaternion(); // Saturn's analytic ring/planet shadow rig
   var solarSunSpikes = null, solarSunOcclusion = { frame: 0, target: 1, value: 1 }; // diffraction spikes + eclipse blackout
+  var solarTrojans = null, solarJupiterShadow = null, solarEarthPatch = null, solarPromFrame = 0;
   var solarArrivalSpin = null, solarIdleSince = performance.now(); // orbital settle on arrival + idle attract drift
   function solarFlareShellMaterial() {
     var material = new THREE.ShaderMaterial({
@@ -2084,7 +2090,10 @@
       } catch (oceanError) {} // canvas tainted (file://) — keep the matte Earth
     }
     material.needsUpdate = true;
-    if (object.specialty.clouds && maps.clouds) { var clouds = object.specialty.clouds.material; clouds.map = maps.clouds; clouds.opacity = 0.85; clouds.needsUpdate = true; }
+    if (object.specialty.clouds && maps.clouds) {
+      var clouds = object.specialty.clouds.material; clouds.map = maps.clouds; clouds.opacity = 0.85; clouds.needsUpdate = true;
+      if (solarEarthPatch) { solarEarthPatch.uCloudMap.value = maps.clouds; solarEarthPatch.uHasClouds.value = 1; } // ground shadow shares the cloud texture
+    }
     if (object.specialty.rings && maps.ring) {
       var rings = object.specialty.rings.material;
       if (rings.uniforms) { rings.uniforms.uMap.value = maps.ring; rings.uniforms.uHasMap.value = 1; rings.uniforms.uOpacity.value = 0.92; }
@@ -2228,15 +2237,39 @@
         object.specialty.clouds = clouds;
         // city lights belong to the night: mask the emissive night map to the dark hemisphere
         // (the Sun sits at the world origin, so -worldPos IS the sun direction), plus a thin
-        // warm twilight band right along the terminator
+        // warm twilight band right along the terminator, plus the drifting clouds' ground shadow
+        solarEarthPatch = { uCloudMap: { value: null }, uCloudShift: { value: 0 }, uHasClouds: { value: 0 } };
         mesh.material.onBeforeCompile = function (shader) {
+          shader.uniforms.uCloudMap = solarEarthPatch.uCloudMap; shader.uniforms.uCloudShift = solarEarthPatch.uCloudShift; shader.uniforms.uHasClouds = solarEarthPatch.uHasClouds;
           shader.vertexShader = shader.vertexShader
-            .replace('#include <common>', '#include <common>\nvarying vec3 vSunWN; varying vec3 vSunWP;')
-            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSunWN = mat3(modelMatrix) * normal; vSunWP = (modelMatrix * vec4(position, 1.0)).xyz;');
+            .replace('#include <common>', '#include <common>\nvarying vec3 vSunWN; varying vec3 vSunWP; varying vec2 vCloudUv;')
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSunWN = mat3(modelMatrix) * normal; vSunWP = (modelMatrix * vec4(position, 1.0)).xyz; vCloudUv = uv;');
           shader.fragmentShader = shader.fragmentShader
-            .replace('#include <common>', '#include <common>\nvarying vec3 vSunWN; varying vec3 vSunWP;')
+            .replace('#include <common>', '#include <common>\nvarying vec3 vSunWN; varying vec3 vSunWP; varying vec2 vCloudUv;\nuniform sampler2D uCloudMap; uniform float uCloudShift; uniform float uHasClouds;')
+            .replace('#include <map_fragment>', '#include <map_fragment>\nif (uHasClouds > 0.5) diffuseColor.rgb *= 1.0 - texture2D(uCloudMap, vec2(vCloudUv.x - uCloudShift, vCloudUv.y)).a * 0.28;')
             .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nfloat sunDot = dot(normalize(vSunWN), normalize(-vSunWP));\ntotalEmissiveRadiance *= (1.0 - smoothstep(-0.12, 0.08, sunDot)) * 1.6;\ntotalEmissiveRadiance += vec3(1.0, 0.42, 0.18) * (1.0 - smoothstep(0.0, 0.1, abs(sunDot))) * 0.12;');
         };
+        // aurora ovals: always faintly present, flaring a beat after each CME — space weather as cause and effect
+        var auroraMaterial = new THREE.ShaderMaterial({
+          uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uBoost: { value: 0 } },
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+          vertexShader: 'varying vec2 vUv; varying float vNz; void main(){ vUv = uv; vNz = normalize(normalMatrix * normal).z; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+          fragmentShader: [
+            'uniform float uTime; uniform float uOpacity; uniform float uBoost; varying vec2 vUv; varying float vNz;',
+            'void main(){',
+            '  float wave = 0.5 + 0.5 * sin(vUv.x * 28.0 + uTime * 1.3) * sin(vUv.x * 11.0 - uTime * 0.7);', // curtains waving in longitude
+            '  float curtain = smoothstep(0.0, 0.35, vUv.y) * (1.0 - smoothstep(0.55, 1.0, vUv.y));',
+            '  float soft = smoothstep(0.05, 0.45, abs(vNz));', // fade the cylinder silhouette — no hard curtain edges
+            '  vec3 color = mix(vec3(0.2, 1.0, 0.55), vec3(1.0, 0.35, 0.45), vUv.y);', // green low, red high
+            '  gl_FragColor = vec4(color, curtain * wave * soft * (0.10 + uBoost) * uOpacity); }'
+          ].join('\n')
+        });
+        solarAnimatedMaterials.push(auroraMaterial);
+        var auroraGeometry = new THREE.CylinderGeometry(radius * 0.4, radius * 0.56, radius * 0.5, 48, 1, true);
+        var auroraN = new THREE.Mesh(auroraGeometry, auroraMaterial); auroraN.position.y = radius * 0.9; auroraN.userData.solarId = body.id;
+        var auroraS = new THREE.Mesh(auroraGeometry, auroraMaterial); auroraS.position.y = -radius * 0.9; auroraS.rotation.x = Math.PI; auroraS.userData.solarId = body.id;
+        tiltNode.add(auroraN); tiltNode.add(auroraS);
+        object.specialty.auroraN = auroraN; object.specialty.auroraS = auroraS;
       }
       // translucent limb atmospheres, tinted per world (thin worlds get faint ones)
       var ATMOS = { venus: [0xf3e3b8, 3.2, 0.5], earth: [0x7fb9ff, 3.0, 0.55], mars: [0xd9a07a, 4.2, 0.16], jupiter: [0xe8d2ac, 3.4, 0.34], saturn: [0xf0e0b6, 3.4, 0.3], titan: [0xe8b060, 2.8, 0.5], uranus: [0xa8e6e6, 3.2, 0.35], neptune: [0x86a8f0, 3.2, 0.35] };
@@ -2253,6 +2286,21 @@
         var faintRing = new THREE.Mesh(new THREE.RingGeometry(ringSpec[0], ringSpec[1], 64, 1), new THREE.MeshBasicMaterial({ color: ringSpec[2], transparent: true, opacity: ringSpec[3], side: THREE.DoubleSide, depthWrite: false }));
         faintRing.rotation.x = Math.PI / 2; faintRing.scale.set(radius, radius, 1); faintRing.userData.solarId = body.id; spinNode.add(faintRing);
         object.specialty.faintRing = faintRing;
+      }
+      if (body.id === 'jupiter') {
+        // Galilean shadow transits: the four moons' shadow dots crawl across the disc whenever
+        // their system is in focus — the phenomenon amateur telescopes chase, fully analytic
+        var jupiterShadow = { uOcc: { value: [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()] } };
+        mesh.material.onBeforeCompile = function (shader) {
+          shader.uniforms.uOcc = jupiterShadow.uOcc;
+          shader.vertexShader = shader.vertexShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vJovWP;')
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvJovWP = (modelMatrix * vec4(position, 1.0)).xyz;');
+          shader.fragmentShader = shader.fragmentShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vJovWP;\nuniform vec4 uOcc[4];')
+            .replace('#include <map_fragment>', '#include <map_fragment>\nvec3 jsD = normalize(-vJovWP);\nfor (int oi = 0; oi < 4; oi++) {\n  if (uOcc[oi].w > 0.0) {\n    vec3 toOcc = uOcc[oi].xyz - vJovWP;\n    float jsAlong = dot(toOcc, jsD);\n    if (jsAlong > 0.0) {\n      float jsMiss = dot(toOcc, toOcc) - jsAlong * jsAlong;\n      float jsRR = uOcc[oi].w * uOcc[oi].w;\n      diffuseColor.rgb *= 1.0 - 0.85 * (1.0 - smoothstep(jsRR * 0.4, jsRR * 1.3, jsMiss));\n    }\n  }\n}');
+        };
+        solarJupiterShadow = jupiterShadow;
       }
       if (body.id === 'saturn') {
         // rings with real shadow anatomy, all analytic (no shadow maps): the stretch of ring
@@ -2423,6 +2471,23 @@
     solarAsteroidRocks.userData.solarId = 'asteroid-belt'; solarRoot.add(solarAsteroidRocks);
     return solarAsteroidBelt;
   }
+  function buildTrojans() { // Jupiter's Greeks and Trojans: two banana swarms riding L4/L5, 60° ahead and behind
+    if (solarTrojans) return solarTrojans;
+    var state = 0x7a015a3d;
+    function nextRandom() { state = (state + 0x6d2b79f5) | 0; var t = Math.imul(state ^ state >>> 15, 1 | state); t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+    var count = 600, positions = new Float32Array(count * 3), a = solarOrbitRadius(5.203);
+    for (var i = 0; i < count; i++) {
+      var lead = i < count / 2 ? 1 : -1;
+      var gauss = (nextRandom() + nextRandom() + nextRandom() - 1.5) / 1.5;
+      var angle = lead * Math.min(100, Math.max(25, 60 + gauss * 25)) * Math.PI / 180; // clamped: no strays onto Jupiter or into the belt
+      var radius = a + (nextRandom() + nextRandom() - 1) * 2.4;
+      positions[i * 3] = Math.cos(angle) * radius; positions[i * 3 + 1] = (nextRandom() - 0.5) * 1.7; positions[i * 3 + 2] = Math.sin(angle) * radius;
+    }
+    var geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    solarTrojans = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0x8a8378, size: 0.8, map: GLOW_TEX, transparent: true, opacity: 0.18, depthWrite: false, sizeAttenuation: true }));
+    solarTrojans.userData.solarId = 'asteroid-belt'; solarRoot.add(solarTrojans);
+    return solarTrojans;
+  }
   function setSolarPaused(paused) { solarPaused = !!paused; }
   // ── true-scale view: blend the whole overview between the readable compressed layout and
   // honest proportions (true relative sizes, true relative distances — Sun pinned at its display size)
@@ -2451,6 +2516,7 @@
     var fade = 1 - solarScaleBlend;
     if (solarAsteroidBelt) solarAsteroidBelt.material.opacity = 0.12 * fade; // baked compressed — fades out honestly
     if (solarKuiper) solarKuiper.material.opacity = 0.22 * fade;
+    if (solarTrojans) solarTrojans.material.opacity = 0.18 * fade;
     solarComets.forEach(function (comet) { comet.group.visible = solarScaleBlend < 0.05; });
     if (solarScaleBlend === 0) updateSolarVisibility(); // re-derive belt dimming and friends from nav
   }
@@ -2631,7 +2697,10 @@
       });
       var st = solarShaderTime;
       var burst = Math.max(0, Math.min(1, (Math.sin(st * 0.11) * Math.sin(st * 0.043 + 1.7) * 2 - 0.72) / 0.28)); // same beat as the prominence shell
-      if (solarProminences) {
+      solarPromFrame++;
+      // sun shrunk to a distant dot: quarter-rate particle updates are indistinguishable (16-22s lifetimes)
+      var promThrottled = solarCamera.position.length() > 260 && (solarPromFrame % 4) !== 0;
+      if (solarProminences && !promThrottled) {
         var promPos = solarProminences.positions, promCol = solarProminences.colors, promR = solarProminences.R, promIndex = 0;
         solarProminences.anchors.forEach(function (anchor) {
           var cycle = (st + anchor.phase) % anchor.period;
@@ -2657,9 +2726,10 @@
         solarProminences.points.geometry.attributes.position.needsUpdate = true;
         solarProminences.points.geometry.attributes.color.needsUpdate = true;
       }
-      if (solarCME) {
+      if (solarCME && !promThrottled) {
         if (!solarCME.active && burst > 0.6) {
           solarCME.active = true; solarCME.t0 = st;
+          solarCME.auroraT0 = st + 2; // the storm front reaches Earth a beat later
           solarCME.lon = (Math.floor(st * 0.05) % 6) / 6 * Math.PI * 2; // erupt from one of the prominence longitudes
           solarCME.points.visible = true;
         }
@@ -2678,6 +2748,11 @@
             solarCME.points.material.opacity = 0.85 * Math.pow(1 - life, 1.5); // thins out as the plume disperses
           }
         }
+        if (solarCME.auroraT0 != null && SOLAR_OBJECTS.earth && SOLAR_OBJECTS.earth.specialty.auroraN) {
+          var sinceStorm = st - solarCME.auroraT0;
+          SOLAR_OBJECTS.earth.specialty.auroraN.material.uniforms.uBoost.value =
+            sinceStorm > 0 ? Math.min(1, sinceStorm * 0.8) * Math.exp(-sinceStorm / 7) * 0.85 : 0; // flare in, decay over ~10s
+        }
       }
     }
     if (solarPaused || solarReducedMotion()) return;
@@ -2691,7 +2766,31 @@
       // retrograde is double-encoded in NASA data (tilt > 90° AND negative period); the tilt already
       // flips the axis geometrically, so only flip the spin when exactly one encoding applies (e.g. Triton)
       if ((body.rotationHours < 0) !== (body.tiltDeg > 90)) object.spinNode.rotation.y *= -1;
+      if (object.specialty.clouds) object.specialty.clouds.rotation.y = solarElapsed * 0.012; // weather drifts relative to the ground
     });
+    if (solarEarthPatch) solarEarthPatch.uCloudShift.value = solarElapsed * 0.012 / (Math.PI * 2); // the ground shadow tracks the drift
+    if (solarJupiterShadow) { // Galilean shadow dots: live only while the Jovian system is revealed
+      var jupiterMoonIds = ['io', 'europa', 'ganymede', 'callisto'];
+      for (var omi = 0; omi < 4; omi++) {
+        var jovMoon = SOLAR_OBJECTS[jupiterMoonIds[omi]], occSlot = solarJupiterShadow.uOcc.value[omi];
+        if (jovMoon && jovMoon.lodGroup.visible) { jovMoon.mesh.getWorldPosition(solarEventVec); occSlot.set(solarEventVec.x, solarEventVec.y, solarEventVec.z, jovMoon.radius); }
+        else occSlot.w = 0;
+      }
+    }
+    var lunaObject = SOLAR_OBJECTS.moon, lunaEarth = SOLAR_OBJECTS.earth;
+    if (lunaObject && lunaEarth && lunaObject.lodGroup.visible && lunaObject.mesh.material.map) {
+      // lunar eclipse: inside Earth's shadow cone the Moon turns blood-moon rust
+      lunaObject.mesh.getWorldPosition(solarEventVec); lunaEarth.mesh.getWorldPosition(solarEventVec2);
+      var earthLen = solarEventVec2.length();
+      var relX = solarEventVec.x - solarEventVec2.x, relY = solarEventVec.y - solarEventVec2.y, relZ = solarEventVec.z - solarEventVec2.z;
+      var antiSun = (relX * solarEventVec2.x + relY * solarEventVec2.y + relZ * solarEventVec2.z) / earthLen;
+      var eclipse = 0;
+      if (antiSun > 0) {
+        var perp = Math.sqrt(Math.max(0, relX * relX + relY * relY + relZ * relZ - antiSun * antiSun));
+        eclipse = 1 - Math.min(1, Math.max(0, (perp - lunaEarth.radius * 0.55) / (lunaEarth.radius * 0.5)));
+      }
+      lunaObject.mesh.material.color.setRGB(1 - eclipse * 0.45, 1 - eclipse * 0.72, 1 - eclipse * 0.78);
+    }
     if (solarRingFx) { // Saturn's shadow rig follows the planet; the Sun stays fixed at the origin
       solarRingFx.object.mesh.getWorldPosition(solarRingFx.rings.uPlanet.value);
       solarRingFx.shadow.uRingC.value.copy(solarRingFx.rings.uPlanet.value);
@@ -2703,6 +2802,7 @@
       solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceresObject.body, solarFutureAngle(ceresObject.body, ceresObject, solarElapsed));
       if (solarAsteroidRocks) solarAsteroidRocks.rotation.y = solarAsteroidBelt.rotation.y;
     }
+    if (solarTrojans) solarTrojans.rotation.y = solarBeltCenterAngle(SOLAR_BY_ID.jupiter, solarFutureAngle(SOLAR_BY_ID.jupiter, SOLAR_OBJECTS.jupiter, solarElapsed)); // the swarms co-orbit with Jupiter
   }
   var selectedBeacon = null;
   function selectBeacon(i) {
@@ -3406,6 +3506,7 @@
         material.needsUpdate = true; solarMapsDetached = true;
       }
       if (object.specialty.clouds && object.specialty.clouds.material.map) { var cloudsMat = object.specialty.clouds.material; cloudsMat.map = null; cloudsMat.opacity = 0.34; cloudsMat.needsUpdate = true; }
+      if (body.id === 'earth' && solarEarthPatch) { solarEarthPatch.uCloudMap.value = null; solarEarthPatch.uHasClouds.value = 0; }
       if (object.specialty.rings && object.specialty.rings.material.uniforms && object.specialty.rings.material.uniforms.uMap.value) { var ringSet = object.specialty.rings.material.uniforms; ringSet.uMap.value = null; ringSet.uHasMap.value = 0; ringSet.uOpacity.value = 0.54; }
     });
     var sunUniforms = SOLAR_OBJECTS.sun && SOLAR_OBJECTS.sun.mesh.material.uniforms;
@@ -4269,6 +4370,7 @@
   }
   buildSolarBodies();
   buildAsteroidBelt(Math.max(500, Math.floor(4500 * perfScale)));
+  buildTrojans();
   applySolarPerformanceTier(0);
   function frame() {
     rafId = null;
