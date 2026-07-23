@@ -2074,21 +2074,9 @@
     if (maps.albedo) { material.map = maps.albedo; material.color.set(0xffffff); }
     if (maps.normal) material.normalMap = maps.normal;
     if (maps.night) { material.emissiveMap = maps.night; material.emissive = new THREE.Color(0xffffff); }
-    if (object.body && object.body.id === 'earth' && maps.albedo && maps.albedo.image && !material.specularMap) {
-      try { // ocean-only glint: the old whole-globe specular read as a white blob — the fix is a water mask, not killing specular
-        var oceanCanvas = document.createElement('canvas'); oceanCanvas.width = 1024; oceanCanvas.height = 512;
-        var oceanCtx = oceanCanvas.getContext('2d');
-        oceanCtx.drawImage(maps.albedo.image, 0, 0, 1024, 512);
-        var oceanPixels = oceanCtx.getImageData(0, 0, 1024, 512), oceanData = oceanPixels.data;
-        for (var oi = 0; oi < oceanData.length; oi += 4) {
-          var water = oceanData[oi + 2] > oceanData[oi] * 1.12 && oceanData[oi + 2] > oceanData[oi + 1] && oceanData[oi] + oceanData[oi + 1] + oceanData[oi + 2] < 420 ? 220 : 0;
-          oceanData[oi] = oceanData[oi + 1] = oceanData[oi + 2] = water; // dark, blue-dominant = ocean
-        }
-        oceanCtx.putImageData(oceanPixels, 0, 0);
-        material.specularMap = new THREE.CanvasTexture(oceanCanvas);
-        material.specular = new THREE.Color(0x2e2c26); material.shininess = 110; // tight, restrained glint — anything brighter re-creates the old white blob under bloom
-      } catch (oceanError) {} // canvas tainted (file://) — keep the matte Earth
-    }
+    // NOTE: an ocean-masked specularMap was tried here (water-only glint) — even at 2% reflectance the
+    // Phong peak over the sub-solar point saturates under this light + bloom and reads as a white blob.
+    // Earth stays matte; the build-time specular kill below is deliberate and final.
     material.needsUpdate = true;
     if (object.specialty.clouds && maps.clouds) {
       var clouds = object.specialty.clouds.material; clouds.map = maps.clouds; clouds.opacity = 0.85; clouds.needsUpdate = true;
