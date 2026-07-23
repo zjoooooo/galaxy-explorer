@@ -134,10 +134,10 @@
   #bp-img { display: block; width: 100%; height: 150px; object-fit: cover; border-radius: 8px;
     margin: 10px 0 3px; background: rgba(255,255,255,.04); }
   #bp-credit { font-size: 9px; line-height: 1.35; color: #5b6578; margin-bottom: 6px; }
-  #bp-solar-link, #bp-earth-sky-link, #bp-flyto, #bp-compare { display: block; width: 100%; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(255,255,255,.07);
+  #bp-solar-link, #bp-earth-sky-link, #bp-flyto, #bp-compare, #bp-align, #bp-transit { display: block; width: 100%; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(255,255,255,.07);
     color: #9cc0ff; cursor: pointer; font-size: 13px; }
   #bp-solar-link, #bp-earth-sky-link { font: inherit; text-align: left; background: transparent; }
-  #bp-solar-link:hover, #bp-earth-sky-link:hover, #bp-flyto:hover, #bp-compare:hover { color: #cfe2ff; }
+  #bp-solar-link:hover, #bp-earth-sky-link:hover, #bp-flyto:hover, #bp-compare:hover, #bp-align:hover, #bp-transit:hover { color: #cfe2ff; }
   /* true-size comparison overlay */
   #scalecmp { position: fixed; inset: 0; z-index: 40; background: rgba(4,6,12,.95); display: none; }
   #scalecmp.open { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
@@ -1832,6 +1832,7 @@
   SOLAR_BODIES.forEach(function (b) { SOLAR_BY_ID[b.id] = b; });
 
   var solarScaleBlend = 0, solarScaleAnim = null, SOLAR_TRUE_AU = 35; // true-scale view: display units per AU at blend = 1
+  var solarEventRide = null, solarEventVec = new THREE.Vector3(), solarEventVec2 = new THREE.Vector3(); // conjunction / transit fast-forward
   function solarOrbitRadius(au) {
     if (au <= 0) return 0;
     var compressed = 25 + Math.log(1 + au * 1.8) * 42;
@@ -2467,6 +2468,89 @@
     }
     return true;
   }
+  // ── event rides: planet angles are pure functions of solarElapsed, so "when is the next
+  // conjunction / transit?" is just a scan of future clock values — then ease the clock there
+  function solarFutureAngle(body, object, elapsed) { return body.phase + elapsed * SOLAR_ORBIT_RATE / object.compressedPeriod; }
+  function solarWorldAt(body, object, elapsed, target) { // orbitPivot's inclination applied by hand
+    solarOrbitPoint(body, solarFutureAngle(body, object, elapsed), target);
+    var inc = body.inclinationDeg * Math.PI / 180, z = target.z;
+    target.y = -z * Math.sin(inc); target.z = z * Math.cos(inc);
+    return target;
+  }
+  function solarSeekConjunction() {
+    var ids = ['mercury', 'venus', 'earth', 'mars'], startElapsed = solarElapsed + 30;
+    for (var t = startElapsed; t < startElapsed + 250000; t += 2) {
+      var az = ids.map(function (id) {
+        solarOrbitPoint(SOLAR_BY_ID[id], solarFutureAngle(SOLAR_BY_ID[id], SOLAR_OBJECTS[id], t), solarEventVec);
+        return Math.atan2(solarEventVec.z, solarEventVec.x);
+      });
+      az.sort(function (a, b) { return a - b; });
+      var maxGap = az[0] + Math.PI * 2 - az[3];
+      for (var i = 1; i < 4; i++) if (az[i] - az[i - 1] > maxGap) maxGap = az[i] - az[i - 1];
+      if (Math.PI * 2 - maxGap < 0.42) return t; // all four inside a ~24° sector
+    }
+    return null;
+  }
+  function solarSeekTransit(id) {
+    var inner = SOLAR_BY_ID[id], innerObject = SOLAR_OBJECTS[id]; if (!inner || !innerObject || !inner.distanceAu) return null;
+    var earthBody = SOLAR_BY_ID.earth, earthObject = SOLAR_OBJECTS.earth, startElapsed = solarElapsed + 30;
+    for (var t = startElapsed; t < startElapsed + 400000; t += 0.5) {
+      solarWorldAt(inner, innerObject, t, solarEventVec);
+      solarWorldAt(earthBody, earthObject, t, solarEventVec2);
+      var dx = solarEventVec.x - solarEventVec2.x, dy = solarEventVec.y - solarEventVec2.y, dz = solarEventVec.z - solarEventVec2.z;
+      var dot = -solarEventVec2.x * dx - solarEventVec2.y * dy - solarEventVec2.z * dz;
+      var lenE = solarEventVec2.length(), lenD = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (lenD < lenE && dot / (lenE * lenD) > Math.cos(Math.atan2(6, lenE))) return t; // inner planet within ~2/3 of the Sun disc, seen from Earth
+    }
+    return null;
+  }
+  function solarEventBanner(type, id) {
+    var L = typeof beaconLang === 'string' ? beaconLang : 'en';
+    if (type === 'align') return { en: 'Planetary alignment: Mercury · Venus · Earth · Mars', hans: '行星连珠:水星 · 金星 · 地球 · 火星', hant: '行星連珠:水星 · 金星 · 地球 · 火星', ja: '惑星直列:水星・金星・地球・火星', ko: '행성 정렬: 수성 · 금성 · 지구 · 화성' }[L] || 'Planetary alignment';
+    return (id === 'venus'
+      ? { en: 'Transit of Venus — a dark disc crossing the Sun', hans: '金星凌日 —— 暗色圆盘正掠过日面', hant: '金星凌日 —— 暗色圓盤正掠過日面', ja: '金星の太陽面通過 — 暗い円盤が太陽を横切る', ko: '금성의 태양면 통과 — 어두운 원반이 태양을 가로지릅니다' }
+      : { en: 'Transit of Mercury — a dark disc crossing the Sun', hans: '水星凌日 —— 暗色圆盘正掠过日面', hant: '水星凌日 —— 暗色圓盤正掠過日面', ja: '水星の太陽面通過 — 暗い円盤が太陽を横切る', ko: '수성의 태양면 통과 — 어두운 원반이 태양을 가로지릅니다' })[L] || 'Transit';
+  }
+  function aimSolarTransitRig() { // parked outside Earth on the Sun line, nudged sideways so Earth clears the view
+    SOLAR_OBJECTS.earth.mesh.getWorldPosition(solarEventVec);
+    solarEventVec2.set(solarEventVec.z, 0, -solarEventVec.x).normalize(); // perpendicular in the ecliptic
+    solarCamera.position.copy(solarEventVec).multiplyScalar(1.9).addScaledVector(solarEventVec2, 9);
+    solarCamera.position.y += 4;
+    solarControls.target.set(0, 0, 0);
+    solarCamera.lookAt(solarControls.target);
+  }
+  function startSolarEventRide(type, id) {
+    if (viewMode !== 'solar' || solarWarp || solarFly || solarScaleAnim || solarScaleBlend > 0 || solarEventRide || solarReducedMotion()) return false;
+    var target = type === 'align' ? solarSeekConjunction() : solarSeekTransit(id);
+    if (target == null) return false;
+    clearSolarCard();
+    if (type === 'transit') { solarNav.cameraStack.push(solarSnapshot()); solarNav.level = 'focus'; updateSolarNavigationText(); }
+    solarControls.enabled = false;
+    solarEventRide = { type: type, id: id, fromElapsed: solarElapsed, toElapsed: target, start: performance.now(), dur: 8000, e: 0, banner: solarEventBanner(type, id) };
+    return true;
+  }
+  function cancelSolarEventRide() { if (solarEventRide) { solarEventRide = null; solarControls.enabled = true; } }
+  function stepSolarEventRide() {
+    if (!solarEventRide) return false;
+    var ride = solarEventRide, now = performance.now();
+    if (ride.phase !== 'watch') {
+      var k = Math.min(1, (now - ride.start) / ride.dur);
+      var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      e = Math.min(e, ride.e + 0.05); ride.e = e;
+      solarElapsed = ride.fromElapsed + (ride.toElapsed - ride.fromElapsed) * e;
+      if (ride.type === 'transit') aimSolarTransitRig();
+      if (e >= 1) {
+        setMsg(ride.banner);
+        if (ride.type === 'align') cancelSolarEventRide();
+        else { ride.phase = 'watch'; ride.watchUntil = now + 20000; }
+      }
+      return true;
+    }
+    solarElapsed += 0.016 * 8; // slow-motion crossing while the rig holds the shot
+    aimSolarTransitRig();
+    if (now >= ride.watchUntil) cancelSolarEventRide();
+    return true;
+  }
   function updateSolarMotion(dt) {
     dt = Math.max(0, Math.min(Number(dt) || 0, 0.15));
     if (!solarReducedMotion()) {
@@ -2534,7 +2618,7 @@
     if (solarPaused || solarReducedMotion()) return;
     dt *= solarTimeScale; // fast-forward affects orbits/spins/comets only, never the Sun's shader clock above
     updateSolarComets(dt);
-    solarElapsed += dt;
+    if (!solarEventRide) solarElapsed += dt; // an event ride owns the clock while active
     var orbitElapsed = solarElapsed * SOLAR_ORBIT_RATE;
     SOLAR_BODIES.forEach(function (body) {
       var object = SOLAR_OBJECTS[body.id]; if (!object) return;
@@ -2599,6 +2683,8 @@
       (body.id === 'earth' ? '<button id="bp-earth-sky-link" type="button" aria-label="' + esc({ en: 'Explore Earth\'s sky →', hans: '探索地球的天空 →', hant: '探索地球的天空 →', ja: '地球の空を探索する →', ko: '지구의 하늘 탐험하기 →' }[L]) + '">' + esc({ en: 'Explore Earth\'s sky →', hans: '探索地球的天空 →', hant: '探索地球的天空 →', ja: '地球の空を探索する →', ko: '지구의 하늘 탐험하기 →' }[L]) + '</button>' : '') +
       '<div id="bp-flyto">' + esc({ en: '🚀 Fly to this world →', hans: '🚀 飞跃到此星球 →', hant: '🚀 飛越到此星球 →', ja: '🚀 この天体へ飛ぶ →', ko: '🚀 이 천체로 날아가기 →' }[L]) + '</div>' +
       '<div id="bp-compare">' + esc({ en: '⚖ Compare real sizes →', hans: '⚖ 对比真实大小 →', hant: '⚖ 對比真實大小 →', ja: '⚖ 実際の大きさを比べる →', ko: '⚖ 실제 크기 비교 →' }[L]) + '</div>' +
+      (body.id === 'sun' && !solarReducedMotion() ? '<div id="bp-align">' + esc({ en: '🪐 Fast-forward to the next alignment →', hans: '🪐 快进到下一次行星连珠 →', hant: '🪐 快進到下一次行星連珠 →', ja: '🪐 次の惑星直列へ早送り →', ko: '🪐 다음 행성 정렬로 빨리 감기 →' }[L]) + '</div>' : '') +
+      ((body.id === 'venus' || body.id === 'mercury') && !solarReducedMotion() ? '<div id="bp-transit">' + esc({ en: '🌓 Fast-forward to the next transit →', hans: '🌓 快进到下一次凌日 →', hant: '🌓 快進到下一次凌日 →', ja: '🌓 次の太陽面通過へ早送り →', ko: '🌓 다음 태양면 통과로 빨리 감기 →' }[L]) + '</div>' : '') +
       '<div id="bp-cat">' + esc(info.catalog) + '</div>';
     solarCardOpen = true;
     bpEl.classList.add('open');
@@ -2647,6 +2733,8 @@
     if (e.target && e.target.id === 'bp-solar-link') enterSolar();
     else if (e.target && e.target.id === 'bp-earth-sky-link' && viewMode === 'solar' && solarNav.selectedId === 'earth' && solarNav.parentId === null) enterSkyFromEarth();
     else if (e.target && e.target.id === 'bp-compare' && viewMode === 'solar') openSolarScaleOverlay();
+    else if (e.target && e.target.id === 'bp-align' && viewMode === 'solar') startSolarEventRide('align', null);
+    else if (e.target && e.target.id === 'bp-transit' && viewMode === 'solar') startSolarEventRide('transit', solarNav.selectedId);
     else if (e.target && e.target.id === 'bp-flyto' && viewMode === 'solar' && solarCometSelected !== null) flySolarToComet(solarCometSelected);
     else if (e.target && e.target.id === 'bp-flyto' && viewMode === 'solar' && solarNav.selectedId) flySolarTo(solarNav.selectedId);
     else if (e.target && e.target.id === 'bp-flyto' && selectedBeacon !== null) flyToBeacon(selectedBeacon);
@@ -3074,6 +3162,7 @@
   function leaveSolarLevel() {
     if (viewMode === 'sky' && skyReturnContext) return returnSkyToEarth();
     if (solarFly) { solarFly = null; solarControls.enabled = true; } // Escape mid-flight cancels the tween — no zombie fly
+    if (solarEventRide) { cancelSolarEventRide(); return true; } // Esc stops the event ride first (transit's snapshot pops on the next Esc)
     if (solarScaleAnim) return true; // let the scale tween land; Back/Esc during it is a no-op
     if (solarScaleBlend > 0) { toggleSolarScale(); return true; } // leave true scale first
     if (solarNav.level === 'sky' && solarNav.skySnapshot) {
@@ -3098,6 +3187,7 @@
   }
   renderer.domElement.addEventListener('pointerdown', function (e) {
     if (viewMode !== 'solar') return;
+    if (solarEventRide) cancelSolarEventRide(); // grabbing the view hands the clock back
     var point = solarPointerPosition(e); solarPointer.down = true; solarPointer.x = point.x; solarPointer.y = point.y; solarPointer.moved = false;
   });
   renderer.domElement.addEventListener('pointermove', function (e) {
@@ -4069,7 +4159,7 @@
       var solarNow = performance.now(), solarDt = solarFrameLast ? Math.min((solarNow - solarFrameLast) / 1000, 0.15) : 0;
       solarFrameLast = solarNow;
       updateSolarMotion(solarDt);
-      if (!stepSolarWarp() && !stepSolarFly() && !stepSolarScale()) { stepSolarFollow(); solarControls.update(); } // warp, fly, scale tween, then free orbit
+      if (!stepSolarWarp() && !stepSolarFly() && !stepSolarScale() && !stepSolarEventRide()) { stepSolarFollow(); solarControls.update(); } // warp, fly, scale, event ride, then free orbit
         updateSolarBackdrop();
       if (!solarReducedMotion()) updateSolarFx(solarNow);
       if (solarComposer) solarComposer.render(); else renderer.render(solarScene, solarCamera);
