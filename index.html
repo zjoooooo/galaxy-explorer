@@ -1981,6 +1981,7 @@
     return material;
   }
   var solarProminences = null, solarCME = null;
+  var solarRingFx = null, solarRingQuat = new THREE.Quaternion(); // Saturn's analytic ring/planet shadow rig
   function solarFlareShellMaterial() {
     var material = new THREE.ShaderMaterial({
       uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 } },
@@ -2044,7 +2045,11 @@
     if (maps.night) { material.emissiveMap = maps.night; material.emissive = new THREE.Color(0xffffff); }
     material.needsUpdate = true;
     if (object.specialty.clouds && maps.clouds) { var clouds = object.specialty.clouds.material; clouds.map = maps.clouds; clouds.opacity = 0.85; clouds.needsUpdate = true; }
-    if (object.specialty.rings && maps.ring) { var rings = object.specialty.rings.material; rings.map = maps.ring; rings.color.set(0xffffff); rings.opacity = 0.92; rings.needsUpdate = true; }
+    if (object.specialty.rings && maps.ring) {
+      var rings = object.specialty.rings.material;
+      if (rings.uniforms) { rings.uniforms.uMap.value = maps.ring; rings.uniforms.uHasMap.value = 1; rings.uniforms.uOpacity.value = 0.92; }
+      else { rings.map = maps.ring; rings.color.set(0xffffff); rings.opacity = 0.92; rings.needsUpdate = true; }
+    }
   }
   function solarOrbitDistance(body) {
     if (!body.parent) return solarOrbitRadius(body.distanceAu);
@@ -2207,9 +2212,63 @@
         object.specialty.faintRing = faintRing;
       }
       if (body.id === 'saturn') {
-        var rings = new THREE.Mesh(solarRingGeometry, new THREE.MeshBasicMaterial({ color: 0xdcc58b, transparent: true, opacity: 0.54, side: THREE.DoubleSide, depthWrite: false }));
+        // rings with real shadow anatomy, all analytic (no shadow maps): the stretch of ring
+        // inside the planet's shadow goes dark, backlit dust forward-scatters, and the planet
+        // itself wears the rings' cast band (onBeforeCompile below)
+        var ringUniforms = {
+          uMap: { value: null }, uHasMap: { value: 0 }, uColor: { value: new THREE.Color(0xdcc58b) },
+          uOpacity: { value: 0.54 }, uPlanet: { value: new THREE.Vector3() }, uPlanetR: { value: radius }
+        };
+        var rings = new THREE.Mesh(solarRingGeometry, new THREE.ShaderMaterial({
+          uniforms: ringUniforms, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+          vertexShader: 'varying vec2 vUv; varying vec3 vWorld; void main(){ vUv = uv; vWorld = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+          fragmentShader: [
+            'uniform sampler2D uMap; uniform float uHasMap; uniform vec3 uColor; uniform float uOpacity;',
+            'uniform vec3 uPlanet; uniform float uPlanetR;',
+            'varying vec2 vUv; varying vec3 vWorld;',
+            'void main(){',
+            '  vec4 tex = texture2D(uMap, vUv);',
+            '  vec3 base = mix(uColor, tex.rgb, uHasMap);',
+            '  float alpha = mix(1.0, tex.a, uHasMap) * uOpacity;',
+            '  vec3 toSun = normalize(-vWorld);', // the Sun sits at the world origin
+            '  vec3 toPlanet = uPlanet - vWorld;',
+            '  float along = dot(toPlanet, toSun);',
+            '  float perp2 = dot(toPlanet, toPlanet) - along * along;',
+            '  float rr = uPlanetR * uPlanetR;',
+            '  float shade = along > 0.0 ? 1.0 - smoothstep(rr * 0.72, rr * 1.15, perp2) : 0.0;', // planet eclipses this stretch
+            '  base *= 1.0 - shade * 0.82;',
+            '  float fwd = pow(max(dot(normalize(vWorld), normalize(cameraPosition - vWorld)), 0.0), 3.0);', // backlit dust glows
+            '  base *= 1.0 + fwd * 0.5;',
+            '  gl_FragColor = vec4(base, alpha); }'
+          ].join('\n')
+        }));
         rings.rotation.x = Math.PI / 2; rings.scale.set(radius * 1.58, radius * 1.58, 1); rings.userData.solarId = body.id; spinNode.add(rings);
         object.specialty.rings = rings;
+        var saturnShadow = { uRingC: { value: new THREE.Vector3() }, uRingN: { value: new THREE.Vector3(0, 1, 0) }, uRingIn: { value: radius * 1.58 }, uRingOut: { value: radius * 3.16 } };
+        mesh.material.onBeforeCompile = function (shader) {
+          shader.uniforms.uRingC = saturnShadow.uRingC; shader.uniforms.uRingN = saturnShadow.uRingN;
+          shader.uniforms.uRingIn = saturnShadow.uRingIn; shader.uniforms.uRingOut = saturnShadow.uRingOut;
+          shader.vertexShader = shader.vertexShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vRingWN; varying vec3 vRingWP;')
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRingWN = mat3(modelMatrix) * normal; vRingWP = (modelMatrix * vec4(position, 1.0)).xyz;');
+          shader.fragmentShader = shader.fragmentShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vRingWN; varying vec3 vRingWP;\nuniform vec3 uRingC; uniform vec3 uRingN; uniform float uRingIn; uniform float uRingOut;')
+            .replace('#include <map_fragment>', '#include <map_fragment>\n' + [
+              'vec3 rsD = normalize(-vRingWP);', // toward the Sun at the origin
+              'float rsDen = dot(rsD, uRingN);',
+              'float rsShade = 0.0;',
+              'if (abs(rsDen) > 1e-4) {',
+              '  float rsT = dot(uRingC - vRingWP, uRingN) / rsDen;',
+              '  if (rsT > 0.0) {',
+              '    float rsR = length(vRingWP + rsD * rsT - uRingC);',
+              '    rsShade = smoothstep(uRingIn - 0.5, uRingIn + 0.5, rsR) * (1.0 - smoothstep(uRingOut - 0.6, uRingOut + 0.3, rsR));',
+              '  }',
+              '}',
+              'rsShade *= smoothstep(-0.05, 0.25, dot(normalize(vRingWN), rsD));', // a cast shadow only reads on the lit side
+              'diffuseColor.rgb *= 1.0 - rsShade * 0.7;'
+            ].join('\n'));
+        };
+        solarRingFx = { rings: ringUniforms, shadow: saturnShadow, object: object };
       }
       if (body.id !== 'sun') {
         // axial tilt made visible: a pole-to-pole axis (blue = north, amber = south, so Venus's
@@ -2399,6 +2458,12 @@
       // flips the axis geometrically, so only flip the spin when exactly one encoding applies (e.g. Triton)
       if ((body.rotationHours < 0) !== (body.tiltDeg > 90)) object.spinNode.rotation.y *= -1;
     });
+    if (solarRingFx) { // Saturn's shadow rig follows the planet; the Sun stays fixed at the origin
+      solarRingFx.object.mesh.getWorldPosition(solarRingFx.rings.uPlanet.value);
+      solarRingFx.shadow.uRingC.value.copy(solarRingFx.rings.uPlanet.value);
+      solarRingFx.object.tiltNode.getWorldQuaternion(solarRingQuat);
+      solarRingFx.shadow.uRingN.value.set(0, 1, 0).applyQuaternion(solarRingQuat);
+    }
     if (solarAsteroidBelt) {
       var ceresObject = SOLAR_OBJECTS.ceres;
       solarAsteroidBelt.rotation.y = solarBeltCenterAngle(ceresObject.body, ceresObject.body.phase + orbitElapsed / ceresObject.compressedPeriod);
