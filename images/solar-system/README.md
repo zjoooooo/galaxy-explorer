@@ -46,7 +46,7 @@ that availability does not erase a source record's attribution instruction.
 | `titan.jpg` | NASA/JPL, [Saturn – Titan](https://science.nasa.gov/3d-resources/saturn-titan/) | 720×360 JPEG → 2048×1024 JPEG. |
 | `uranus.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `2k_uranus.jpg` | 2048×1024 JPEG. |
 | `neptune.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `2k_neptune.jpg` | 2048×1024 JPEG. |
-| `triton.jpg` | NASA/JPL, [Neptune – Triton](https://science.nasa.gov/3d-resources/neptune-triton/), USGS/Tammy Becker & JPL/Caltech | 1440×720 JPEG → 2048×1024 JPEG. |
+| `triton.jpg` | NASA/JPL, [Neptune – Triton](https://science.nasa.gov/3d-resources/neptune-triton/), USGS/Tammy Becker & JPL/Caltech | 1440×720 JPEG → 2048×1024 JPEG. Voyager 2 mapped only part of the surface; the source's unmapped regions are black, which rendered as an almost-black moon. The unmapped area is filled with a heavily blurred resample of the mapped terrain's colors (ffmpeg maskedmerge, luminance mask, 10px feather); the mapped swath itself is unretouched. |
 | `pluto.jpg` | NASA/JPL, [Pluto](https://science.nasa.gov/3d-resources/pluto/) | 720×360 JPEG → 2048×1024 JPEG. The source page identifies this as a fictional texture stitched by David Seal from a Pat Rawlings painting; it is retained only with that explicit credit. |
 
 Moon and Mars configure the two normal maps above. Earth has no normal map: the
