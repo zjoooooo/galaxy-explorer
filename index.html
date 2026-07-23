@@ -41,6 +41,7 @@
     background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 5px 10px; }
   #solartime button:hover { border-color: #6366f1; color: #fff; }
   #solartime button.on { border-color: #6366f1; color: #fff; background: rgba(50,58,96,.72); }
+  #solarscale { margin-left: 8px; }
   /* quick-jump roster: every top-level body plus the two comets, one tap to fly there */
   #solarstrip { position: absolute; left: 50%; transform: translateX(-50%); bottom: 18px; display: flex; gap: 4px;
     max-width: min(72vw, 920px); overflow-x: auto; pointer-events: auto; z-index: 6; padding: 2px; scrollbar-width: none; }
@@ -192,7 +193,7 @@
 
 <button id="skyback" class="overlay" type="button" aria-label="← Back to Galaxy">← Back to Galaxy</button>
 <button id="solarback" class="overlay" type="button" aria-label="← Back to Galaxy">← Back to Galaxy</button>
-<div id="solarlabels" aria-live="polite" style="display:none"><div id="solarstrip" role="group" aria-label="Bodies"></div><div id="solartime" role="group" aria-label="Time speed"><button type="button" data-scale="0" aria-label="Pause">⏸</button><button type="button" data-scale="1" class="on" aria-label="Normal speed">1×</button><button type="button" data-scale="16" aria-label="16x speed">16×</button><button type="button" data-scale="128" aria-label="128x speed">128×</button></div></div>
+<div id="solarlabels" aria-live="polite" style="display:none"><div id="solarstrip" role="group" aria-label="Bodies"></div><div id="solartime" role="group" aria-label="Time speed"><button type="button" data-scale="0" aria-label="Pause">⏸</button><button type="button" data-scale="1" class="on" aria-label="Normal speed">1×</button><button type="button" data-scale="16" aria-label="16x speed">16×</button><button type="button" data-scale="128" aria-label="128x speed">128×</button><button type="button" id="solarscale" aria-label="True scale">⚖︎</button></div></div>
 
 <div id="msg" class="overlay"></div>
 <div id="scalecmp" role="dialog" aria-modal="true" aria-label="True sizes"><button id="scalecmp-close" type="button" aria-label="Close">×</button><h3></h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1820 560"></svg><div class="note"></div></div>
@@ -654,7 +655,7 @@
       ok(typeof clearSolarCard === 'function', 'clearSolarCard missing');
       ok(typeof enterSolarSky === 'function', 'enterSolarSky missing');
       ok(typeof solarActiveProxies === 'function', 'solarActiveProxies missing');
-      var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldPaused = solarPaused, oldCardOpen = solarCardOpen, oldTimeScale = solarTimeScale;
+      var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldPaused = solarPaused, oldCardOpen = solarCardOpen, oldTimeScale = solarTimeScale, oldScaleBlend = solarScaleBlend;
       var oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
       var oldElapsed = solarElapsed, oldShader = solarShaderTime, oldBelt = solarAsteroidBelt && solarAsteroidBelt.rotation.y, oldGalaxyView = savedGalaxyView;
       var oldControls = { enabled: solarControls.enabled, minDistance: solarControls.minDistance, maxDistance: solarControls.maxDistance, frameLast: solarFrameLast, perfLast: perfLast };
@@ -668,6 +669,7 @@
       try {
         if (viewMode !== 'solar') enterSolar();
         solarTimeScale = 1; // motion assertions below assume real-time pacing
+        solarScaleAnim = null; if (solarScaleBlend) solarApplyScaleBlend(0); // ...and the compressed layout
         updateSolarLabels();
         ok(Object.keys(solarLabelButtons).length === SOLAR_BODIES.length, 'not every solar body received a label');
         SOLAR_BODIES.forEach(function (body) {
@@ -733,6 +735,7 @@
       } finally {
         if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
         solarNav = oldNav; solarPaused = oldPaused; solarCardOpen = oldCardOpen; savedGalaxyView = oldGalaxyView; solarTimeScale = oldTimeScale;
+        if (solarScaleBlend !== oldScaleBlend) solarApplyScaleBlend(oldScaleBlend);
         solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
         solarControls.enabled = oldControls.enabled; solarControls.minDistance = oldControls.minDistance; solarControls.maxDistance = oldControls.maxDistance;
         solarElapsed = oldElapsed; solarShaderTime = oldShader; solarCoronaMaterial.uniforms.uTime.value = oldShader;
@@ -807,6 +810,7 @@
   solarControls.minDistance = 2;
   solarControls.maxDistance = 420;
   var GLOW_TEX = glowTexture(); // created before its first users below (backdrop band, Kuiper belt, comets)
+  var solarKuiper = null; // kept addressable so the true-scale view can fade it (its positions are baked compressed)
   (function buildSolarBackdrop() {
     var N = 1400, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), phs = new Float32Array(N), spd = new Float32Array(N), c = new THREE.Color();
     for (var i = 0; i < N; i++) {
@@ -862,7 +866,8 @@
     }
     var kg = new THREE.BufferGeometry();
     kg.setAttribute('position', new THREE.BufferAttribute(kp, 3));
-    solarScene.add(new THREE.Points(kg, new THREE.PointsMaterial({ color: 0x8d8a94, size: 0.9, map: GLOW_TEX, transparent: true, opacity: 0.22, depthWrite: false, sizeAttenuation: true })));
+    solarKuiper = new THREE.Points(kg, new THREE.PointsMaterial({ color: 0x8d8a94, size: 0.9, map: GLOW_TEX, transparent: true, opacity: 0.22, depthWrite: false, sizeAttenuation: true }));
+    solarScene.add(solarKuiper);
   })();
   // ── comets: nucleus + coma, a straight blue ION tail pinned anti-sunward, and a curved
   // pale DUST tail whose grains keep their own Keplerian paths while radiation pressure
@@ -945,6 +950,7 @@
   }
   function flySolarToComet(cometIndex) {
     if (solarFly || solarWarp) return false;
+    if (solarScaleBlend > 0 || solarScaleAnim) return false; // comets are hidden at true scale
     var comet = solarComets[cometIndex]; if (!comet) return false;
     var wp = new THREE.Vector3(); comet.coma.getWorldPosition(wp);
     var dir = solarCamera.position.clone().sub(wp); dir.y = 0;
@@ -1825,7 +1831,12 @@
   var SOLAR_BY_ID = {};
   SOLAR_BODIES.forEach(function (b) { SOLAR_BY_ID[b.id] = b; });
 
-  function solarOrbitRadius(au) { return au <= 0 ? 0 : 25 + Math.log(1 + au * 1.8) * 42; }
+  var solarScaleBlend = 0, solarScaleAnim = null, SOLAR_TRUE_AU = 35; // true-scale view: display units per AU at blend = 1
+  function solarOrbitRadius(au) {
+    if (au <= 0) return 0;
+    var compressed = 25 + Math.log(1 + au * 1.8) * 42;
+    return solarScaleBlend ? compressed + (au * SOLAR_TRUE_AU - compressed) * solarScaleBlend : compressed;
+  }
   function solarDisplayRadius(km) { return km <= 0 ? 0 : 0.8 + Math.pow(km / 4879, 0.38) * 1.55; }
   function solarBodyDisplayRadius(body) {
     if (body.id === 'sun') return 9.5;
@@ -2141,7 +2152,7 @@
             var hitProxy = new THREE.Mesh(solarSphereLow, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
       hitProxy.scale.set(radius * 1.6, radius * 1.6, radius * 1.6); hitProxy.userData.solarId = body.id; lodGroup.add(hitProxy);
       var orbitLine = orbitPivot.children[0];
-      SOLAR_OBJECTS[body.id] = { body: body, orbitPivot: orbitPivot, positionNode: positionNode, tiltNode: tiltNode, spinNode: spinNode, lodGroup: lodGroup, hitProxy: hitProxy, orbitLine: orbitLine, mesh: mesh, specialty: {}, radius: radius, compressedPeriod: solarCompressedPeriod(body) };
+      SOLAR_OBJECTS[body.id] = { body: body, orbitPivot: orbitPivot, positionNode: positionNode, tiltNode: tiltNode, spinNode: spinNode, lodGroup: lodGroup, hitProxy: hitProxy, orbitLine: orbitLine, mesh: mesh, specialty: {}, radius: radius, baseRadius: radius, radiusScale: 1, compressedPeriod: solarCompressedPeriod(body) };
       var object = SOLAR_OBJECTS[body.id];
       if (body.id === 'sun') {
         solarSunGlows = makeSolarCoreLayers(radius, lodGroup);
@@ -2390,6 +2401,72 @@
     return solarAsteroidBelt;
   }
   function setSolarPaused(paused) { solarPaused = !!paused; }
+  // ── true-scale view: blend the whole overview between the readable compressed layout and
+  // honest proportions (true relative sizes, true relative distances — Sun pinned at its display size)
+  function solarRefreshOrbitLines() {
+    SOLAR_BODIES.forEach(function (body) {
+      var object = SOLAR_OBJECTS[body.id]; if (!object || !object.orbitLine || !object.orbitLine.geometry) return;
+      var attr = object.orbitLine.geometry.attributes && object.orbitLine.geometry.attributes.position; if (!attr) return;
+      for (var i = 0; i < attr.count; i++) {
+        solarOrbitPoint(body, i / attr.count * Math.PI * 2, solarBeltPoint);
+        attr.setXYZ(i, solarBeltPoint.x, solarBeltPoint.y, solarBeltPoint.z);
+      }
+      attr.needsUpdate = true;
+      object.orbitLine.geometry.computeBoundingSphere();
+    });
+  }
+  function solarApplyScaleBlend(blend) {
+    solarScaleBlend = Math.max(0, Math.min(1, blend));
+    var trueK = 9.5 / SOLAR_BY_ID.sun.radiusKm; // Sun keeps its display size; everything else shrinks to match
+    SOLAR_BODIES.forEach(function (body) {
+      var object = SOLAR_OBJECTS[body.id]; if (!object) return;
+      var r = object.baseRadius + (body.radiusKm * trueK - object.baseRadius) * solarScaleBlend;
+      object.tiltNode.scale.setScalar(r / object.baseRadius);
+      object.radius = r; object.radiusScale = r / object.baseRadius;
+    });
+    solarRefreshOrbitLines();
+    var fade = 1 - solarScaleBlend;
+    if (solarAsteroidBelt) solarAsteroidBelt.material.opacity = 0.12 * fade; // baked compressed — fades out honestly
+    if (solarKuiper) solarKuiper.material.opacity = 0.22 * fade;
+    solarComets.forEach(function (comet) { comet.group.visible = solarScaleBlend < 0.05; });
+    if (solarScaleBlend === 0) updateSolarVisibility(); // re-derive belt dimming and friends from nav
+  }
+  function toggleSolarScale() {
+    if (viewMode !== 'solar' || solarWarp || solarFly || solarScaleAnim) return false;
+    if (solarNav.level !== 'overview') return false; // a statement about the whole system — offered from the overview
+    var to = solarScaleBlend > 0.5 ? 0 : 1;
+    var scaleButton = document.getElementById('solarscale');
+    if (scaleButton) scaleButton.classList.toggle('on', to === 1);
+    solarControls.maxDistance = 1600; solarCamera.far = 4200; solarCamera.updateProjectionMatrix(); // roomy during the ride either way
+    if (solarReducedMotion()) {
+      solarApplyScaleBlend(to);
+      solarCamera.position.set(0, to ? 620 : 200, to ? 1250 : 285);
+      solarControls.target.set(0, 0, 0); solarControls.update();
+      if (!to) { solarControls.maxDistance = 333; solarCamera.far = 1800; solarCamera.updateProjectionMatrix(); }
+      return true;
+    }
+    solarControls.enabled = false;
+    solarScaleAnim = { from: solarScaleBlend, to: to, start: performance.now(), dur: 2600, e: 0,
+      p0: solarCamera.position.clone(), t0: solarControls.target.clone(),
+      p1: new THREE.Vector3(0, to ? 620 : 200, to ? 1250 : 285), t1: new THREE.Vector3(0, 0, 0) };
+    return true;
+  }
+  function stepSolarScale() {
+    if (!solarScaleAnim) return false;
+    var k = Math.min(1, (performance.now() - solarScaleAnim.start) / solarScaleAnim.dur);
+    var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // easeInOutQuad
+    e = Math.min(e, solarScaleAnim.e + 0.05); solarScaleAnim.e = e; // dropped frames must not snap
+    solarApplyScaleBlend(solarScaleAnim.from + (solarScaleAnim.to - solarScaleAnim.from) * e);
+    solarCamera.position.lerpVectors(solarScaleAnim.p0, solarScaleAnim.p1, e);
+    solarControls.target.lerpVectors(solarScaleAnim.t0, solarScaleAnim.t1, e);
+    solarCamera.lookAt(solarControls.target); // controls.update() is skipped while the tween owns the camera
+    if (e >= 1) {
+      var landedCompressed = solarScaleAnim.to === 0;
+      solarScaleAnim = null; solarControls.enabled = true;
+      if (landedCompressed) { solarControls.maxDistance = 333; solarCamera.far = 1800; solarCamera.updateProjectionMatrix(); }
+    }
+    return true;
+  }
   function updateSolarMotion(dt) {
     dt = Math.max(0, Math.min(Number(dt) || 0, 0.15));
     if (!solarReducedMotion()) {
@@ -2758,7 +2835,7 @@
       if (label.dataset.txt !== labelText) { label.dataset.txt = labelText; label.textContent = labelText; label.setAttribute('aria-label', labelText); }
       if (!object || !solarBodyIsActive(body)) { label.style.display = 'none'; return; }
       object.mesh.getWorldPosition(solarLabelPoint);
-      object.hitProxy.scale.setScalar(solarHitRadius(object, solarLabelPoint));
+      object.hitProxy.scale.setScalar(solarHitRadius(object, solarLabelPoint) / (object.radiusScale || 1)); // proxy lives inside the scaled tiltNode
       var projected = solarLabelProjected.copy(solarLabelPoint).project(solarCamera);
       if (projected.z < -1 || projected.z > 1 || projected.x < -1 || projected.x > 1 || projected.y < -1 || projected.y > 1) { label.style.display = 'none'; return; }
       candidates.push({ body: body, label: label, x: (projected.x * 0.5 + 0.5) * window.innerWidth, y: (-projected.y * 0.5 + 0.5) * window.innerHeight,
@@ -2773,6 +2850,7 @@
     });
     solarComets.forEach(function (comet, cometIndex) { // comet name labels, same treatment as the bodies
       var label = solarCometLabelFor(cometIndex);
+      if (!comet.group.visible) { label.style.display = 'none'; return; } // hidden at true scale
       comet.coma.getWorldPosition(solarLabelPoint);
       var projected = solarLabelProjected.copy(solarLabelPoint).project(solarCamera);
       if (projected.z < -1 || projected.z > 1 || projected.x < -1 || projected.x > 1 || projected.y < -1 || projected.y > 1) { label.style.display = 'none'; return; }
@@ -2940,6 +3018,7 @@
   }
   function flySolarTo(id) {
     if (solarFly || solarWarp) return false; // one flight at a time — repeated rocket clicks must not stack snapshots
+    if (solarScaleBlend > 0 || solarScaleAnim) return false; // true scale is a view-only overview
     var body = SOLAR_BY_ID[id], object = SOLAR_OBJECTS[id]; if (!body || !object) return false;
     var wp = new THREE.Vector3(); object.mesh.getWorldPosition(wp);
     var r = Math.max(object.radius, 0.5);
@@ -2995,6 +3074,8 @@
   function leaveSolarLevel() {
     if (viewMode === 'sky' && skyReturnContext) return returnSkyToEarth();
     if (solarFly) { solarFly = null; solarControls.enabled = true; } // Escape mid-flight cancels the tween — no zombie fly
+    if (solarScaleAnim) return true; // let the scale tween land; Back/Esc during it is a no-op
+    if (solarScaleBlend > 0) { toggleSolarScale(); return true; } // leave true scale first
     if (solarNav.level === 'sky' && solarNav.skySnapshot) {
       setSolarNavigation(solarNav.skySnapshot); solarNav.skySnapshot = null; return true;
     }
@@ -3100,6 +3181,11 @@
     if (viewMode !== 'solar') return;
     cancelSolarWarp();
     solarFly = null; // an abandoned fly must not resume in the next solar session
+    solarScaleAnim = null;
+    if (solarScaleBlend) { // never leave the scene half-scaled for the next session
+      solarApplyScaleBlend(0); solarControls.maxDistance = 333; solarCamera.far = 1800; solarCamera.updateProjectionMatrix();
+      var scaleButton = document.getElementById('solarscale'); if (scaleButton) scaleButton.classList.remove('on');
+    }
     var galaxyView = savedGalaxyView;
     clearSolarCard();
     viewMode = 'galaxy';
@@ -3182,9 +3268,10 @@
   if (solarTimeEl) {
     if (solarReducedMotion()) solarTimeEl.style.display = 'none'; // orbital motion is disabled entirely under reduced motion
     Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button'), function (button) {
+      if (button.id === 'solarscale') { button.addEventListener('click', function () { toggleSolarScale(); }); return; }
       button.addEventListener('click', function () {
         solarTimeScale = +button.dataset.scale;
-        Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button'), function (other) { other.classList.toggle('on', other === button); });
+        Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button[data-scale]'), function (other) { other.classList.toggle('on', other === button); });
       });
     });
   }
@@ -3791,6 +3878,8 @@
   function updateSolarNavigationText() {
     var L = typeof beaconLang === 'string' ? beaconLang : 'en';
     if (typeof solarStripEl !== 'undefined' && solarStripEl && solarStripEl.dataset.lang !== L) buildSolarStrip(); // roster follows the language switch
+    var scaleToggle = document.getElementById('solarscale');
+    if (scaleToggle) { var scaleText = { en: 'True scale', hans: '真实比例', hant: '真實比例', ja: '実スケール', ko: '실제 축척' }[L] || 'True scale'; scaleToggle.title = scaleText; scaleToggle.setAttribute('aria-label', scaleText); }
     var text = {
       en: { galaxy: '← Back to Galaxy', solar: '← Back to Solar System', earth: '← Back to Earth' },
       hans: { galaxy: '← 返回银河系', solar: '← 返回太阳系', earth: '← 返回地球' },
@@ -3980,7 +4069,7 @@
       var solarNow = performance.now(), solarDt = solarFrameLast ? Math.min((solarNow - solarFrameLast) / 1000, 0.15) : 0;
       solarFrameLast = solarNow;
       updateSolarMotion(solarDt);
-      if (!stepSolarWarp() && !stepSolarFly()) { stepSolarFollow(); solarControls.update(); } // warp, then fly tween, then free orbit
+      if (!stepSolarWarp() && !stepSolarFly() && !stepSolarScale()) { stepSolarFollow(); solarControls.update(); } // warp, fly, scale tween, then free orbit
         updateSolarBackdrop();
       if (!solarReducedMotion()) updateSolarFx(solarNow);
       if (solarComposer) solarComposer.render(); else renderer.render(solarScene, solarCamera);
