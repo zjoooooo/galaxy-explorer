@@ -795,7 +795,7 @@
   // everything that co-rotates (dust + nebula + effects) lives under this group
   var galaxyRoot = new THREE.Group(); scene.add(galaxyRoot);
   var camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 5000);
-  camera.position.set(0, 390, 520); // elevated 3/4 top-down view, pulled back so the whole disc + deep-field neighbours frame with margin on load
+  camera.position.set(0, 529, 715); // elevated 3/4 view (el ≈ 36.5°, d ≈ 890), pulled back so the disc, the Magellanic Clouds and Triangulum all frame on load
   var controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxDistance = 1600; controls.minDistance = 5;
 
