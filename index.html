@@ -35,6 +35,12 @@
   #skyback, #solarback { top: 64px; left: 18px; z-index: 6; display: none; cursor: pointer; font: inherit; font-size: 13px;
     color: #cbd5e1; background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 6px 12px; }
   #skyback:hover, #solarback:hover { border-color: #6366f1; color: #fff; }
+  /* solar time-speed pill (pause / 1x / 16x / 128x) */
+  #solartime { position: absolute; left: 18px; bottom: 18px; display: flex; gap: 6px; pointer-events: auto; z-index: 6; }
+  #solartime button { cursor: pointer; font: inherit; font-size: 12px; color: #cbd5e1;
+    background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 5px 10px; }
+  #solartime button:hover { border-color: #6366f1; color: #fff; }
+  #solartime button.on { border-color: #6366f1; color: #fff; background: rgba(50,58,96,.72); }
   button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid #9cc0ff; outline-offset: 3px; }
   #skylabels, #solarlabels { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
   .skylabel { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
@@ -136,6 +142,7 @@
     @keyframes bpUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
     #skyback, #solarback { left: max(12px, env(safe-area-inset-left)); top: max(64px, calc(env(safe-area-inset-top) + 52px)); }
     .solar-label { font-size: 11px; letter-spacing: .04em; min-width: 44px; min-height: 44px; padding: 8px 12px; }
+    #solartime button { min-width: 44px; min-height: 44px; }
   }
 
   /* background-music control: speaker button + a hover popup listing tracks by name */
@@ -167,7 +174,7 @@
 
 <button id="skyback" class="overlay" type="button" aria-label="← Back to Galaxy">← Back to Galaxy</button>
 <button id="solarback" class="overlay" type="button" aria-label="← Back to Galaxy">← Back to Galaxy</button>
-<div id="solarlabels" aria-live="polite" style="display:none"></div>
+<div id="solarlabels" aria-live="polite" style="display:none"><div id="solartime" role="group" aria-label="Time speed"><button type="button" data-scale="0" aria-label="Pause">⏸</button><button type="button" data-scale="1" class="on" aria-label="Normal speed">1×</button><button type="button" data-scale="16" aria-label="16x speed">16×</button><button type="button" data-scale="128" aria-label="128x speed">128×</button></div></div>
 
 <div id="msg" class="overlay"></div>
 <div id="skyveil" aria-hidden="true"></div>
@@ -628,7 +635,7 @@
       ok(typeof clearSolarCard === 'function', 'clearSolarCard missing');
       ok(typeof enterSolarSky === 'function', 'enterSolarSky missing');
       ok(typeof solarActiveProxies === 'function', 'solarActiveProxies missing');
-      var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldPaused = solarPaused, oldCardOpen = solarCardOpen;
+      var oldView = viewMode, oldNav = { level: solarNav.level, selectedId: solarNav.selectedId, parentId: solarNav.parentId, cameraStack: solarNav.cameraStack.slice(), galaxySnapshot: solarNav.galaxySnapshot, skySnapshot: solarNav.skySnapshot }, oldPaused = solarPaused, oldCardOpen = solarCardOpen, oldTimeScale = solarTimeScale;
       var oldPosition = solarCamera.position.clone(), oldTarget = solarControls.target.clone();
       var oldElapsed = solarElapsed, oldShader = solarShaderTime, oldBelt = solarAsteroidBelt && solarAsteroidBelt.rotation.y, oldGalaxyView = savedGalaxyView;
       var oldControls = { enabled: solarControls.enabled, minDistance: solarControls.minDistance, maxDistance: solarControls.maxDistance, frameLast: solarFrameLast, perfLast: perfLast };
@@ -641,6 +648,7 @@
       });
       try {
         if (viewMode !== 'solar') enterSolar();
+        solarTimeScale = 1; // motion assertions below assume real-time pacing
         updateSolarLabels();
         ok(Object.keys(solarLabelButtons).length === SOLAR_BODIES.length, 'not every solar body received a label');
         SOLAR_BODIES.forEach(function (body) {
@@ -705,7 +713,7 @@
         ok(solarNav.selectedId === null, 'closing a card changed the restored focus');
       } finally {
         if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
-        solarNav = oldNav; solarPaused = oldPaused; solarCardOpen = oldCardOpen; savedGalaxyView = oldGalaxyView;
+        solarNav = oldNav; solarPaused = oldPaused; solarCardOpen = oldCardOpen; savedGalaxyView = oldGalaxyView; solarTimeScale = oldTimeScale;
         solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
         solarControls.enabled = oldControls.enabled; solarControls.minDistance = oldControls.minDistance; solarControls.maxDistance = oldControls.maxDistance;
         solarElapsed = oldElapsed; solarShaderTime = oldShader; solarCoronaMaterial.uniforms.uTime.value = oldShader;
@@ -1846,6 +1854,7 @@
   // ── solar runtime: shared meshes, hierarchical orbits, and deterministic time ──
   var SOLAR_OBJECTS = {}, solarAsteroidBelt = null;
   var solarElapsed = 0, solarShaderTime = 0, solarPaused = false, solarFrameLast = 0;
+  var solarTimeScale = 1; // user-facing orbital fast-forward (0 = user pause); the Sun's shader life stays on real time
   var SOLAR_ORBIT_RATE = 0.18, SOLAR_SPIN_RATE = 0.05;
   var solarBeltClearance = { angle: 0.06, inner: 0, outer: 0 }, solarBeltPoint = new THREE.Vector3();
   var solarSphereLow = new THREE.SphereGeometry(1, 12, 8);
@@ -2340,6 +2349,7 @@
       }
     }
     if (solarPaused || solarReducedMotion()) return;
+    dt *= solarTimeScale; // fast-forward affects orbits/spins/comets only, never the Sun's shader clock above
     updateSolarComets(dt);
     solarElapsed += dt;
     var orbitElapsed = solarElapsed * SOLAR_ORBIT_RATE;
@@ -2992,6 +3002,16 @@
     perfLast = 0;
   }
   solarBackEl.addEventListener('click', function () { if (!leaveSolarLevel()) exitSolar(); });
+  var solarTimeEl = document.getElementById('solartime');
+  if (solarTimeEl) {
+    if (solarReducedMotion()) solarTimeEl.style.display = 'none'; // orbital motion is disabled entirely under reduced motion
+    Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button'), function (button) {
+      button.addEventListener('click', function () {
+        solarTimeScale = +button.dataset.scale;
+        Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button'), function (other) { other.classList.toggle('on', other === button); });
+      });
+    });
+  }
   window.addEventListener('keydown', function (e) {
     if ((e.key || '').toLowerCase() !== 'escape' || viewMode !== 'solar') return;
     if (document.body.classList.contains('gx-cinema')) return; // cinema mode owns Escape first
