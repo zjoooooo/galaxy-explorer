@@ -3,7 +3,12 @@
 # Galaxy Explorer 🌌
 Demo Page
 https://zjoooooo.github.io/galaxy-explorer/
+
 <img width="1920" height="945" alt="Image_2026-07-04_141404_478" src="https://github.com/user-attachments/assets/ce6388f3-5854-4c13-9d6c-daccac89bf24" />
+
+latest view
+<img width="3006" height="1706" alt="image" src="https://github.com/user-attachments/assets/3553f380-a4df-4853-be31-d21faaa4c24d" />
+
 
 An interactive, procedurally-generated **Milky Way galaxy** — with a full 3D
 **Solar System**, roaming **comets**, and real **radio-galaxy jets** — that runs
