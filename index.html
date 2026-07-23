@@ -601,7 +601,7 @@
       var points = 0;
       solarRoot.traverse(function (o) { if (o instanceof THREE.Points) points++; });
       ok(solarAsteroidBelt instanceof THREE.Points, 'asteroid belt is not points');
-      ok(points === 6, 'expected the dust belt, the Trojan swarms, the Sun CME points, the prominence flow, and two comet tails');
+      ok(points === 5, 'expected the dust belt, the Trojan swarms, the Sun CME points, the prominence flow, and one comet tail');
       ok(solarAsteroidRocks && solarAsteroidRocks.children.length === 3 && solarAsteroidRocks.children.every(function (mesh) { return mesh.isInstancedMesh; }), 'asteroid rock layer must be three instanced meshes');
       var rockTotal = solarAsteroidRocks.children.reduce(function (sum, mesh) { return sum + mesh.count; }, 0);
       ok(rockTotal >= 300, 'asteroid rock layer is too sparse');
@@ -878,8 +878,7 @@
   (function buildSolarComets() {
     var ION_N = 90, DUST_N = 150, state = 4242;
     function crnd() { state = (state * 1664525 + 1013904223) >>> 0; return state / 4294967296; }
-    [ { q: 16, Q: 150, incl: 0.31, phase: 1.2, rate: 0.014 },
-      { q: 24, Q: 205, incl: -0.21, phase: 4.3, rate: 0.011 } ].forEach(function (spec, cometIndex) {
+    [ { q: 16, Q: 150, incl: 0.31, phase: 1.2, rate: 0.014 } ].forEach(function (spec, cometIndex) {
       var a = (spec.q + spec.Q) / 2, e = (spec.Q - spec.q) / (spec.Q + spec.q), b = a * Math.sqrt(1 - e * e);
       var group = new THREE.Group(); group.rotation.x = spec.incl; solarRoot.add(group);
       var coma = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: 0xbcd8cf, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -902,7 +901,7 @@
   })();
   var COMET_INFO = [
     { img: 'images/comet-halley.jpg', credit: "NASA/W. Liller — Halley's Comet, 1986",
-      name: { en: 'Comet 1', hans: '彗星 1', hant: '彗星 1', ja: '彗星 1', ko: '혜성 1' },
+      name: { en: "Halley's Comet", hans: '哈雷彗星', hant: '哈雷彗星', ja: 'ハレー彗星', ko: '핼리 혜성' },
       type: { en: 'Icy Solar System visitor', hans: '太阳系冰质访客', hant: '太陽系冰質訪客', ja: '太陽系の氷の訪問者', ko: '태양계의 얼음 방문자' },
       facts: {
         en: [['Nucleus', 'A "dirty snowball" of ice and dust'], ['Blue ion tail', 'Ionized gas glows; pinned straight anti-sunward by the solar wind'], ['White dust tail', 'Dust reflecting sunlight; curves gently along the orbit']],
@@ -917,23 +916,6 @@
         hant: '一顆哈雷型軌道的示意彗星。注意觀察它靠近太陽時:彗尾永遠背向太陽——離開內太陽系時,彗星其實是「尾巴朝前」倒著飛的。',
         ja: 'ハレー型軌道のデモ彗星です。太陽に近づくときに注目:尾はつねに太陽と反対側を向くため、内太陽系を離れるとき彗星は「尾を先頭に」飛んでいきます。',
         ko: '핼리형 궤도의 시연용 혜성입니다. 태양에 가까울 때 관찰해 보세요: 꼬리는 언제나 태양 반대쪽을 향하므로, 내태양계를 떠날 때 혜성은 "꼬리를 앞세우고" 날아갑니다.'
-      } },
-    { img: 'images/comet-hale-bopp.jpg', credit: 'E. Kolmhofer, H. Raab / Johannes Kepler Observatory · CC BY-SA 3.0 — Hale-Bopp, 1997',
-      name: { en: 'Comet 2', hans: '彗星 2', hant: '彗星 2', ja: '彗星 2', ko: '혜성 2' },
-      type: { en: 'Icy Solar System visitor', hans: '太阳系冰质访客', hant: '太陽系冰質訪客', ja: '太陽系の氷の訪問者', ko: '태양계의 얼음 방문자' },
-      facts: {
-        en: [['Coma', 'A glowing gas-dust cloud that wakes only near the Sun'], ['Two tails', 'Blue = glowing ionized gas; white = sunlit dust'], ['Farther out', 'Tails and coma fade away — only a dark nucleus travels on']],
-        hans: [['彗发', '靠近太阳才苏醒的发光气体尘埃云'], ['两条彗尾', '蓝色 = 发光的电离气体;黄白 = 反光的尘埃'], ['远离太阳后', '彗发与彗尾逐渐消退——只剩暗淡的彗核继续旅行']],
-        hant: [['彗髮', '靠近太陽才甦醒的發光氣體塵埃雲'], ['兩條彗尾', '藍色 = 發光的電離氣體;黃白 = 反光的塵埃'], ['遠離太陽後', '彗髮與彗尾逐漸消退——只剩暗淡的彗核繼續旅行']],
-        ja: [['コマ', '太陽の近くでだけ目覚める、光るガスと塵の雲'], ['二本の尾', '青=発光する電離ガス、白=陽光を反射する塵'], ['太陽から離れると', '尾もコマも消えていき、暗い核だけが旅を続けます']],
-        ko: [['코마', '태양 가까이에서만 깨어나는 빛나는 가스·먼지 구름'], ['두 개의 꼬리', '파랑 = 빛나는 이온화 가스, 흰색 = 햇빛을 반사하는 먼지'], ['태양에서 멀어지면', '꼬리와 코마는 사라지고 어두운 핵만 여행을 계속합니다']]
-      },
-      desc: {
-        en: 'A demonstration comet like Hale-Bopp, whose 1997 photograph shows exactly these two tails — one blue, one white — fanning apart from the bright coma.',
-        hans: '一颗海尔-波普式的示意彗星——1997 年的真实照片里,正是这样一蓝一白的两条彗尾从明亮的彗发中张开。',
-        hant: '一顆海爾-波普式的示意彗星——1997 年的真實照片裡,正是這樣一藍一白的兩條彗尾從明亮的彗髮中張開。',
-        ja: 'ヘール・ボップ彗星型のデモ彗星です。1997年の実際の写真には、まさにこのように青と白の二本の尾が明るいコマから扇状に広がる姿が写っています。',
-        ko: '헤일-밥 혜성형 시연용 혜성입니다. 1997년의 실제 사진에는 바로 이렇게 파란 꼬리와 흰 꼬리가 밝은 코마에서 부챗살처럼 펼쳐진 모습이 담겨 있습니다.'
       } }
   ];
   var solarCometSelected = null;
@@ -2831,6 +2813,7 @@
       (body.id === 'sun' && !solarReducedMotion() ? '<div id="bp-align">' + esc({ en: '🪐 Fast-forward to the next alignment →', hans: '🪐 快进到下一次行星连珠 →', hant: '🪐 快進到下一次行星連珠 →', ja: '🪐 次の惑星直列へ早送り →', ko: '🪐 다음 행성 정렬로 빨리 감기 →' }[L]) + '</div>' : '') +
       ((body.id === 'venus' || body.id === 'mercury') && !solarReducedMotion() ? '<div id="bp-transit">' + esc({ en: '🌓 Fast-forward to the next transit →', hans: '🌓 快进到下一次凌日 →', hant: '🌓 快進到下一次凌日 →', ja: '🌓 次の太陽面通過へ早送り →', ko: '🌓 다음 태양면 통과로 빨리 감기 →' }[L]) + '</div>' : '') +
       '<div id="bp-cat">' + esc(info.catalog) + '</div>';
+    solarCometSelected = null; // a body card replaces any comet selection — #bp-flyto must fly to THIS body
     solarCardOpen = true;
     bpEl.classList.add('open');
     return true;

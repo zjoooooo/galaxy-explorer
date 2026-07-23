@@ -186,4 +186,3 @@ All 18 card photos come from one source family: NASA mission photography, via Wi
 ### Comet card images
 
 - `images/comet-halley.jpg` — NASA/W. Liller (Halley's Comet, 1986, Large Scale Phenomena Network) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Lspn_comet_halley.jpg)
-- `images/comet-hale-bopp.jpg` — E. Kolmhofer, H. Raab; Johannes Kepler Observatory, Linz · CC BY-SA 3.0 · [source](https://commons.wikimedia.org/wiki/File:Comet_Hale-Bopp_1995O1.jpg)
