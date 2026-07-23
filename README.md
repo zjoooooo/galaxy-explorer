@@ -5,13 +5,15 @@ Demo Page
 https://zjoooooo.github.io/galaxy-explorer/
 <img width="1920" height="945" alt="Image_2026-07-04_141404_478" src="https://github.com/user-attachments/assets/ce6388f3-5854-4c13-9d6c-daccac89bf24" />
 
-An interactive, procedurally-generated **Milky Way galaxy** that runs entirely in
-the browser with WebGL (three.js). No backend, no build step, no dependencies to
-install, no API keys — just open the page and explore.
+An interactive, procedurally-generated **Milky Way galaxy** — with a full 3D
+**Solar System**, roaming **comets**, and real **radio-galaxy jets** — that runs
+entirely in the browser with WebGL (three.js). No backend, no build step, no
+dependencies to install, no API keys — just open the page and explore.
 
-Everything you see is generated in code at load time. There are **no image assets
-of the galaxy** — the spiral arms, nebula gas, star clusters, distant galaxies
-and supernovae are all math.
+The galaxy itself is generated in code at load time: **no image assets** — the
+spiral arms, nebula gas, star clusters, distant galaxies and supernovae are all
+math. The Solar System layers real NASA-based surface textures on top for the
+planets, moons and Sun.
 
 **Free for any use** — personal, commercial, academic and teaching — under the
 [MIT License](LICENSE).
@@ -30,27 +32,39 @@ and supernovae are all math.
 - **Physically-modelled ambient events** — occasional shooting stars, meteor
   showers, and supernovae that follow a real light curve (t².³ rise → rounded
   peak → two-slope fade) with a four-pointed diffraction-spike flash.
-- **Interactive beacons** — 15 clickable markers (the Solar System, Sagittarius
-  A*, famous nebulae, clusters, stars and black holes) open detailed info cards
-  with a glowing 3D ring on the selected object.
-- **Solar System guide** — follow the **Solar System** beacon to **Explore the
-  Solar System**, then freely orbit and zoom around the Sun, eight planets,
-  Pluto, Ceres, the asteroid belt and representative moons. Select a body to
-  immediately open its illustrated information card without moving the camera or stopping
-  the Solar System; from Earth, choose **Explore Earth's sky** for the star
-  dome. Orbital and axial motion are intentionally slowed for observation;
-  their relative directions and periods remain a visual guide. Display scale
-  and starting positions are arranged for readability, not a literal scale
-  model or real-time ephemeris.
-- **Zodiac sky view** — from Earth's Solar System card, open an Earth-centred,
-  rotatable star dome with the 12 zodiac constellations drawn from 106 real
-  stars (J2000 positions), each with its own card.
+- **Interactive beacons** — ~30 clickable markers (the Solar System, Sagittarius
+  A*, famous nebulae, clusters, stars and black holes) open detailed five-language
+  info cards with a glowing 3D ring on the selected object. Fly close to an
+  external galaxy and its own **in-galaxy objects** appear — star-forming regions,
+  globular clusters, supernova remnants, and radio jets, each with its own card.
+- **Radio-galaxy jets** — **Centaurus A** fires two needle-thin plasma beams
+  (blue north, violet south) that flow, ripple and surge like living streams,
+  each ending in a giant churning **radio lobe** — the anatomy radio telescopes
+  see. **M87** keeps its famous *one-sided* jet, because its counter-jet is
+  Doppler-dimmed into invisibility.
+- **Solar System guide** — follow the **Solar System** beacon and ride a
+  six-second **wormhole** into a full 3D Solar System: the Sun, all eight
+  planets, the Moon, Ceres, Pluto and seven more famous moons, wrapped in real
+  NASA-based imagery (4K for the main worlds) and lit by a single sunlight
+  source at the Sun. Click any world for its illustrated five-language card,
+  then hit **Fly to this world** to sweep over and *ride along* with the
+  orbiting planet while its moons appear. A **living Sun** shows drifting
+  granulation, migrating sunspots, and prominences that pour out and disperse;
+  a true-span **asteroid belt** with the Kirkwood gap, a **Kuiper belt**, faint
+  rings on the giants, and translucent limb **atmospheres** complete the scene.
+  Two **comets** roam eccentric orbits, unfurling the classic twin tails — a
+  straight blue ion tail and a curved white dust tail — near the Sun; click one
+  to read how they work, or **chase** it. Orbital and axial motion are
+  intentionally slowed for observation; display scale and starting positions
+  are arranged for readability, not a literal scale model or real-time ephemeris.
+- **Constellation sky view** — from Earth's card, drop through an
+  atmosphere-white flash into an Earth-centred, rotatable star dome with **25
+  constellations** (the 12 zodiac plus 13 famous others) drawn from real J2000
+  star positions, and the **7 external galaxies** sitting inside their true host
+  constellations — each with its own five-language photo card.
 - **Five languages** — labels, cards and navigation switch between English,
   Simplified Chinese, Traditional Chinese, Japanese and Korean (top-right
   selector; choice remembered).
-- **Local texture detail** — Solar bodies use bundled local texture tiers that
-  adapt to focus, viewport and device capability; no runtime texture service is
-  required.
 - **Cinematic look** — selective bloom + ACES tone-mapping.
 - **Performance-aware** — an FPS watchdog automatically reduces dust density on
   weak GPUs so it stays smooth on laptops, TVs and kiosks.
@@ -95,7 +109,8 @@ nginx, or any web host. Just upload the folder — there is nothing to build.
 |---|---|
 | **drag** | orbit the camera |
 | **scroll / pinch** | zoom in / out |
-| **click a beacon or body** | open its card; selecting a Solar body leaves the camera and motion unchanged |
+| **click a beacon, body or comet** | open its card; selecting a body leaves the camera and motion unchanged |
+| **Fly to this world / Chase this comet** | (on the card) sweep over and ride along with the moving object |
 | **Back** | return one level: sky → Earth → Solar overview → galaxy |
 | **`Esc`** | staged return: close a card, then leave the current Solar level, then the Solar System |
 | **`F`** | cinema mode — hide all UI |
@@ -154,6 +169,11 @@ Vanilla JavaScript + three.js r128 (vendored under `vendor/`). One self-containe
 
 Ambient effects (meteors, supernovae) are short-lived objects that spawn on a
 schedule and dispose themselves — zero steady per-frame cost when idle.
+
+The Solar System is a second scene, entered through the wormhole transition. Its
+planets are lit by a single point light at the Sun and textured with bundled
+NASA / Solar System Scope maps (loaded on first entry). Comets, jets, prominences
+and tails are particle systems written into preallocated buffers each frame.
 
 ## 🤝 Contributing
 
