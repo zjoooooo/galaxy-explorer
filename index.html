@@ -4527,7 +4527,7 @@
       var geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      var points = new THREE.Points(geometry, new THREE.PointsMaterial({ map: GLOW_TEX, size: len * 0.06, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+      var points = new THREE.Points(geometry, new THREE.PointsMaterial({ map: GLOW_TEX, size: len * (o.size || 0.06), vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
       points.frustumCulled = false;
       var edge = new THREE.Color(o.edge), coreColor = new THREE.Color(o.core), mixed = new THREE.Color();
       points.userData.step = function (t) {
@@ -4572,8 +4572,8 @@
       core.scale.set(len * 0.12, len * 0.12, 1);
       // flowing plasma streams (comet ion-tail technique): BLUE up one side, VIOLET down the other
       var plasmaBoost = feat.plasmaOnly ? 1.35 : 1; // plasma-only jets carry the whole look — beef them up
-      var plasmaA = jetPlasma(dir, len * 0.85, e1, e2, { edge: 0x2f7dff, core: 0xa8dcff, flare: flare * (feat.plasmaOnly ? 0.03 : 0.2) * plasmaBoost, curve: curve, n: Math.round(260 * plasmaBoost), seed: 977 }); // plasma-only: a needle-tight beam (~5 units wide at the tip)
-      var plasmaB = feat.oneSided ? null : jetPlasma(back, len * 0.75, e1, e2, { edge: 0x8a3cff, core: 0xdcb2ff, flare: flare * (feat.plasmaOnly ? 0.033 : 0.22) * plasmaBoost, curve: -curve, n: Math.round(240 * plasmaBoost), seed: 1553 });
+      var plasmaA = jetPlasma(dir, len * 0.85, e1, e2, { edge: 0x2f7dff, core: 0xa8dcff, flare: flare * (feat.plasmaOnly ? 0.03 : 0.2) * plasmaBoost, curve: curve, n: Math.round(260 * plasmaBoost), seed: 977, size: feat.plasmaOnly ? 0.035 : 0.06 }); // plasma-only: a needle-tight beam, sprite size matched to beam width for a sharp saturated core
+      var plasmaB = feat.oneSided ? null : jetPlasma(back, len * 0.75, e1, e2, { edge: 0x8a3cff, core: 0xdcb2ff, flare: flare * (feat.plasmaOnly ? 0.033 : 0.22) * plasmaBoost, curve: -curve, n: Math.round(240 * plasmaBoost), seed: 1553, size: feat.plasmaOnly ? 0.035 : 0.06 });
       if (lobeA) { grp.add(lobeA); grp.add(streamA); } if (lobeB) { grp.add(lobeB); grp.add(streamB); } grp.add(core);
       grp.add(plasmaA); if (plasmaB) grp.add(plasmaB);
       grp.userData.update = function (t) {
