@@ -2863,6 +2863,7 @@
   }
   function updateSolarVisibility() {
     var localP = solarNav.level === 'overview' ? null : solarLocalParent(); // moons appear only AFTER flying in — a mere card selection at overview must not reveal them
+    solarEnsureMoonMaps(localP); // their textures load the moment their system becomes the focus
     SOLAR_BODIES.forEach(function (body) {
       var object = SOLAR_OBJECTS[body.id]; if (!object) return;
       var active = solarBodyIsActive(body), moonVisible = !body.parent || body.parent === localP;
@@ -3229,12 +3230,34 @@
     }
   });
   var solarMapsPreloaded = false;
+  var solarUploadQueue = [], solarMoonMapsLoaded = {}, solarMapsDetached = false;
+  function solarQueueMaps(object, maps) {
+    var textures = Object.keys(maps).map(function (key) { return maps[key]; }).filter(Boolean);
+    solarUploadQueue.push({ object: object, maps: maps, textures: textures });
+  }
+  function drainSolarUploadQueue() { // one texImage2D per frame — upload stalls spread invisibly across the warp
+    if (!solarUploadQueue.length) return;
+    var entry = solarUploadQueue[0];
+    if (entry.textures.length) { try { renderer.initTexture(entry.textures.pop()); } catch (err) {} return; }
+    solarUploadQueue.shift();
+    solarApplyMaps(entry.object, entry.maps);
+  }
+  function solarEnsureMoonMaps(parentId) { // moon textures are dead weight for overview-only visitors (~110 MB decoded)
+    if (!parentId || solarMoonMapsLoaded[parentId]) return;
+    solarMoonMapsLoaded[parentId] = true;
+    SOLAR_BODIES.forEach(function (body) {
+      if (body.parent !== parentId) return;
+      var object = SOLAR_OBJECTS[body.id]; if (!object) return;
+      loadSolarMaps(body).then(function (maps) { solarQueueMaps(object, maps); });
+    });
+  }
   function preloadSolarMaps() { // ~hundreds of MB of textures — only fetch once the user actually enters the solar view
     if (solarMapsPreloaded) return;
     solarMapsPreloaded = true;
     SOLAR_BODIES.forEach(function (body) {
+      if (body.parent) return; // moons load on first fly-in (solarEnsureMoonMaps)
       var object = SOLAR_OBJECTS[body.id];
-      loadSolarMaps(body).then(function (maps) { solarApplyMaps(object, maps); });
+      loadSolarMaps(body).then(function (maps) { solarQueueMaps(object, maps); });
     });
     var sunMaterial = SOLAR_OBJECTS.sun.mesh.material;
     solarLoadTexture('images/solar-system/sun.jpg', true).then(function (texture) {
@@ -3247,6 +3270,18 @@
   function enterSolar() {
     if (viewMode !== 'galaxy') return;
     preloadSolarMaps();
+    if (solarMapsDetached) { // rebuild GPU textures from the JS-side cache, one per frame through the warp
+      solarMapsDetached = false;
+      SOLAR_BODIES.forEach(function (body) {
+        var object = SOLAR_OBJECTS[body.id]; if (!object || body.id === 'sun') return;
+        if (body.parent && !solarMoonMapsLoaded[body.parent]) return;
+        var maps = {}, any = false;
+        Object.keys(body.maps || {}).forEach(function (key) { var texture = solarTextures.cache[body.maps[key]]; if (texture) { maps[key] = texture; any = true; } });
+        if (any) solarQueueMaps(object, maps);
+      });
+      var sunTexture = solarTextures.cache['images/solar-system/sun.jpg'], sunMat = SOLAR_OBJECTS.sun && SOLAR_OBJECTS.sun.mesh.material;
+      if (sunTexture && sunMat && sunMat.uniforms) { sunMat.uniforms.uMap.value = sunTexture; sunMat.uniforms.uHasMap.value = 1; }
+    }
     ensureSolarComposer();
     flyState = null; // cancel a partial galaxy fly before preserving the current view
     savedGalaxyView = { position: camera.position.clone(), target: controls.target.clone(), returnVisible: !!returnBtn && returnBtn.style.display === 'block' };
@@ -3276,6 +3311,24 @@
       solarApplyScaleBlend(0); solarControls.maxDistance = 333; solarCamera.far = 1800; solarCamera.updateProjectionMatrix();
       var scaleButton = document.getElementById('solarscale'); if (scaleButton) scaleButton.classList.remove('on');
     }
+    cancelSolarEventRide();
+    // free ~400 MB of GPU textures the galaxy/sky scenes never use; the JS-side image cache
+    // stays, and the next enterSolar re-queues everything through the one-per-frame upload path
+    solarUploadQueue.length = 0;
+    SOLAR_BODIES.forEach(function (body) {
+      var object = SOLAR_OBJECTS[body.id]; if (!object) return;
+      var material = object.mesh.material;
+      if (material.map || material.emissiveMap || material.normalMap) {
+        material.map = null; material.normalMap = null; material.emissiveMap = null;
+        material.color.set(body.color); if (material.emissive) material.emissive.set(0x000000);
+        material.needsUpdate = true; solarMapsDetached = true;
+      }
+      if (object.specialty.clouds && object.specialty.clouds.material.map) { var cloudsMat = object.specialty.clouds.material; cloudsMat.map = null; cloudsMat.opacity = 0.34; cloudsMat.needsUpdate = true; }
+      if (object.specialty.rings && object.specialty.rings.material.uniforms && object.specialty.rings.material.uniforms.uMap.value) { var ringSet = object.specialty.rings.material.uniforms; ringSet.uMap.value = null; ringSet.uHasMap.value = 0; ringSet.uOpacity.value = 0.54; }
+    });
+    var sunUniforms = SOLAR_OBJECTS.sun && SOLAR_OBJECTS.sun.mesh.material.uniforms;
+    if (sunUniforms && sunUniforms.uMap && sunUniforms.uMap.value) { sunUniforms.uMap.value = null; sunUniforms.uHasMap.value = 0; solarMapsDetached = true; }
+    Object.keys(solarTextures.cache).forEach(function (url) { var texture = solarTextures.cache[url]; if (texture) texture.dispose(); });
     var galaxyView = savedGalaxyView;
     clearSolarCard();
     viewMode = 'galaxy';
@@ -4159,6 +4212,7 @@
       var solarNow = performance.now(), solarDt = solarFrameLast ? Math.min((solarNow - solarFrameLast) / 1000, 0.15) : 0;
       solarFrameLast = solarNow;
       updateSolarMotion(solarDt);
+      drainSolarUploadQueue();
       if (!stepSolarWarp() && !stepSolarFly() && !stepSolarScale() && !stepSolarEventRide()) { stepSolarFollow(); solarControls.update(); } // warp, fly, scale, event ride, then free orbit
         updateSolarBackdrop();
       if (!solarReducedMotion()) updateSolarFx(solarNow);
