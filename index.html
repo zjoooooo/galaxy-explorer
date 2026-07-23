@@ -64,6 +64,7 @@
     font: inherit; font-size: 13px; letter-spacing: .08em; color: #ffe5a9; white-space: nowrap; text-align: center;
     background: transparent; border: 0; min-width: 24px; min-height: 24px; padding: 2px 8px;
     text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(255,190,100,.45); transition: opacity .2s ease; }
+  .solar-label small { display: block; font-size: 10px; letter-spacing: .05em; color: #9fb4d8; text-shadow: 0 1px 3px rgba(0,0,0,.9); }
 
   /* location beacons: borderless glow-dot + pulse rings + floating label (no boxes, no borders) */
   /* absolute (not fixed): under Safari pinch/page-zoom, fixed layers detach from the
@@ -159,6 +160,7 @@
     @keyframes bpUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
     #skyback, #solarback { left: max(12px, env(safe-area-inset-left)); top: max(64px, calc(env(safe-area-inset-top) + 52px)); }
     .solar-label { font-size: 11px; letter-spacing: .04em; min-width: 44px; min-height: 44px; padding: 8px 12px; }
+    .solar-label small { font-size: 9px; }
     #solartime button { min-width: 44px; min-height: 44px; }
     #solarstrip { left: 12px; right: 12px; transform: none; max-width: none; bottom: 70px; }
     #solarstrip button { min-height: 40px; }
@@ -2003,6 +2005,8 @@
   }
   var solarProminences = null, solarCME = null;
   var solarRingFx = null, solarRingQuat = new THREE.Quaternion(); // Saturn's analytic ring/planet shadow rig
+  var solarSunSpikes = null, solarSunOcclusion = { frame: 0, target: 1, value: 1 }; // diffraction spikes + eclipse blackout
+  var solarArrivalSpin = null, solarIdleSince = performance.now(); // orbital settle on arrival + idle attract drift
   function solarFlareShellMaterial() {
     var material = new THREE.ShaderMaterial({
       uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 } },
@@ -2172,6 +2176,9 @@
       var object = SOLAR_OBJECTS[body.id];
       if (body.id === 'sun') {
         solarSunGlows = makeSolarCoreLayers(radius, lodGroup);
+        var sunSpikes = new THREE.Sprite(new THREE.SpriteMaterial({ map: crossTexture(), color: 0xfff3d6, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
+        sunSpikes.scale.set(radius * 7.5, radius * 7.5, 1); sunSpikes.userData.solarId = 'sun'; lodGroup.add(sunSpikes);
+        solarSunSpikes = { sprite: sunSpikes, baseOpacity: 0.5 }; // kept OUT of solarSunGlows — a self-check pins that array at 4
         var prominences = new THREE.Mesh(solarSphereHigh, solarFlareShellMaterial());
         prominences.scale.set(radius * 1.06, radius * 1.06, radius * 1.06);
         prominences.userData.solarId = 'sun'; lodGroup.add(prominences);
@@ -2569,6 +2576,46 @@
     if (now >= ride.watchUntil) cancelSolarEventRide();
     return true;
   }
+  function updateSolarSunOcclusion() { // fly behind a planet and the Sun's glow blacks out — a natural eclipse
+    solarSunOcclusion.frame++;
+    if (solarSunOcclusion.frame % 10 === 0) {
+      var blocked = false, cam = solarCamera.position, len = cam.length();
+      if (len > 1e-3) for (var i = 0; i < SOLAR_BODIES.length && !blocked; i++) {
+        var body = SOLAR_BODIES[i]; if (body.id === 'sun') continue;
+        var object = SOLAR_OBJECTS[body.id]; if (!object || !object.lodGroup.visible) continue;
+        object.mesh.getWorldPosition(solarEventVec);
+        var dx = -cam.x / len, dy = -cam.y / len, dz = -cam.z / len; // camera → Sun (origin)
+        var bx = solarEventVec.x - cam.x, by = solarEventVec.y - cam.y, bz = solarEventVec.z - cam.z;
+        var along = bx * dx + by * dy + bz * dz;
+        if (along > 0 && along < len) {
+          var px = bx - dx * along, py = by - dy * along, pz = bz - dz * along;
+          if (px * px + py * py + pz * pz < object.radius * object.radius * 1.1) blocked = true;
+        }
+      }
+      solarSunOcclusion.target = blocked ? 0 : 1;
+    }
+    solarSunOcclusion.value += (solarSunOcclusion.target - solarSunOcclusion.value) * 0.12;
+    var visibleShare = solarSunOcclusion.value;
+    solarSunGlows.forEach(function (layer) { layer.sprite.material.opacity = layer.baseOpacity * visibleShare; });
+    if (solarSunSpikes) {
+      solarSunSpikes.sprite.material.opacity = solarSunSpikes.baseOpacity * visibleShare;
+      if (!solarReducedMotion()) solarSunSpikes.sprite.material.rotation = solarShaderTime * 0.02;
+    }
+  }
+  function updateSolarCameraLife() { // 3s decaying orbit-insertion sweep on arrival; slow attract drift when idle
+    var now = performance.now(), spinning = false;
+    if (solarArrivalSpin) {
+      var left = solarArrivalSpin - now;
+      if (left <= 0 || solarReducedMotion() || solarFly || solarWarp) solarArrivalSpin = null;
+      else { var k = left / 3200; solarControls.autoRotate = true; solarControls.autoRotateSpeed = 5 * k * k; spinning = true; }
+    }
+    if (!spinning) {
+      var idle = !solarWarp && !solarFly && !solarScaleAnim && !solarEventRide && !solarReducedMotion() &&
+        solarNav.level === 'overview' && !solarCardOpen && now - solarIdleSince > 45000;
+      solarControls.autoRotate = idle;
+      if (idle) solarControls.autoRotateSpeed = Math.min(0.3, (now - solarIdleSince - 45000) * 0.0000375); // eases in over ~8s
+    }
+  }
   function updateSolarMotion(dt) {
     dt = Math.max(0, Math.min(Number(dt) || 0, 0.15));
     if (!solarReducedMotion()) {
@@ -2937,8 +2984,22 @@
     var candidates = [];
     SOLAR_BODIES.forEach(function (body) {
       var object = SOLAR_OBJECTS[body.id], label = solarLabelFor(body);
-      var labelText = solarLabelText(body);
-      if (label.dataset.txt !== labelText) { label.dataset.txt = labelText; label.textContent = labelText; label.setAttribute('aria-label', labelText); }
+      var labelText = solarLabelText(body), subText = '';
+      if (object && body.id === solarNav.selectedId && body.id !== 'sun' && body.distanceAu > 0) {
+        // live distance: the honest number behind the compressed layout (r = a(1 - e·cosθ) for this parametrization)
+        var theta = solarFutureAngle(body, object, solarElapsed);
+        var rAu = body.distanceAu * (1 - body.eccentricity * Math.cos(theta));
+        if (body.parent) subText = Math.round(rAu * 149597870).toLocaleString('en-US') + ' km';
+        else {
+          var lightMinutes = rAu * 8.317;
+          subText = rAu.toFixed(2) + ' AU · ☀ ' + (lightMinutes < 1 ? Math.round(lightMinutes * 60) + ' s' : lightMinutes.toFixed(1) + ' min');
+        }
+      }
+      var composed = labelText + '|' + subText;
+      if (label.dataset.txt !== composed) {
+        label.dataset.txt = composed; label.textContent = labelText; label.setAttribute('aria-label', labelText);
+        if (subText) { var subEl = document.createElement('small'); subEl.textContent = subText; label.appendChild(subEl); }
+      }
       if (!object || !solarBodyIsActive(body)) { label.style.display = 'none'; return; }
       object.mesh.getWorldPosition(solarLabelPoint);
       object.hitProxy.scale.setScalar(solarHitRadius(object, solarLabelPoint) / (object.radiusScale || 1)); // proxy lives inside the scaled tiltNode
@@ -3154,6 +3215,7 @@
         solarControls.minDistance = 3;
         solarNav.level = 'focus'; solarNav.selectedId = null; solarNav.parentId = null; solarNav.focusId = null;
         solarFollow = { comet: cometIndex, last: null };
+        solarArrivalSpin = performance.now() + 3200; // orbit-insertion settle
         updateSolarVisibility();
         updateSolarNavigationText();
         renderCometPanel(cometIndex, beaconLang);
@@ -3166,6 +3228,7 @@
       solarNav.level = 'focus'; solarNav.selectedId = id; solarNav.parentId = body.parent || null;
       solarNav.focusId = body.parent || id; // the system we are IN — the flown-to body's primary
       solarFollow = { id: id, last: null }; // camera rides along with the orbiting body from here on
+      solarArrivalSpin = performance.now() + 3200; // orbit-insertion settle
       updateSolarVisibility(); // the body's moons become visible + selectable here
       updateSolarNavigationText();
       renderSolarPanel(id, beaconLang);
@@ -3206,6 +3269,7 @@
   renderer.domElement.addEventListener('pointerdown', function (e) {
     if (viewMode !== 'solar') return;
     if (solarEventRide) cancelSolarEventRide(); // grabbing the view hands the clock back
+    solarIdleSince = performance.now(); solarArrivalSpin = null; // any grab ends the camera's own ideas
     var point = solarPointerPosition(e); solarPointer.down = true; solarPointer.x = point.x; solarPointer.y = point.y; solarPointer.moved = false;
   });
   renderer.domElement.addEventListener('pointermove', function (e) {
@@ -3329,6 +3393,7 @@
       var scaleButton = document.getElementById('solarscale'); if (scaleButton) scaleButton.classList.remove('on');
     }
     cancelSolarEventRide();
+    solarArrivalSpin = null; solarControls.autoRotate = false;
     // free ~400 MB of GPU textures the galaxy/sky scenes never use; the JS-side image cache
     // stays, and the next enterSolar re-queues everything through the one-per-frame upload path
     solarUploadQueue.length = 0;
@@ -4230,6 +4295,8 @@
       solarFrameLast = solarNow;
       updateSolarMotion(solarDt);
       drainSolarUploadQueue();
+      updateSolarSunOcclusion();
+      updateSolarCameraLife();
       if (!stepSolarWarp() && !stepSolarFly() && !stepSolarScale() && !stepSolarEventRide()) { stepSolarFollow(); solarControls.update(); } // warp, fly, scale, event ride, then free orbit
         updateSolarBackdrop();
       if (!solarReducedMotion()) updateSolarFx(solarNow);
