@@ -4533,7 +4533,7 @@
       points.userData.step = function (t) {
         for (var i = 0; i < N; i++) {
           var particle = particles[i], i3 = i * 3;
-          var kk = (particle.frac + t * 0.085 * particle.speed) % 1;
+          var kk = (particle.frac + t * 0.042 * particle.speed) % 1; // halved flow speed
           var spread = len * (0.008 + kk * (o.flare || 0.05)); // a tight beam: overlap is what fuses sprites into fluid
           var kink = Math.sin(kk * 6.5 - t * 1.2) * len * 0.012 * kk;
           var bend = (o.curve || 0) * len * kk * kk;
