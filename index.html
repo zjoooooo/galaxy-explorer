@@ -528,6 +528,7 @@
         if (viewMode === 'solar' && oldView !== 'solar') exitSolar();
         solarNav.selectedId = oldNav.selectedId; solarNav.level = oldNav.level; solarNav.parentId = oldNav.parentId; solarNav.cameraStack = oldNav.cameraStack; solarNav.galaxySnapshot = oldNav.galaxySnapshot; solarNav.skySnapshot = oldNav.skySnapshot; solarCamera.position.copy(oldPosition); solarControls.target.copy(oldTarget); solarControls.update();
         SOLAR_BODIES.forEach(function (body) { var o = SOLAR_OBJECTS[body.id], s = objects[body.id]; Object.keys(s.own).forEach(function (key) { o[key] = s.own[key]; }); o.lodGroup.visible = s.group; o.orbitLine.visible = s.orbit; o.hitProxy.visible = s.proxy; o.hitProxy.userData.solarActive = s.active; o.hitProxy.scale.copy(s.proxyScale); o.mesh.visible = s.mesh[0]; restoreMaterial(o.mesh.material, s.mesh[1]); s.special.forEach(function (x) { var m = o.specialty[x[0]]; m.visible = x[1]; restoreMaterial(m.material, x[2]); }); });
+        updateSolarVisibility(); // re-derive nav-dependent state (orbit-line fade) from the restored navigation
         solarCompactOverride = oldCompact; savedGalaxyView = oldSavedGalaxy; controls.enabled = oldControls.galaxy; solarControls.enabled = oldControls.solar; skyControls.enabled = oldControls.sky; solarControls.minDistance = oldControls.min; solarControls.maxDistance = oldControls.max; document.getElementById('beacons').style.display = oldDisplays.beacons; solarLabelsEl.style.display = oldDisplays.labels; solarBackEl.style.display = oldDisplays.back; bpBody.innerHTML = oldPanel.html; bpEl.classList.toggle('open', oldPanel.open); viewMode = oldView;
         solarCardOpen = oldTransient.card; solarPaused = oldTransient.paused; skyReturnContext = oldTransient.skyReturn; flyState = oldTransient.fly; selectedBeacon = oldTransient.selectedBeacon; beaconRing.visible = oldTransient.ringVisible; beaconRing.material.opacity = oldTransient.ringOpacity; solarFrameLast = oldTransient.solarFrameLast; if (returnBtn) returnBtn.style.display = oldTransient.returnDisplay;
         solarPerfEMA = oldWatch[0]; solarPerfLast = oldWatch[1]; solarPerfNextCheck = oldWatch[2];
@@ -723,6 +724,7 @@
           }
         });
         solarLabelButtons = oldLabelButtons;
+        updateSolarVisibility(); // re-derive nav-dependent state (orbit-line fade) from the restored navigation
       }
     });
     check('solar-free-selection', function () { // regression: selecting one body must never lock out the others
@@ -1888,7 +1890,7 @@
   var solarAnimatedMaterials = [];
   var solarMaterialBases = {
     terrestrial: new THREE.MeshPhongMaterial({ shininess: 12, specular: 0x222222 }),
-    giant: new THREE.MeshPhongMaterial({ shininess: 18, specular: 0x443322 }),
+    giant: new THREE.MeshPhongMaterial({ shininess: 6, specular: 0x000000 }), // gas giants have no solid surface to glint — specular read as a plastic hotspot
     moon: new THREE.MeshPhongMaterial({ shininess: 4, specular: 0x111111 }),
     dwarf: new THREE.MeshPhongMaterial({ shininess: 4, specular: 0x111111 }),
     sun: new THREE.MeshBasicMaterial({ color: 0xffd36b })
@@ -1906,8 +1908,9 @@
     var material = new THREE.ShaderMaterial({
       uniforms: { uColor: { value: new THREE.Color(colorHex) }, uFalloff: { value: falloff }, uIntensity: { value: intensity }, uOpacity: { value: 1 } },
       transparent: true, depthWrite: false, side: THREE.BackSide, blending: THREE.AdditiveBlending,
-      vertexShader: 'varying float vRim; uniform float uFalloff; void main(){ vec3 n = normalize(normalMatrix * normal); vRim = pow(1.0 - abs(n.z), uFalloff); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: 'uniform vec3 uColor; uniform float uIntensity; uniform float uOpacity; varying float vRim; void main(){ gl_FragColor = vec4(uColor, vRim * uIntensity * uOpacity); }'
+      // sun-side weighting: scattering lights the limb facing the Sun (world origin), the night-side rim all but vanishes
+      vertexShader: 'varying float vRim; varying float vSun; uniform float uFalloff; void main(){ vec3 n = normalize(normalMatrix * normal); vRim = pow(1.0 - abs(n.z), uFalloff); vec4 wp = modelMatrix * vec4(position, 1.0); vSun = dot(normalize(mat3(modelMatrix) * normal), normalize(-wp.xyz)); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'uniform vec3 uColor; uniform float uIntensity; uniform float uOpacity; varying float vRim; varying float vSun; void main(){ float day = 0.05 + 0.95 * smoothstep(-0.35, 0.3, vSun); gl_FragColor = vec4(uColor, vRim * uIntensity * uOpacity * day); }'
     });
     return material;
   }
@@ -2565,6 +2568,8 @@
       var active = solarBodyIsActive(body), moonVisible = !body.parent || body.parent === localP;
       object.lodGroup.visible = moonVisible;
       object.orbitLine.visible = moonVisible;
+      // close-up: distant orbit ellipses read as straight lines crossing the view — fade all but the local system
+      if (object.orbitLine.material) object.orbitLine.material.opacity = body.parent ? 0.12 : (localP ? (body.id === localP ? 0.08 : 0.04) : 0.3);
       object.hitProxy.visible = active;
       object.hitProxy.userData.solarActive = active;
     });
