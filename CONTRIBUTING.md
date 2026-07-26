@@ -26,8 +26,12 @@ There is no build step and no dependencies to install.
 - **Keep it dependency-free and single-file** where practical. The value of this
   project is that it's easy to read, learn from, and drop into anything.
 - **Comment non-obvious math/shaders** — people use this to learn.
-- **Test in a browser** before opening a PR (check the console for errors). There
-  is no automated test suite.
+- **Test in a browser** before opening a PR (check the console for errors).
+- **Run the validator** before pushing — CI runs the same dependency-free checks
+  (JS syntax, asset references, HTML sanity) on every pull request:
+  ```sh
+  node .github/scripts/validate.mjs
+  ```
 - Keep changes focused; describe what and why in the PR.
 
 ## Ideas up for grabs
