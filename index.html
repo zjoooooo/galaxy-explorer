@@ -43,13 +43,14 @@
   #solartime button.on { border-color: #6366f1; color: #fff; background: rgba(50,58,96,.72); }
   #solarscale { margin-left: 8px; }
   /* quick-jump roster: every top-level body plus the two comets, one tap to fly there */
-  #solarstrip { position: absolute; left: 50%; transform: translateX(-50%); bottom: 18px; display: flex; gap: 4px;
+  #solarstrip, #galaxystrip { position: absolute; left: 50%; transform: translateX(-50%); bottom: 18px; display: flex; gap: 4px;
     max-width: min(72vw, 920px); overflow-x: auto; pointer-events: auto; z-index: 6; padding: 2px; scrollbar-width: none; }
-  #solarstrip::-webkit-scrollbar { display: none; }
-  #solarstrip button { display: flex; align-items: center; gap: 5px; white-space: nowrap; cursor: pointer; font: inherit; font-size: 11px;
+  #solarstrip::-webkit-scrollbar, #galaxystrip::-webkit-scrollbar { display: none; }
+  #solarstrip button, #galaxystrip button { display: flex; align-items: center; gap: 5px; white-space: nowrap; cursor: pointer; font: inherit; font-size: 11px;
     color: #cbd5e1; background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 4px 9px; }
-  #solarstrip button:hover { border-color: #6366f1; color: #fff; }
-  #solarstrip i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  #solarstrip button:hover, #galaxystrip button:hover { border-color: #6366f1; color: #fff; }
+  #solarstrip i, #galaxystrip i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  #galaxystrip button.sel { border-color: #9cc0ff; color: #fff; background: rgba(30,42,68,.9); }
   button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid #9cc0ff; outline-offset: 3px; }
   #skylabels, #solarlabels { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
   .skylabel { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
@@ -116,7 +117,7 @@
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
   }
   /* beacon info panel — desktop: fixed right side */
-  #beacon-panel { top: 74px; right: 14px; width: 300px; max-height: calc(100vh - 96px); overflow-y: auto;
+  #beacon-panel { top: 74px; right: 14px; width: 300px; max-height: calc(100vh - 130px); overflow-y: auto;
     z-index: 7; background: rgba(10,14,24,.92); border-radius: 12px; padding: 16px 18px 18px;
     color: #e5e7eb; box-shadow: 0 8px 30px rgba(0,0,0,.5); display: none; }
   #beacon-panel.open { display: block; animation: bpIn .18s ease; }
@@ -162,8 +163,8 @@
     .solar-label { font-size: 11px; letter-spacing: .04em; min-width: 44px; min-height: 44px; padding: 8px 12px; }
     .solar-label small { font-size: 9px; }
     #solartime button { min-width: 44px; min-height: 44px; }
-    #solarstrip { left: 12px; right: 12px; transform: none; max-width: none; bottom: 70px; }
-    #solarstrip button { min-height: 40px; }
+    #solarstrip, #galaxystrip { left: 12px; right: 12px; transform: none; max-width: none; bottom: 70px; }
+    #solarstrip button, #galaxystrip button { min-height: 40px; }
   }
 
   /* background-music control: speaker button + a hover popup listing tracks by name */
@@ -220,6 +221,45 @@
 <script src="vendor/ShaderPass.js"></script>
 <script src="vendor/UnrealBloomPass.js"></script>
 <script>
+  // Video capture is an opt-in runtime. Keep this bootstrap before every
+  // procedural scene allocation so a capture never observes unseeded geometry.
+  var videoParams = new URLSearchParams(location.search);
+  var videoMode = videoParams.get('video') === '1';
+  function videoParamInt(name, fallback) {
+    var value = Number(videoParams.get(name));
+    return Number.isSafeInteger(value) && value > 0 ? value : fallback;
+  }
+  var videoConfig = Object.freeze({
+    enabled: videoMode,
+    seed: videoParamInt('seed', 20260723),
+    width: videoParamInt('width', 1920),
+    height: videoParamInt('height', 1080),
+    fps: videoParamInt('fps', 30),
+    quality: videoParams.get('quality') || 'final'
+  });
+  var videoRandomCalls = 0, videoRandomHash = 2166136261;
+  function mulberry32(seed) {
+    var state = seed >>> 0;
+    return function () {
+      state += 0x6d2b79f5;
+      var value = state;
+      value = Math.imul(value ^ value >>> 15, value | 1);
+      value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+      value = ((value ^ value >>> 14) >>> 0) / 4294967296;
+      videoRandomCalls++;
+      videoRandomHash = Math.imul(videoRandomHash ^ Math.floor(value * 4294967296), 16777619) >>> 0;
+      return value;
+    };
+  }
+  function resetVideoRandom() {
+    videoRandomCalls = 0;
+    videoRandomHash = 2166136261;
+    Math.random = mulberry32(videoConfig.seed);
+  }
+  if (videoMode) resetVideoRandom();
+  var videoClockMs = 0, videoFrameStepMs = 1000 / videoConfig.fps;
+  function videoNow() { return videoMode ? videoClockMs : performance.now(); }
+
   // ── tunables (tweak to taste, then reload) ──────────────────────────────────
   // BLOOM: gentle selective glow (threshold 0.42 → only bright knots/core glow).
   //        strength 0 = off, ~0.05 subtle, ~0.12 strong.
@@ -786,15 +826,17 @@
 
   // ── renderer / scene / bloom ────────────────────────────────────────────────
   var cv = document.getElementById('cv');
+  var outputWidth = videoMode ? videoConfig.width : window.innerWidth;
+  var outputHeight = videoMode ? videoConfig.height : window.innerHeight;
   var renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(videoMode ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(outputWidth, outputHeight);
   renderer.toneMapping = THREE.NoToneMapping; // tone-mapped AFTER bloom via a final ACES pass instead
   var scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x03040a, 0.0012);
   // everything that co-rotates (dust + nebula + effects) lives under this group
   var galaxyRoot = new THREE.Group(); scene.add(galaxyRoot);
-  var camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 5000);
+  var camera = new THREE.PerspectiveCamera(55, outputWidth / outputHeight, 0.5, 5000);
   camera.position.set(0, 529, 715); // elevated 3/4 view (el ≈ 36.5°, d ≈ 890), pulled back so the disc, the Magellanic Clouds and Triangulum all frame on load
   var controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxDistance = 1600; controls.minDistance = 5;
@@ -803,7 +845,7 @@
   var solarScene = new THREE.Scene();
   var solarRoot = new THREE.Group(); solarScene.add(solarRoot);
   var solarBackdrop = null;
-  var solarCamera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.05, 1800);
+  var solarCamera = new THREE.PerspectiveCamera(52, outputWidth / outputHeight, 0.05, 1800);
   solarCamera.position.set(0, 105, 180);
   var solarControls = new THREE.OrbitControls(solarCamera, renderer.domElement);
   solarControls.enabled = false;
@@ -898,7 +940,7 @@
       nucleus.scale.set(0.62, 0.46, 0.54); group.add(nucleus);
       var hitProxy = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
       hitProxy.scale.setScalar(5); hitProxy.userData.solarComet = cometIndex; group.add(hitProxy);
-      solarComets.push({ a: a, b: b, e: e, angle: spec.phase, rate: spec.rate, q: spec.q, group: group, coma: coma, core: core, nucleus: nucleus,
+      solarComets.push({ a: a, b: b, e: e, angle: spec.phase, initialAngle: spec.phase, rate: spec.rate, q: spec.q, group: group, coma: coma, core: core, nucleus: nucleus,
         hitProxy: hitProxy, tails: tails, positions: tp, colors: tc, ions: ions, dust: dust, index: cometIndex });
     });
   })();
@@ -944,7 +986,7 @@
     if (dir.lengthSq() < 1e-4) dir.set(0.6, 0, 1); dir.normalize();
     solarNav.cameraStack.push(solarSnapshot());
     solarControls.enabled = false;
-    solarFly = { cometIndex: cometIndex, dir: dir, dist: 15, lift: 4, p0: solarCamera.position.clone(), t0: solarControls.target.clone(), start: performance.now(), dur: 2000, wp: wp };
+    solarFly = { cometIndex: cometIndex, dir: dir, dist: 15, lift: 4, p0: solarCamera.position.clone(), t0: solarControls.target.clone(), start: videoNow(), dur: 2600, wp: wp };
     return true;
   }
   function selectSolarComet(cometIndex) {
@@ -1017,7 +1059,7 @@
       comet.tails.geometry.attributes.color.needsUpdate = true;
     });
   }
-  var solarFx = [], solarMeteorNext = performance.now() + 8000 + Math.random() * 10000;
+  var solarFx = [], solarMeteorNext = videoNow() + 8000 + Math.random() * 10000;
   function spawnSolarMeteor() {
     var nx = Math.random() * 1.4 - 0.7, ny = Math.random() * 1.0 - 0.25;
     var d0 = new THREE.Vector3(nx, ny, 0.5).unproject(solarCamera).sub(solarCamera.position).normalize();
@@ -1033,11 +1075,11 @@
     mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(dir, side, normal));
     mesh.scale.set(0.001, 2.6, 1); mesh.frustumCulled = false;
     solarScene.add(mesh);
-    solarFx.push({ obj: mesh, mat: m, from: from, dir: dir, dist: dist, t0: performance.now(), dur: 1100 + Math.random() * 500 });
+    solarFx.push({ obj: mesh, mat: m, from: from, dir: dir, dist: dist, t0: videoNow(), dur: 1100 + Math.random() * 500 });
   }
   function updateSolarFx(nowMs) {
     if (viewMode !== 'solar') return;
-    if (nowMs >= solarMeteorNext) { spawnSolarMeteor(); solarMeteorNext = nowMs + 9000 + Math.random() * 15000; }
+    if (!videoMode && nowMs >= solarMeteorNext) { spawnSolarMeteor(); solarMeteorNext = nowMs + 9000 + Math.random() * 15000; }
     for (var i = solarFx.length - 1; i >= 0; i--) {
       var f = solarFx[i], k = (nowMs - f.t0) / f.dur;
       if (k >= 1) { solarScene.remove(f.obj); f.mat.dispose(); solarFx.splice(i, 1); continue; }
@@ -1059,7 +1101,7 @@
   try {
     composer = new THREE.EffectComposer(renderer);
     composer.addPass(new THREE.RenderPass(scene, camera));
-    composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), BLOOM.strength, BLOOM.radius, BLOOM.threshold));
+    composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(outputWidth, outputHeight), BLOOM.strength, BLOOM.radius, BLOOM.threshold));
     // tone-map AFTER bloom (ACES + gamma) so bright cores compress to colour instead of clipping to white
     composer.addPass(new THREE.ShaderPass({
       uniforms: { tDiffuse: { value: null }, uExposure: { value: TONE.exposure } },
@@ -1068,7 +1110,7 @@
         'vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14), 0.0, 1.0); }' +
         'void main(){ vec3 c = aces(texture2D(tDiffuse, vUv).rgb * uExposure); gl_FragColor = vec4(pow(c, vec3(1.0/2.2)), 1.0); }'
     }));
-    composer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(outputWidth, outputHeight);
   } catch (e) { composer = null; }
   function render() {
     if (composer) composer.render(); else renderer.render(scene, camera);
@@ -1557,10 +1599,23 @@
         t: {"en":["Small Magellanic Cloud","Milky Way satellite"],"hans":["小麦哲伦云","银河系的卫星星系"],"hant":["小麥哲倫雲","銀河系的衛星星系"],"ja":["小マゼラン雲","天の川銀河の衛星銀河"],"ko":["소마젤란은하","우리은하의 위성 은하"]},
         info: { en:{"type":"Dwarf galaxy · satellite · not to scale","distance":"~200,000 light-years","constellation":"Tucana","facts":[["Distance","~200,000 ly"],["Legacy","Leavitt’s Cepheid law"]],"desc":"A dwarf-irregular companion of the Milky Way, paired with its larger sibling as the Magellanic Clouds. By measuring its Cepheid variable stars, Henrietta Leavitt uncovered the period–luminosity law — the first rung of the cosmic distance ladder that let astronomers measure the universe. Drawn on the far sky, not to scale.","catalog":"SMC"}, hans:{"type":"矮星系 · 卫星星系 · 非真实比例","distance":"约 20 万光年","constellation":"杜鹃座","facts":[["距离","约 20 万光年"],["贡献","勒维特造父定律"]],"desc":"银河系的一个不规则矮伴星系，与更大的同伴合称麦哲伦云。亨丽埃塔·勒维特通过测量其中的造父变星，发现了周期—光度关系——这是宇宙距离阶梯的第一级，让天文学家得以测量宇宙。这里画在远方天幕上，非真实比例。","catalog":"SMC"}, hant:{"type":"矮星系 · 衛星星系 · 非真實比例","distance":"約 20 萬光年","constellation":"杜鵑座","facts":[["距離","約 20 萬光年"],["貢獻","勒維特造父定律"]],"desc":"銀河系的一個不規則矮伴星系，與更大的同伴合稱麥哲倫雲。亨麗埃塔·勒維特透過測量其中的造父變星，發現了週期—光度關係——這是宇宙距離階梯的第一級，讓天文學家得以測量宇宙。這裡畫在遠方天幕上，非真實比例。","catalog":"SMC"}, ja:{"type":"矮小銀河 · 衛星銀河 · 実スケールではない","distance":"約20万光年","constellation":"きょしちょう座","facts":[["距離","約20万光年"],["功績","リービットのセファイド則"]],"desc":"天の川銀河の不規則矮小伴銀河で、より大きな兄弟星系とともにマゼラン雲と呼ばれます。ヘンリエッタ・リービットはこの銀河のセファイド変光星を測定し、周期光度関係を発見しました。これは宇宙の距離はしごの最初の一段であり、天文学者が宇宙を測ることを可能にしました。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"SMC"}, ko:{"type":"왜소 은하 · 위성 은하 · 실제 비율 아님","distance":"약 20만 광년","constellation":"큰부리새자리","facts":[["거리","약 20만 광년"],["업적","리비트의 세페이드 법칙"]],"desc":"우리은하의 불규칙 왜소 동반 은하로, 더 큰 형제 은하와 함께 마젤란은하로 불립니다. 헨리에타 리비트는 이 은하의 세페이드 변광성을 측정해 주기-광도 관계를 밝혀냈습니다. 이는 천문학자가 우주를 측정하게 해준 우주 거리 사다리의 첫 단입니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"SMC"} } }
     ];
+    function videoTargetForBeacon(definition) {
+      var catalog = definition.info.en.catalog;
+      return definition.cls === 'sun' ? 'beacon-solar-system' : ({
+        'Sgr A*': 'beacon-sagittarius-a-star',
+        LMC: 'beacon-lmc',
+        SMC: 'beacon-smc',
+        M31: 'beacon-andromeda',
+        M87: 'beacon-m87',
+        'NGC 5128': 'beacon-centaurus-a'
+      }[catalog] || '');
+    }
     var host = document.createElement('div'); host.id = 'beacons'; document.body.appendChild(host);
     for (var i = 0; i < DEFS.length; i++) {
       var d = DEFS[i], el = document.createElement('div');
       el.className = 'beacon' + (d.cls ? ' ' + d.cls : '');
+      var videoTarget = videoTargetForBeacon(d);
+      if (videoTarget) el.dataset.videoTarget = videoTarget;
       el.style.display = 'none'; // hidden until first positioned — unpositioned beacons otherwise stack clickable at the page's top-left
       el.innerHTML = '<div class="b-mark"><span class="b-ring"></span><span class="b-ring r2"></span><span class="b-dot"></span></div><div class="b-label"></div>';
       host.appendChild(el);
@@ -1666,6 +1721,8 @@
     CHILDREN.forEach(function (c) {
       var el = document.createElement('div');
       el.className = 'beacon child';
+      if (c.info.en.catalog === 'M87 jet') el.dataset.videoTarget = 'child-m87-jet';
+      if (c.info.en.catalog === 'Cen A jet') el.dataset.videoTarget = 'child-centaurus-a-jet';
       el.style.display = 'none'; // hidden until first positioned — see the DEFS loop note
       el.innerHTML = '<div class="b-mark"><span class="b-ring"></span><span class="b-ring r2"></span><span class="b-dot"></span></div><div class="b-label"></div>';
       host.appendChild(el);
@@ -1888,8 +1945,12 @@
   var solarTextures = { cache: {}, pending: {}, warned: {}, textureLoader: null };
   var solarPerf = { stage: 0, epoch: 0, beltFraction: 1, backgroundFraction: 1, backgroundEvery: 1, labelEvery: 1, labelFrame: 0, backgroundFrame: 0 };
   var solarMotionOverride = null, solarCompactOverride = null;
-  function solarIsCompact() { return solarCompactOverride !== null ? !!solarCompactOverride : window.innerWidth <= 640 || !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches); }
+  function solarIsCompact() {
+    if (videoMode) return videoConfig.width <= 640;
+    return solarCompactOverride !== null ? !!solarCompactOverride : window.innerWidth <= 640 || !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
+  }
   function solarReducedMotion() {
+    if (videoMode) return false;
     if (solarMotionOverride !== null) return !!solarMotionOverride;
     return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
@@ -1996,11 +2057,11 @@
     solarAnimatedMaterials.push(material);
     return material;
   }
-  var solarProminences = null, solarCME = null;
+  var solarProminences = null, solarCME = null, solarForceProminenceUpdate = false;
   var solarRingFx = null, solarRingQuat = new THREE.Quaternion(); // Saturn's analytic ring/planet shadow rig
   var solarSunOcclusion = { frame: 0, target: 1, value: 1 }; // eclipse blackout: sun glows fade behind an occluding planet
   var solarTrojans = null, solarJupiterShadow = null, solarEarthPatch = null, solarPromFrame = 0;
-  var solarArrivalSpin = null, solarIdleSince = performance.now(); // orbital settle on arrival + idle attract drift
+  var solarArrivalSpin = null, solarIdleSince = videoNow(); // orbital settle on arrival + idle attract drift
   function solarFlareShellMaterial() {
     var material = new THREE.ShaderMaterial({
       uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 } },
@@ -2098,7 +2159,8 @@
   }
   function solarCompressedPeriod(body) {
     if (body.id === 'sun') return 1;
-    return body.parent ? 0.7 + Math.sqrt(body.periodDays) * 0.32 : 2.5 + Math.log(body.periodDays + 1) * 1.25;
+    var p = body.parent ? 0.7 + Math.sqrt(body.periodDays) * 0.32 : 2.5 + Math.log(body.periodDays + 1) * 1.25;
+    return videoMode && body.parent ? p * 8 : p; // video: slow the tight moon orbits so a held narration shot isn't dizzying (spin is driven separately and stays lively)
   }
   function solarOrbitPoint(body, angle, target) {
     var a = solarOrbitDistance(body), b = a * Math.sqrt(1 - body.eccentricity * body.eccentricity);
@@ -2521,14 +2583,14 @@
       return true;
     }
     solarControls.enabled = false;
-    solarScaleAnim = { from: solarScaleBlend, to: to, start: performance.now(), dur: 2600, e: 0,
+    solarScaleAnim = { from: solarScaleBlend, to: to, start: videoNow(), dur: 2600, e: 0,
       p0: solarCamera.position.clone(), t0: solarControls.target.clone(),
       p1: new THREE.Vector3(0, to ? 620 : 200, to ? 1250 : 285), t1: new THREE.Vector3(0, 0, 0) };
     return true;
   }
   function stepSolarScale() {
     if (!solarScaleAnim) return false;
-    var k = Math.min(1, (performance.now() - solarScaleAnim.start) / solarScaleAnim.dur);
+    var k = Math.min(1, (videoNow() - solarScaleAnim.start) / solarScaleAnim.dur);
     var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // easeInOutQuad
     e = Math.min(e, solarScaleAnim.e + 0.05); solarScaleAnim.e = e; // dropped frames must not snap
     solarApplyScaleBlend(solarScaleAnim.from + (solarScaleAnim.to - solarScaleAnim.from) * e);
@@ -2603,13 +2665,13 @@
     clearSolarCard();
     if (type === 'transit') { solarNav.cameraStack.push(solarSnapshot()); solarNav.level = 'focus'; updateSolarNavigationText(); }
     solarControls.enabled = false;
-    solarEventRide = { type: type, id: id, fromElapsed: solarElapsed, toElapsed: target, start: performance.now(), dur: 8000, e: 0, banner: solarEventBanner(type, id) };
+    solarEventRide = { type: type, id: id, fromElapsed: solarElapsed, toElapsed: target, start: videoNow(), dur: 8000, e: 0, banner: solarEventBanner(type, id) };
     return true;
   }
   function cancelSolarEventRide() { if (solarEventRide) { solarEventRide = null; solarControls.enabled = true; } }
   function stepSolarEventRide() {
     if (!solarEventRide) return false;
-    var ride = solarEventRide, now = performance.now();
+    var ride = solarEventRide, now = videoNow();
     if (ride.phase !== 'watch') {
       var k = Math.min(1, (now - ride.start) / ride.dur);
       var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
@@ -2651,7 +2713,7 @@
     solarSunGlows.forEach(function (layer) { layer.sprite.material.opacity = layer.baseOpacity * visibleShare; });
   }
   function updateSolarCameraLife() { // 3s decaying orbit-insertion sweep on arrival; slow attract drift when idle
-    var now = performance.now(), spinning = false;
+    var now = videoNow(), spinning = false;
     if (solarArrivalSpin) {
       var left = solarArrivalSpin - now;
       if (left <= 0 || solarReducedMotion() || solarFly || solarWarp) solarArrivalSpin = null;
@@ -2681,7 +2743,7 @@
       var burst = Math.max(0, Math.min(1, (Math.sin(st * 0.11) * Math.sin(st * 0.043 + 1.7) * 2 - 0.72) / 0.28)); // same beat as the prominence shell
       solarPromFrame++;
       // sun shrunk to a distant dot: quarter-rate particle updates are indistinguishable (16-22s lifetimes)
-      var promThrottled = solarCamera.position.length() > 260 && (solarPromFrame % 4) !== 0;
+      var promThrottled = !solarForceProminenceUpdate && solarCamera.position.length() > 260 && (solarPromFrame % 4) !== 0;
       if (solarProminences && !promThrottled) {
         var promPos = solarProminences.positions, promCol = solarProminences.colors, promR = solarProminences.R, promIndex = 0;
         solarProminences.anchors.forEach(function (anchor, anchorIndex) {
@@ -2761,7 +2823,7 @@
     SOLAR_BODIES.forEach(function (body) {
       var object = SOLAR_OBJECTS[body.id]; if (!object) return;
       if (body.id !== 'sun') solarOrbitPoint(body, solarFutureAngle(body, object, solarElapsed), object.positionNode.position);
-      object.spinNode.rotation.y = solarElapsed * SOLAR_SPIN_RATE / Math.max(0.3, Math.abs(body.rotationHours) / 120);
+      object.spinNode.rotation.y = solarElapsed * SOLAR_SPIN_RATE / Math.max(videoMode ? 6 : 0.3, Math.abs(body.rotationHours) / 120);
       // retrograde is double-encoded in NASA data (tilt > 90° AND negative period); the tilt already
       // flips the axis geometrically, so only flip the spin when exactly one encoding applies (e.g. Triton)
       if ((body.rotationHours < 0) !== (body.tiltDeg > 90)) object.spinNode.rotation.y *= -1;
@@ -2811,11 +2873,14 @@
       BEACONS[k].el.classList.toggle('sel', k === i);
       BEACONS[k].el.classList.toggle('dim', k !== i);
     }
+    var gStrip = document.getElementById('galaxystrip'); // mirror the highlight onto the bottom roster
+    if (gStrip) for (var gs = 0; gs < gStrip.children.length; gs++) { var gb = gStrip.children[gs]; gb.classList.toggle('sel', +gb.dataset.beaconIndex === i); if (+gb.dataset.beaconIndex === i && gb.scrollIntoView) gb.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
     if (window.openBeaconExtras) window.openBeaconExtras(i);
   }
   function clearSelection() {
     selectedBeacon = null;
     for (var k = 0; k < BEACONS.length; k++) { BEACONS[k].el.classList.remove('sel', 'dim'); }
+    var gStrip = document.getElementById('galaxystrip'); if (gStrip) for (var gs = 0; gs < gStrip.children.length; gs++) gStrip.children[gs].classList.remove('sel');
     if (window.closeBeaconExtras) window.closeBeaconExtras();
   }
   var bpEl = document.getElementById('beacon-panel'), bpBody = document.getElementById('bp-body');
@@ -2914,21 +2979,21 @@
     returnBtn.style.display = show ? 'block' : 'none';
   }
   function flyTo(p1, t1, dur, onDone) {
-    flyState = { p0: camera.position.clone(), p1: p1.clone(), t0: controls.target.clone(), t1: t1.clone(), start: performance.now(), dur: dur, onDone: onDone };
+    flyState = { p0: camera.position.clone(), p1: p1.clone(), t0: controls.target.clone(), t1: t1.clone(), start: videoNow(), dur: dur, onDone: onDone };
     controls.enabled = false;
   }
   function flyToBeacon(i) {
     var b = BEACONS[i]; if (!b.gal) return;
     var gp = b.p.clone(), galR = (b.gal.stars && b.gal.stars.radius) || 130;
     var dir = camera.position.clone().sub(gp); if (dir.lengthSq() < 1) dir.set(0, 0.35, 1); dir.normalize();
-    flyTo(gp.clone().addScaledVector(dir, galR * 3.0), gp, 2400, function () { showReturnBtn(true); }); // frame the whole galaxy
+    flyTo(gp.clone().addScaledVector(dir, galR * 3.0), gp, 2900, function () { showReturnBtn(true); }); // frame the whole galaxy
     if (selectedBeacon !== null) clearSelection(); // clear the card so the view is unobstructed
   }
-  function flyHome() { flyTo(new THREE.Vector3(0, 390, 520), new THREE.Vector3(0, 0, 0), 2200, function () { showReturnBtn(false); }); }
+  function flyHome() { flyTo(new THREE.Vector3(0, 390, 520), new THREE.Vector3(0, 0, 0), 2700, function () { showReturnBtn(false); }); }
   function stepFly() { // called each frame while flying; returns true while active
     if (!flyState) return false;
-    var k = Math.min(1, (performance.now() - flyState.start) / flyState.dur);
-    var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // easeInOutQuad
+    var k = Math.min(1, (videoNow() - flyState.start) / flyState.dur);
+    var e = 1 - Math.pow(1 - k, 3); // easeOutCubic: launch fast, decelerate on approach, settle onto the target
     camera.position.lerpVectors(flyState.p0, flyState.p1, e);
     controls.target.lerpVectors(flyState.t0, flyState.t1, e);
     camera.lookAt(controls.target);
@@ -3119,6 +3184,20 @@
       candidate.label.classList.toggle('sel', candidate.body.id === solarNav.selectedId);
       candidate.label.style.left = candidate.x + 'px'; candidate.label.style.top = candidate.y + 'px';
     });
+    if (videoMode && bpEl.classList.contains('open')) {
+      // Recording only: the info panel covers the right edge, and a body label whose centre lands
+      // under it becomes unclickable for the choreography (e.g. the Moon behind Earth's card). Slide
+      // any such label just left of the panel so its name stays visible and the cursor can reach it.
+      var panelRect = bpEl.getBoundingClientRect();
+      candidates.forEach(function (candidate) {
+        if (candidate.label.style.display === 'none') return;
+        var w = candidate.label.offsetWidth || 44;
+        if (candidate.x > panelRect.left && candidate.x < panelRect.right
+          && candidate.y > panelRect.top - 8 && candidate.y - candidate.label.offsetHeight < panelRect.bottom + 8) {
+          candidate.label.style.left = (panelRect.left - 10 - w / 2) + 'px';
+        }
+      });
+    }
     solarComets.forEach(function (comet, cometIndex) { // comet name labels, same treatment as the bodies
       var label = solarCometLabelFor(cometIndex);
       if (!comet.group.visible) { label.style.display = 'none'; return; } // hidden at true scale
@@ -3231,7 +3310,7 @@
   function stepSolarWarp() {
     if (!solarWarp) return false;
     if (!solarWarp.t0) { // first frame: build the winding wormhole path, light the star streaks
-      solarWarp.t0 = performance.now();
+      solarWarp.t0 = videoNow();
       solarWarp.to = { position: new THREE.Vector3(0, 200, 285), target: new THREE.Vector3(0, 0, 0) }; // the signature overview: Sun centered, every orbit in frame
       var dir = solarWarp.to.position.clone().sub(solarWarp.to.target).normalize();
       var from = solarWarp.to.target.clone().addScaledVector(dir, solarWarp.to.position.distanceTo(solarWarp.to.target) * 4); // near enough that the whole system is visible from frame one — it only ever grows closer
@@ -3245,7 +3324,7 @@
       solarWarpStreaks.visible = true;
       solarControls.enabled = false;
     }
-    var k = Math.min(1, (performance.now() - solarWarp.t0) / solarWarp.dur);
+    var k = Math.min(1, (videoNow() - solarWarp.t0) / solarWarp.dur);
     var e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; // easeInOutCubic: fastest at mid-tunnel where the streaks peak
     e = Math.min(e, solarWarp.e + 0.05); solarWarp.e = e;
     solarCamera.position.copy(solarWarp.curve.getPoint(e));
@@ -3296,10 +3375,16 @@
     var wp = new THREE.Vector3(); object.mesh.getWorldPosition(wp);
     var r = Math.max(object.radius, 0.5);
     var dir = solarCamera.position.clone().sub(wp); dir.y = 0;
+    if (body.parent && SOLAR_OBJECTS[body.parent]) { // frame a moon side-on to its planet so the parent (and any rings) swing to the frame edge instead of slicing through the moon; bias the side toward the Sun so the moon stays lit
+      var pp = new THREE.Vector3(); SOLAR_OBJECTS[body.parent].mesh.getWorldPosition(pp);
+      var mp = pp.sub(wp); mp.y = 0; mp.normalize();
+      dir = new THREE.Vector3(-mp.z, 0, mp.x); // 90° from the moon→parent line, in the ground plane
+      if (dir.dot(wp) > 0) dir.negate(); // point toward the Sun (at the origin): sunward = -wp
+    }
     if (dir.lengthSq() < 1e-4) dir.set(0.6, 0, 1); dir.normalize();
     solarNav.cameraStack.push(solarSnapshot());
     solarControls.enabled = false;
-    solarFly = { id: id, dir: dir, dist: r * 5.5, lift: r * 1.4, p0: solarCamera.position.clone(), t0: solarControls.target.clone(), start: performance.now(), dur: 2000, wp: wp };
+    solarFly = { id: id, dir: dir, dist: r * 5.5, lift: r * 1.4, p0: solarCamera.position.clone(), t0: solarControls.target.clone(), start: videoNow(), dur: 2600, wp: wp };
     return true;
   }
   function stepSolarFly() { // called each frame in solar view; tracks the moving body while flying
@@ -3308,9 +3393,9 @@
     if (solarFly.cometIndex != null) solarComets[solarFly.cometIndex].coma.getWorldPosition(solarFly.wp);
     else SOLAR_OBJECTS[solarFly.id].mesh.getWorldPosition(solarFly.wp);
     var p1 = solarFly.wp.clone().addScaledVector(solarFly.dir, solarFly.dist); p1.y += solarFly.lift;
-    var k = Math.min(1, (performance.now() - solarFly.start) / solarFly.dur);
-    var e2 = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // easeInOutQuad
-    e2 = Math.min(e2, (solarFly.e || 0) + 0.05); solarFly.e = e2; // a dropped frame must never snap the camera to the end
+    var k = Math.min(1, (videoNow() - solarFly.start) / solarFly.dur);
+    var e2 = 1 - Math.pow(1 - k, 3); // easeOutCubic: launch fast, decelerate on approach, settle onto the target
+    e2 = Math.min(e2, (solarFly.e || 0) + 0.14); solarFly.e = e2; // cap only guards against dropped-frame snaps; loose enough to keep the fast launch
     solarCamera.position.lerpVectors(solarFly.p0, p1, e2);
     solarControls.target.lerpVectors(solarFly.t0, solarFly.wp, e2);
     if (e2 >= 1) {
@@ -3321,7 +3406,7 @@
         solarControls.minDistance = 3;
         solarNav.level = 'focus'; solarNav.selectedId = null; solarNav.parentId = null; solarNav.focusId = null;
         solarFollow = { comet: cometIndex, last: null };
-        solarArrivalSpin = performance.now() + 3200; // orbit-insertion settle
+        solarArrivalSpin = videoNow() + 3200; // orbit-insertion settle
         updateSolarVisibility();
         updateSolarNavigationText();
         renderCometPanel(cometIndex, beaconLang);
@@ -3334,7 +3419,7 @@
       solarNav.level = 'focus'; solarNav.selectedId = id; solarNav.parentId = body.parent || null;
       solarNav.focusId = body.parent || id; // the system we are IN — the flown-to body's primary
       solarFollow = { id: id, last: null }; // camera rides along with the orbiting body from here on
-      solarArrivalSpin = performance.now() + 3200; // orbit-insertion settle
+      solarArrivalSpin = videoNow() + 3200; // orbit-insertion settle
       updateSolarVisibility(); // the body's moons become visible + selectable here
       updateSolarNavigationText();
       renderSolarPanel(id, beaconLang);
@@ -3375,7 +3460,7 @@
   renderer.domElement.addEventListener('pointerdown', function (e) {
     if (viewMode !== 'solar') return;
     if (solarEventRide) cancelSolarEventRide(); // grabbing the view hands the clock back
-    solarIdleSince = performance.now(); solarArrivalSpin = null; // any grab ends the camera's own ideas
+    solarIdleSince = videoNow(); solarArrivalSpin = null; // any grab ends the camera's own ideas
     var point = solarPointerPosition(e); solarPointer.down = true; solarPointer.x = point.x; solarPointer.y = point.y; solarPointer.moved = false;
   });
   renderer.domElement.addEventListener('pointermove', function (e) {
@@ -3416,8 +3501,8 @@
       else if (best) selectSolarBody(best);
     }
   });
-  var solarMapsPreloaded = false;
-  var solarUploadQueue = [], solarMoonMapsLoaded = {}, solarMapsDetached = false;
+  var solarMapsPreloaded = false, solarPreloadPromise = null, solarPreloadSettled = false, solarPreloadCount = 0;
+  var solarUploadQueue = [], solarMoonMapsLoaded = {}, solarMapsDetached = false, solarResourceDetachCount = 0;
   function solarQueueMaps(object, maps) {
     var textures = Object.keys(maps).map(function (key) { return maps[key]; }).filter(Boolean);
     solarUploadQueue.push({ object: object, maps: maps, textures: textures });
@@ -3439,20 +3524,24 @@
     });
   }
   function preloadSolarMaps() { // ~hundreds of MB of textures — only fetch once the user actually enters the solar view
-    if (solarMapsPreloaded) return;
+    if (solarPreloadPromise) return solarPreloadPromise;
     solarMapsPreloaded = true;
+    solarPreloadCount++;
+    var tasks = [];
     SOLAR_BODIES.forEach(function (body) {
       if (body.parent) return; // moons load on first fly-in (solarEnsureMoonMaps)
       var object = SOLAR_OBJECTS[body.id];
-      loadSolarMaps(body).then(function (maps) { solarQueueMaps(object, maps); });
+      tasks.push(loadSolarMaps(body).then(function (maps) { solarQueueMaps(object, maps); }));
     });
     var sunMaterial = SOLAR_OBJECTS.sun.mesh.material;
-    solarLoadTexture('images/solar-system/sun.jpg', true).then(function (texture) {
+    tasks.push(solarLoadTexture('images/solar-system/sun.jpg', true).then(function (texture) {
       if (texture) {
         texture.wrapT = THREE.RepeatWrapping; texture.needsUpdate = true; // the sun shader also wobbles V slightly past the edge (wrapS comes from the loader)
         sunMaterial.uniforms.uMap.value = texture; sunMaterial.uniforms.uHasMap.value = 1;
       }
-    });
+    }));
+    solarPreloadPromise = Promise.all(tasks).then(function () { solarPreloadSettled = true; return true; });
+    return solarPreloadPromise;
   }
   function enterSolar() {
     if (viewMode !== 'galaxy') return;
@@ -3500,24 +3589,28 @@
     }
     cancelSolarEventRide();
     solarArrivalSpin = null; solarControls.autoRotate = false;
-    // free ~400 MB of GPU textures the galaxy/sky scenes never use; the JS-side image cache
-    // stays, and the next enterSolar re-queues everything through the one-per-frame upload path
-    solarUploadQueue.length = 0;
-    SOLAR_BODIES.forEach(function (body) {
-      var object = SOLAR_OBJECTS[body.id]; if (!object) return;
-      var material = object.mesh.material;
-      if (material.map || material.emissiveMap || material.normalMap) {
-        material.map = null; material.normalMap = null; material.emissiveMap = null;
-        material.color.set(body.color); if (material.emissive) material.emissive.set(0x000000);
-        material.needsUpdate = true; solarMapsDetached = true;
-      }
-      if (object.specialty.clouds && object.specialty.clouds.material.map) { var cloudsMat = object.specialty.clouds.material; cloudsMat.map = null; cloudsMat.opacity = 0.34; cloudsMat.needsUpdate = true; }
-      if (body.id === 'earth' && solarEarthPatch) { solarEarthPatch.uCloudMap.value = null; solarEarthPatch.uHasClouds.value = 0; }
-      if (object.specialty.rings && object.specialty.rings.material.uniforms && object.specialty.rings.material.uniforms.uMap.value) { var ringSet = object.specialty.rings.material.uniforms; ringSet.uMap.value = null; ringSet.uHasMap.value = 0; ringSet.uOpacity.value = 0.54; }
-    });
-    var sunUniforms = SOLAR_OBJECTS.sun && SOLAR_OBJECTS.sun.mesh.material.uniforms;
-    if (sunUniforms && sunUniforms.uMap && sunUniforms.uMap.value) { sunUniforms.uMap.value = null; sunUniforms.uHasMap.value = 0; solarMapsDetached = true; }
-    Object.keys(solarTextures.cache).forEach(function (url) { var texture = solarTextures.cache[url]; if (texture) texture.dispose(); });
+    // Interactive mode releases the heavy Solar texture set on exit. Video mode
+    // keeps it attached for the capture session so later preparations cannot race
+    // disposed textures or produce a different semantic boundary.
+    if (!videoMode) {
+      solarResourceDetachCount++;
+      solarUploadQueue.length = 0;
+      SOLAR_BODIES.forEach(function (body) {
+        var object = SOLAR_OBJECTS[body.id]; if (!object) return;
+        var material = object.mesh.material;
+        if (material.map || material.emissiveMap || material.normalMap) {
+          material.map = null; material.normalMap = null; material.emissiveMap = null;
+          material.color.set(body.color); if (material.emissive) material.emissive.set(0x000000);
+          material.needsUpdate = true; solarMapsDetached = true;
+        }
+        if (object.specialty.clouds && object.specialty.clouds.material.map) { var cloudsMat = object.specialty.clouds.material; cloudsMat.map = null; cloudsMat.opacity = 0.34; cloudsMat.needsUpdate = true; }
+        if (body.id === 'earth' && solarEarthPatch) { solarEarthPatch.uCloudMap.value = null; solarEarthPatch.uHasClouds.value = 0; }
+        if (object.specialty.rings && object.specialty.rings.material.uniforms && object.specialty.rings.material.uniforms.uMap.value) { var ringSet = object.specialty.rings.material.uniforms; ringSet.uMap.value = null; ringSet.uHasMap.value = 0; ringSet.uOpacity.value = 0.54; }
+      });
+      var sunUniforms = SOLAR_OBJECTS.sun && SOLAR_OBJECTS.sun.mesh.material.uniforms;
+      if (sunUniforms && sunUniforms.uMap && sunUniforms.uMap.value) { sunUniforms.uMap.value = null; sunUniforms.uHasMap.value = 0; solarMapsDetached = true; }
+      Object.keys(solarTextures.cache).forEach(function (url) { var texture = solarTextures.cache[url]; if (texture) texture.dispose(); });
+    }
     var galaxyView = savedGalaxyView;
     clearSolarCard();
     viewMode = 'galaxy';
@@ -3575,6 +3668,11 @@
   }
   document.getElementById('scalecmp-close').addEventListener('click', function () { scaleCmpEl.classList.remove('open'); });
   var solarStripEl = document.getElementById('solarstrip');
+  var solarStripVideoTargets = {
+    earth: 'solar-strip-earth',
+    jupiter: 'solar-strip-jupiter',
+    saturn: 'solar-strip-saturn'
+  };
   function buildSolarStrip() {
     if (!solarStripEl) return;
     var L = typeof beaconLang === 'string' ? beaconLang : 'en';
@@ -3582,6 +3680,7 @@
     SOLAR_BODIES.forEach(function (body) {
       if (body.parent) return; // moons join the scene only after flying in — the roster lists the top-level cast
       var button = document.createElement('button'); button.type = 'button';
+      if (solarStripVideoTargets[body.id]) button.dataset.videoTarget = solarStripVideoTargets[body.id];
       var dot = document.createElement('i'); dot.style.background = '#' + ('00000' + body.color.toString(16)).slice(-6);
       button.appendChild(dot); button.appendChild(document.createTextNode((body.info[L] || body.info.en).name));
       button.addEventListener('click', function () { selectSolarBody(body.id); flySolarTo(body.id); });
@@ -3589,6 +3688,7 @@
     });
     COMET_INFO.forEach(function (info, cometIndex) {
       var button = document.createElement('button'); button.type = 'button';
+      if (cometIndex === 0) button.dataset.videoTarget = 'solar-strip-halley';
       var dot = document.createElement('i'); dot.style.background = '#8fd0ff';
       button.appendChild(dot); button.appendChild(document.createTextNode(info.name[L] || info.name.en));
       button.addEventListener('click', function () { selectSolarComet(cometIndex); flySolarToComet(cometIndex); });
@@ -3596,6 +3696,23 @@
     });
   }
   buildSolarStrip();
+  function buildGalaxyStrip() { // bottom-of-screen roster of the galaxy guide beacons — mirror of #solarstrip so all ~30 are easy to pick by name instead of hunting tiny dots
+    var host = document.getElementById('beacons'); if (!host) return;
+    var strip = document.getElementById('galaxystrip');
+    if (!strip) { strip = document.createElement('div'); strip.id = 'galaxystrip'; strip.setAttribute('role', 'group'); strip.setAttribute('aria-label', 'Galaxy guide'); host.appendChild(strip); }
+    var L = typeof beaconLang === 'string' ? beaconLang : 'en';
+    strip.innerHTML = ''; strip.dataset.lang = L;
+    BEACONS.forEach(function (b, i) {
+      if (b.child || b.gal) return; // in-galaxy detection beacons AND the 7 external galaxies stay off the bottom guide — it lists Milky-Way objects only
+      var name = ((b.t && (b.t[L] || b.t.en)) || [''])[0]; if (!name) return;
+      var button = document.createElement('button'); button.type = 'button'; button.dataset.beaconIndex = i;
+      var dot = document.createElement('i'); dot.style.background = b.gal ? '#c9a0ff' : (b.el && b.el.classList.contains('sun') ? '#ffd27a' : '#8fc2ff');
+      button.appendChild(dot); button.appendChild(document.createTextNode(name));
+      button.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(i); }); // stop the bubble to the window "click-outside clears selection" handler
+      strip.appendChild(button);
+    });
+  }
+  buildGalaxyStrip();
   var solarTimeEl = document.getElementById('solartime');
   if (solarTimeEl) {
     if (solarReducedMotion()) solarTimeEl.style.display = 'none'; // orbital motion is disabled entirely under reduced motion
@@ -3635,7 +3752,7 @@
     return new THREE.Vector3(Math.cos(dec) * Math.cos(ra), Math.sin(dec), -Math.cos(dec) * Math.sin(ra));
   }
   var skyScene = new THREE.Scene();
-  var skyCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
+  var skyCamera = new THREE.PerspectiveCamera(60, outputWidth / outputHeight, 0.1, 3000);
   skyCamera.position.set(0, 0, 0.1); // tiny offset: OrbitControls needs a nonzero radius to orbit
   var skyControls = new THREE.OrbitControls(skyCamera, renderer.domElement);
   skyControls.enablePan = false; skyControls.enableZoom = false;
@@ -3645,7 +3762,7 @@
   skyControls.enabled = false;                  // only active in sky view
   var solarMotionMedia = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   function shortenActiveFlights() {
-    var now = performance.now();
+    var now = videoNow();
     if (flyState) { flyState.p0.copy(camera.position); flyState.t0.copy(controls.target); flyState.start = now; flyState.dur = 120; }
   }
   function refreshReducedMotion() {
@@ -3724,9 +3841,9 @@
       solarComposer.addPass(new THREE.RenderPass(solarScene, solarCamera));
       // high threshold: the Sun blooms, planets get a whisper, dim twinkle stars stay OUT of the
       // bloom mips (sub-threshold sparkles are what caused RGB confetti in the past)
-      solarComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.42, 0.38, 0.93)); // restrained: the Sun glows without whiting out at distance
+      solarComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(outputWidth, outputHeight), 0.42, 0.38, 0.93)); // restrained: the Sun glows without whiting out at distance
       solarComposer.addPass(new THREE.ShaderPass(THREE.CopyShader));
-      solarComposer.setSize(window.innerWidth, window.innerHeight);
+      solarComposer.setSize(outputWidth, outputHeight);
     } catch (e) { solarComposer = null; }
   }
   var skyComposer = null, skyComposerTried = false;
@@ -3736,13 +3853,13 @@
     try {
       skyComposer = new THREE.EffectComposer(renderer);
       skyComposer.addPass(new THREE.RenderPass(skyScene, skyCamera));
-      skyComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.7, 0.6, 0.15));
+      skyComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(outputWidth, outputHeight), 0.7, 0.6, 0.15));
       skyComposer.addPass(new THREE.ShaderPass(THREE.CopyShader)); // final output pass — UnrealBloomPass alone renders black to screen
-      skyComposer.setSize(window.innerWidth, window.innerHeight);
+      skyComposer.setSize(outputWidth, outputHeight);
     } catch (e) { skyComposer = null; }
   }
   // occasional shooting stars streaking across the dome (reuses the galaxy meteor texture)
-  var skyFx = [], skyMeteorNext = performance.now() + 7000 + Math.random() * 10000;
+  var skyFx = [], skyMeteorNext = videoNow() + 7000 + Math.random() * 10000;
   function spawnSkyMeteor() {
     var nx = Math.random() * 1.4 - 0.7, ny = Math.random() * 1.0 - 0.25;
     var d0 = new THREE.Vector3(nx, ny, 0.5).unproject(skyCamera).normalize();
@@ -3758,11 +3875,11 @@
     mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(dir, side, normal));
     mesh.scale.set(0.001, 3.2, 1); mesh.frustumCulled = false;
     skyScene.add(mesh);
-    skyFx.push({ obj: mesh, mat: m, from: from, dir: dir, dist: dist, t0: performance.now(), dur: 1100 + Math.random() * 500 });
+    skyFx.push({ obj: mesh, mat: m, from: from, dir: dir, dist: dist, t0: videoNow(), dur: 1100 + Math.random() * 500 });
   }
   function updateSkyFx(nowMs) {
     if (viewMode !== 'sky') return;
-    if (nowMs >= skyMeteorNext) { spawnSkyMeteor(); skyMeteorNext = nowMs + 9000 + Math.random() * 15000; }
+    if (!videoMode && nowMs >= skyMeteorNext) { spawnSkyMeteor(); skyMeteorNext = nowMs + 9000 + Math.random() * 15000; }
     for (var i = skyFx.length - 1; i >= 0; i--) {
       var f = skyFx[i], k = (nowMs - f.t0) / f.dur;
       if (k >= 1) { skyScene.remove(f.obj); f.mat.dispose(); skyFx.splice(i, 1); continue; }
@@ -4101,6 +4218,7 @@
       var lm = new THREE.LineBasicMaterial({ color: 0x6f9fe8, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending });
       skyScene.add(new THREE.LineSegments(lg, lm));
       var el = document.createElement('div'); el.className = 'skylabel';
+      if (z.key === 'sagittarius') el.dataset.videoTarget = 'constellation-sagittarius';
       host.appendChild(el);
       (function (idx) { el.addEventListener('click', function (e) { e.stopPropagation(); selectSky(idx); }); })(zi);
       SKY_CONS.push({ z: z, el: el, dir: centroid, lineMat: lm, starMat: sm, shown: true });
@@ -4108,6 +4226,12 @@
     paintSkyLabels(beaconLang);
     host.style.display = 'none'; // hidden until enterSky
   })();
+  if (videoMode) { // sky-view camera hooks for the automated promo tour: turn the dome to face any constellation
+    window.skyConDir = function (i) { var c = SKY_CONS[i]; return c ? { x: c.dir.x, y: c.dir.y, z: c.dir.z } : null; };
+    window.skyGetLook = function () { var p = skyCamera.position.clone().normalize().multiplyScalar(-1); return { x: p.x, y: p.y, z: p.z }; };
+    window.skyLook = function (x, y, z) { var v = new THREE.Vector3(x, y, z); if (v.lengthSq() < 1e-9) return false; v.normalize(); skyCamera.position.copy(v).multiplyScalar(-0.1); skyControls.target.set(0, 0, 0); skyControls.autoRotate = false; skyControls.update(); if (typeof updateSkyLabels === 'function') updateSkyLabels(); return true; };
+    window.exitSolarNow = function () { exitSolar(); }; // one clean step back to the galaxy view regardless of how deep the solar nav stack got
+  }
   // ── external galaxies as deep-sky markers on the celestial sphere, at their true J2000
   // RA/Dec, sitting inside their host constellations. Clicking reuses the galaxy's beacon card.
   var SKY_GAL = [];
@@ -4189,21 +4313,79 @@
       '<div id="bp-desc">' + esc(o.desc) + '</div>' +
       '<div id="bp-cat">' + (z.symbol ? z.symbol + ' · ' : '') + esc(z.t.en) + '</div>';
   }
+  // Zodiac figure overlays: a glowing constellation figure fades in over the stars when its sign is picked.
+  var ZFIG = { aries: 1, taurus: 1, gemini: 1, cancer: 1, leo: 1, virgo: 1, libra: 1, scorpius: 1, sagittarius: 1, capricornus: 1, aquarius: 1, pisces: 1 };
+  var skyFigures = {}, skyFigLoader = null;
+  var ZFIG_ANIM = {}; // (optional) keys whose figure has a seamless loop video; empty = all use the still image + the "living" twinkle shader (figure stays put, its stars shimmer + breathe)
+  var FIG_VERT = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+  var FIG_FRAG = 'uniform sampler2D map; uniform float uTime; uniform float uOpacity; varying vec2 vUv; void main(){ vec4 t = texture2D(map, vUv); vec2 cell = floor(vUv * 58.0); float h = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453); float br = 0.82 + 0.18 * (0.5 + 0.5 * sin(uTime * (1.0 + h * 1.5) + h * 6.2831)); gl_FragColor = vec4(t.rgb * br, t.a * uOpacity); }'; // wireframe holds its position but each cell shimmers on its own phase — subtle pixel-phase "alive" flicker, no motion
+  function buildFigureSprite(e, c, tex, asp, additive, frag) { // a billboarded plane; the figure holds still while a per-pixel twinkle + breathe in the shader make it feel alive
+    var base = SKY_R * 0.5 * (c.z.figScale || 1);
+    var mat = new THREE.ShaderMaterial({ uniforms: { map: { value: tex }, uTime: { value: 0 }, uOpacity: { value: 0 } }, vertexShader: FIG_VERT, fragmentShader: frag || FIG_FRAG, transparent: true, depthWrite: false, depthTest: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending });
+    var mesh = new THREE.Mesh(new THREE.PlaneGeometry(base * asp, base), mat);
+    e.baseW = base * asp; e.baseH = base; e.mat = mat;
+    mesh.position.copy(c.dir).multiplyScalar(SKY_R * 0.9);
+    mesh.renderOrder = 6; skyScene.add(mesh); e.sprite = mesh;
+  }
+  var ZFIG_STARS = { aries: 1, taurus: 1, gemini: 1, cancer: 1, leo: 1, virgo: 1, libra: 1, scorpius: 1, sagittarius: 1, capricornus: 1, aquarius: 1, pisces: 1 }; // figures with a separate extracted-star layer (images/constellations/<key>_stars.png) drawn over the star-free wireframe; that layer twinkles per-star, and the product's real stars + stick-lines are muted so there are no double stars
+  var FIG_STARS_FRAG = 'uniform sampler2D map; uniform float uTime; uniform float uOpacity; varying vec2 vUv; void main(){ vec4 t = texture2D(map, vUv); vec2 cell = floor(vUv * 30.0); float h = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453); float fl = 0.23 + 0.77 * (0.5 + 0.5 * sin(uTime * (1.6 + h * 3.0) + h * 6.2831)); gl_FragColor = vec4(t.rgb * fl, t.a * uOpacity * fl); }'; // each extracted star point (per cell) flickers 23%<->100% on its own phase+speed — the strong per-star twinkle
+  function buildStarsLayer(e, c, tex, asp) {
+    var base = SKY_R * 0.5 * (c.z.figScale || 1);
+    var mat = new THREE.ShaderMaterial({ uniforms: { map: { value: tex }, uTime: { value: 0 }, uOpacity: { value: 0 } }, vertexShader: FIG_VERT, fragmentShader: FIG_STARS_FRAG, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending });
+    var mesh = new THREE.Mesh(new THREE.PlaneGeometry(base * asp, base), mat);
+    mesh.position.copy(c.dir).multiplyScalar(SKY_R * 0.895); mesh.renderOrder = 7; skyScene.add(mesh); e.starsSprite = mesh; e.starsMat = mat;
+  }
+  function ensureSkyFigure(i) {
+    if (i in skyFigures) return skyFigures[i];
+    var c = SKY_CONS[i];
+    if (!c || !ZFIG[c.z.key]) return (skyFigures[i] = null);
+    var e = skyFigures[i] = { sprite: null, opacity: 0, target: 0, videoEl: null };
+    var path = 'images/constellations/' + c.z.key;
+    if (ZFIG_ANIM[c.z.key]) { // animated loop on a dark bg — additive blending keys the dark away, no alpha channel needed
+      var v = document.createElement('video'); v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.setAttribute('muted', ''); v.src = path + '.mp4'; e.videoEl = v;
+      v.style.cssText = 'position:fixed;left:-4px;top:-4px;width:2px;height:2px;opacity:0.01;pointer-events:none;z-index:-1'; document.body.appendChild(v); // attached (hidden) so playback is reliable
+      v.addEventListener('loadeddata', function () { v.play().catch(function () {}); var tx = new THREE.VideoTexture(v); if ('colorSpace' in tx) tx.colorSpace = THREE.SRGBColorSpace; buildFigureSprite(e, c, tx, (v.videoWidth / v.videoHeight) || 1, true); });
+      v.load();
+    } else {
+      var hasStars = !!ZFIG_STARS[c.z.key]; e.twinkle = true; // wireframe base always shimmers (pixel-phase); the stars layer twinkles per-star on top
+      var skyLdr = (skyFigLoader = skyFigLoader || new THREE.TextureLoader());
+      skyLdr.load(path + '.png', function (tex) { if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace; buildFigureSprite(e, c, tex, (tex.image && tex.image.width / tex.image.height) || 1, true, FIG_FRAG); });
+      if (hasStars) skyLdr.load(path + '_stars.png', function (tex) { if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace; buildStarsLayer(e, c, tex, (tex.image && tex.image.width / tex.image.height) || 1); }); // extracted glowing stars, twinkled over the star-free wireframe
+    }
+    return e;
+  }
+  function revealSkyFigure(i) { for (var j in skyFigures) if (skyFigures[j]) skyFigures[j].target = 0; var e = ensureSkyFigure(i); if (e) e.target = 0.74; }
+  function hideSkyFigures() { for (var j in skyFigures) if (skyFigures[j]) skyFigures[j].target = 0; }
+  function updateSkyFigures() { // the real stick-figure lines fade out as the art fades in; the art gently breathes + shimmers so it feels alive
+    var sel = window.skySelected, t = videoNow() * 0.001, still = solarReducedMotion();
+    for (var j in skyFigures) { var e = skyFigures[j]; if (!e || !e.sprite) continue;
+      e.opacity += (e.target - e.opacity) * 0.12; var vis = e.opacity > 0.01; e.sprite.visible = vis;
+      if (e.videoEl) { if (vis) { if (e.videoEl.paused) e.videoEl.play().catch(function () {}); } else if (!e.videoEl.paused) e.videoEl.pause(); }
+      if (e.mat) { e.mat.uniforms.uOpacity.value = e.opacity; e.mat.uniforms.uTime.value = (e.twinkle || !still) ? t : 0.0; e.sprite.quaternion.copy(skyCamera.quaternion); } // twinkle figures keep shimmering even under reduced motion
+      else { e.sprite.material.opacity = e.opacity; }
+      if (e.starsSprite) { e.starsMat.uniforms.uOpacity.value = e.opacity; e.starsMat.uniforms.uTime.value = t; e.starsSprite.quaternion.copy(skyCamera.quaternion); e.starsSprite.visible = e.opacity > 0.004; } // extracted-star layer keeps twinkling over the wireframe
+      if (Number(j) === sel && SKY_CONS[j]) SKY_CONS[j].lineMat.opacity = (ZFIG_STARS[SKY_CONS[j].z.key] ? 0.0 : 0.9) * (1 - e.opacity); // ownStars figures already draw the full wireframe — drop the redundant real stick-lines entirely
+    }
+  }
   function selectSky(i) {
     if (i === skySelected) { clearSkySelection(); return; }
     window.skyGalSelected = null; SKY_GAL.forEach(function (g) { g.el.classList.remove('sel'); g.sprite.material.opacity = 0.85; }); // drop any galaxy highlight
     window.skySelected = i;
+    var figSel = !!(SKY_CONS[i] && ZFIG[SKY_CONS[i].z.key]); // a zodiac figure will be drawn over this constellation
+    var ownStars = !!(SKY_CONS[i] && ZFIG_STARS[SKY_CONS[i].z.key]); // figure carries its own twinkling star layer — keep the product's real stars out of the way
     SKY_CONS.forEach(function (c, ci) {
       c.el.classList.toggle('sel', ci === i);
       c.el.classList.toggle('dim', ci !== i);
       c.lineMat.opacity = ci === i ? 0.9 : 0.12;
-      c.starMat.uniforms.uMul.value = ci === i ? 1.5 : 0.4;
+      c.starMat.uniforms.uMul.value = ci === i ? (ownStars ? 0.0 : (figSel ? 2.6 : 1.5)) : 0.4; // ownStars: fully hide the product's real star sprites so only the figure's own extracted-star layer shows (no double/overlapping stars); else brighten reals to read over the figure
     });
+    revealSkyFigure(i);
     renderConstellationPanel(i, beaconLang);
     bpEl.classList.add('open');
   }
   window.clearSkySelection = function () {
     window.skySelected = null; window.skyGalSelected = null;
+    hideSkyFigures();
     SKY_CONS.forEach(function (c) {
       c.el.classList.remove('sel', 'dim');
       c.lineMat.opacity = 0.45;
@@ -4224,6 +4406,7 @@
   function updateSolarNavigationText() {
     var L = typeof beaconLang === 'string' ? beaconLang : 'en';
     if (typeof solarStripEl !== 'undefined' && solarStripEl && solarStripEl.dataset.lang !== L) buildSolarStrip(); // roster follows the language switch
+    var gStripEl = document.getElementById('galaxystrip'); if (gStripEl && gStripEl.dataset.lang !== L && typeof buildGalaxyStrip === 'function') buildGalaxyStrip();
     var scaleToggle = document.getElementById('solarscale');
     if (scaleToggle) { var scaleText = { en: 'True scale', hans: '真实比例', hant: '真實比例', ja: '実スケール', ko: '실제 축척' }[L] || 'True scale'; scaleToggle.title = scaleText; scaleToggle.setAttribute('aria-label', scaleText); }
     var text = {
@@ -4280,10 +4463,10 @@
   function stepSkyDive() { // plays INSIDE the sky view: the last solar frames dive into Earth, then the veil hands over
     if (!skyDive) return false;
     if (!skyDive.t0) {
-      skyDive.t0 = performance.now();
+      skyDive.t0 = videoNow();
       skyDive.from = solarCamera.position.clone(); skyDive.fromT = solarControls.target.clone();
     }
-    var k = Math.min(1, (performance.now() - skyDive.t0) / skyDive.dur);
+    var k = Math.min(1, (videoNow() - skyDive.t0) / skyDive.dur);
     var e = k * k * k; // accelerating plunge
     e = Math.min(e, skyDive.e + 0.06); skyDive.e = e;
     SOLAR_OBJECTS.earth.mesh.getWorldPosition(skyDivePoint);
@@ -4298,11 +4481,11 @@
   function stepSkyArrival() {
     if (!skyArrival) return;
     if (!skyArrival.t0) {
-      skyArrival.t0 = performance.now();
+      skyArrival.t0 = videoNow();
       skyArrival.fov = skyCamera.fov;
       skyVeilEl.style.opacity = '1'; // atmosphere flash on the first animated frame only
     }
-    var k = Math.min(1, (performance.now() - skyArrival.t0) / skyArrival.dur);
+    var k = Math.min(1, (videoNow() - skyArrival.t0) / skyArrival.dur);
     skyCamera.fov = skyArrival.fov + (26 - skyArrival.fov) * Math.pow(1 - k, 3); // falling back to the ground
     skyCamera.updateProjectionMatrix();
     skyVeilEl.style.opacity = String(Math.max(0, 1 - k * 2.2));
@@ -4364,22 +4547,22 @@
   });
 
   // ── render loop (continuous while visible; drives spin + twinkle + breathe + fx) ──
-  var t0 = performance.now(), rafId = null;
+  var t0 = videoNow(), rafId = null, videoFrameCount = 0, videoSolarPreparing = false;
   // FPS watchdog: weak GPUs choke on 85k dust points. Keep an EMA of frame time
   // (samples clamped to 500ms; tab-switch gaps excluded by resetting perfLast on
   // visibilitychange); every 10s, if sustained under ~25fps (40ms — a healthy 30Hz
   // panel sits at 33.3ms, safely below), halve perfScale (1 → .5 → .25 floor) and
   // rebuild the dust at the reduced density. Never scales back up (no oscillation).
-  var perfScale = 1, perfEMA = 16.7, perfLast = 0, perfNextCheck = performance.now() + 12000;
+  var perfScale = 1, perfEMA = 16.7, perfLast = 0, perfNextCheck = videoNow() + 12000;
   var solarPerfEMA = 16.7, solarPerfLast = 0, solarPerfNextCheck = 0;
   function resetSolarPerformanceWatchdog(now) {
-    now = now == null ? performance.now() : now;
+    now = now == null ? videoNow() : now;
     solarPerfEMA = 16.7; solarPerfLast = 0; solarPerfNextCheck = now + 10000;
   }
   function sampleSolarPerformance(now) {
     if (solarPerfLast) solarPerfEMA += (Math.min(now - solarPerfLast, 500) - solarPerfEMA) * 0.05;
     solarPerfLast = now;
-    if (now > solarPerfNextCheck) {
+    if (!videoMode && now > solarPerfNextCheck) {
       solarPerfNextCheck = now + 10000;
       if (solarPerfEMA > 40 && solarPerf.stage < 3) {
       applySolarPerformanceTier(solarPerf.stage + 1);
@@ -4395,7 +4578,9 @@
   function frame() {
     rafId = null;
     if (document.hidden) return;
-    var t = (performance.now() - t0) / 1000;
+    if (videoMode) videoClockMs += videoFrameStepMs;
+    videoFrameCount++;
+    var nowMs = videoNow(), t = (nowMs - t0) / 1000;
     if (viewMode === 'sky') {
       if (skyDive && stepSkyDive()) { // dive-into-Earth prologue: render the solar scene one last stretch
         renderer.render(solarScene, solarCamera);
@@ -4406,14 +4591,21 @@
       if (!solarReducedMotion()) for (var si = 0; si < SKY_CONS.length; si++) SKY_CONS[si].starMat.uniforms.uTime.value = t; // twinkle the constellation stars
       stepSkyArrival();
       skyControls.update();
+      updateSkyFigures();
       if (skyComposer) skyComposer.render(); else renderer.render(skyScene, skyCamera);
-      if (!solarReducedMotion()) updateSkyFx(performance.now());
+      if (!solarReducedMotion()) updateSkyFx(nowMs);
       if (window.updateSkyLabels) updateSkyLabels();
       rafId = requestAnimationFrame(frame);
       return;
     }
     if (viewMode === 'solar') {
-      var solarNow = performance.now(), solarDt = solarFrameLast ? Math.min((solarNow - solarFrameLast) / 1000, 0.15) : 0;
+      if (videoMode && videoSolarPreparing) {
+        drainSolarUploadQueue();
+        if (solarComposer) solarComposer.render(); else renderer.render(solarScene, solarCamera);
+        rafId = requestAnimationFrame(frame);
+        return;
+      }
+      var solarNow = nowMs, solarDt = solarFrameLast ? Math.min((solarNow - solarFrameLast) / 1000, 0.15) : 0;
       solarFrameLast = solarNow;
       updateSolarMotion(solarDt);
       drainSolarUploadQueue();
@@ -4450,12 +4642,15 @@
       cb.sp.scale.set(cbs, cbs, 1);
       cb.sp.material.opacity = cb.o * (1 + 0.16 * cbw); // halo brightness swings with the size
     }
-    if (beaconRing.visible) { var rp = solarReducedMotion() ? 1 : 1 + 0.08 * Math.sin(t * 2.2); beaconRing.scale.set(46 * rp, 46 * rp, 1); }
-    if (!solarReducedMotion()) updateFx(performance.now()); // meteors + supernovae scheduling (no-op when idle)
-    var fnow = performance.now();
+    if (beaconRing.visible) { // pulsing selection halo — breathes in size AND brightness so the picked beacon clearly pops
+      if (solarReducedMotion()) { beaconRing.scale.set(54, 54, 1); beaconRing.material.opacity = 0.9; }
+      else { var bp = Math.sin(t * 3.0); var bs = 54 * (1 + 0.22 * bp); beaconRing.scale.set(bs, bs, 1); beaconRing.material.opacity = 0.6 + 0.35 * (0.5 + 0.5 * bp); }
+    }
+    if (!solarReducedMotion()) updateFx(nowMs); // meteors + supernovae scheduling (no-op when idle)
+    var fnow = nowMs;
     if (perfLast) { perfEMA += (Math.min(fnow - perfLast, 500) - perfEMA) * 0.05; }
     perfLast = fnow;
-    if (fnow > perfNextCheck) {
+    if (!videoMode && fnow > perfNextCheck) {
       perfNextCheck = fnow + 10000;
       if (perfEMA > 40 && perfScale > 0.26) { // sustained < ~25fps → shed decorative dust
         perfScale *= 0.5;
@@ -4483,14 +4678,19 @@
   }
   function startLoop() { if (rafId == null && !document.hidden) rafId = requestAnimationFrame(frame); }
   document.addEventListener('visibilitychange', function () { perfLast = 0; solarFrameLast = 0; resetSolarPerformanceWatchdog(); startLoop(); }); // reset frame clocks so resume gaps do not enter animation timing
+  function applyOutputSize() {
+    outputWidth = videoMode ? videoConfig.width : window.innerWidth;
+    outputHeight = videoMode ? videoConfig.height : window.innerHeight;
+    camera.aspect = outputWidth / outputHeight; camera.updateProjectionMatrix();
+    skyCamera.aspect = outputWidth / outputHeight; skyCamera.updateProjectionMatrix();
+    solarCamera.aspect = outputWidth / outputHeight; solarCamera.updateProjectionMatrix();
+    renderer.setSize(outputWidth, outputHeight);
+    if (composer) composer.setSize(outputWidth, outputHeight);
+    if (skyComposer) skyComposer.setSize(outputWidth, outputHeight);
+    if (solarComposer) solarComposer.setSize(outputWidth, outputHeight);
+  }
   window.addEventListener('resize', function () {
-    camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-    skyCamera.aspect = window.innerWidth / window.innerHeight; skyCamera.updateProjectionMatrix();
-    solarCamera.aspect = window.innerWidth / window.innerHeight; solarCamera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    if (composer) composer.setSize(window.innerWidth, window.innerHeight);
-    if (skyComposer) skyComposer.setSize(window.innerWidth, window.innerHeight);
-    if (solarComposer) solarComposer.setSize(window.innerWidth, window.innerHeight);
+    applyOutputSize();
     refreshSolarResponsiveState();
   });
   var solarPointerMedia = window.matchMedia ? window.matchMedia('(pointer:coarse)') : null;
@@ -4512,8 +4712,8 @@
   // to cross what the operator is looking at. A glowing head sprite rides the line.
   // Optional (ndc, t0, dndc) let a meteor SHOWER share a radiant + screen direction
   // and stagger start times (future t0s stay dormant via the k<0 guard in updateFx).
-  var meteorNext = performance.now() + 12000 + Math.random() * 20000;
-  var novaNext = performance.now() + 90000 + Math.random() * 120000;   // first supernova within 1.5–3.5min, then every 6–12min
+  var meteorNext = videoNow() + 12000 + Math.random() * 20000;
+  var novaNext = videoNow() + 90000 + Math.random() * 120000;   // first supernova within 1.5–3.5min, then every 6–12min
   function skyPointInView(nx, ny, r) { // NDC (x,y) → a point r units from the camera along that view ray
     var v = new THREE.Vector3(nx, ny, 0.5).unproject(camera).sub(camera.position).normalize();
     return camera.position.clone().addScaledVector(v, r);
@@ -4569,7 +4769,7 @@
     mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(dir, side, normal));
     mesh.scale.set(0.001, W3, 1); mesh.frustumCulled = false;
     scene.add(mesh); // on the fixed sky, not galaxyRoot
-    fxList.push({ kind: 'meteor', obj: mesh, mat: m, from: from, dir: dir, dist: dist, t0: t0Opt || performance.now(), dur: 1000 + Math.random() * 500 });
+    fxList.push({ kind: 'meteor', obj: mesh, mat: m, from: from, dir: dir, dist: dist, t0: t0Opt || videoNow(), dur: 1000 + Math.random() * 500 });
   }
   // supernova — three acts, like an astrophoto: ① a DIFFRACTION CROSS (four tapered
   // spikes) flashes up first, ② the round blast bursts through it, ③ a slow orange
@@ -4644,7 +4844,11 @@
   }
   var NOVA_CORE_TEX = novaCoreTexture(), NOVA_HALO_TEX = novaHaloTexture();
   function smooth01(x) { x = x < 0 ? 0 : (x > 1 ? 1 : x); return x * x * (3 - 2 * x); } // smoothstep — silky ramps everywhere
-  function spawnNova() {
+  function spawnNova(options) {
+    var durationMs = options && options.durationMs !== undefined ? options.durationMs : 6000;
+    if (!Number.isFinite(durationMs) || durationMs < 100 || durationMs > 60000) {
+      throw new Error('Supernova durationMs must be between 100 and 60000 ms');
+    }
     // Spawn AWAY from the galaxy on screen (operator: keep distance — more elegant).
     // The disc projects as a flattened ELLIPSE at typical viewing angles, so an
     // isotropic radius test always fails horizontally; instead project 12 disc-rim
@@ -4665,12 +4869,15 @@
       return inside;
     }
     function rimDist(px2, py2) { var m = 99; for (var a = 0; a < 12; a++) { var ddx = px2 - rim[a][0], ddy = py2 - rim[a][1], dd = Math.sqrt(ddx * ddx + ddy * ddy); if (dd < m) m = dd; } return m; }
-    var best = [0.8, 0.8], bestScore = -1e9;
-    for (var ci = 0; ci < 16; ci++) {
-      var nx = Math.random() * 1.8 - 0.9, ny = Math.random() * 1.85 - 0.9;
-      var score = (insideRim(nx, ny) ? -100 : 0) + rimDist(nx, ny);
-      if (score > bestScore) { bestScore = score; best = [nx, ny]; }
-      if (score > 0.35) { best = [nx, ny]; break; }
+    var requestedNdc = options && Array.isArray(options.ndc) ? options.ndc : null;
+    var best = requestedNdc ? [requestedNdc[0], requestedNdc[1]] : [0.8, 0.8], bestScore = -1e9;
+    if (!requestedNdc) {
+      for (var ci = 0; ci < 16; ci++) {
+        var nx = Math.random() * 1.8 - 0.9, ny = Math.random() * 1.85 - 0.9;
+        var score = (insideRim(nx, ny) ? -100 : 0) + rimDist(nx, ny);
+        if (score > bestScore) { bestScore = score; best = [nx, ny]; }
+        if (score > 0.35) { best = [nx, ny]; break; }
+      }
     }
     var p = skyPointInView(best[0], best[1], 850 + Math.random() * 300);
     var coreMat = new THREE.SpriteMaterial({ map: NOVA_CORE_TEX, color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -4680,10 +4887,10 @@
     var cm = new THREE.SpriteMaterial({ map: CROSS_TEX, color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
     var cross = new THREE.Sprite(cm); cross.scale.setScalar(1);
     var grp = new THREE.Group(); grp.add(halo); grp.add(ball); grp.add(cross); grp.position.copy(p); scene.add(grp);
-    fxList.push({ kind: 'nova', obj: grp, mat: coreMat, mat2: cm, mat3: haloMat, ball: ball, halo: halo, cross: cross, t0: performance.now(), dur: 6000 });
+    fxList.push({ kind: 'nova', obj: grp, mat: coreMat, mat2: cm, mat3: haloMat, ball: ball, halo: halo, cross: cross, t0: videoNow(), dur: durationMs });
   }
   function updateFx(nowMs) {
-    if (nowMs >= meteorNext) {
+    if (!videoMode && nowMs >= meteorNext) {
       if (Math.random() < 0.06) { // occasional meteor SHOWER: 6–9 staggered from one on-screen radiant
         var mN = 6 + ((Math.random() * 4) | 0), rNdc = [Math.random() * 1.2 - 0.6, Math.random() * 0.8 - 0.1];
         var rDndc = [(Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.3), -(0.35 + Math.random() * 0.3)];
@@ -4691,7 +4898,7 @@
       } else spawnMeteor();
       meteorNext = nowMs + 30000 + Math.random() * 30000;
     }
-    if (nowMs >= novaNext) { spawnNova(); novaNext = nowMs + 360000 + Math.random() * 360000; }
+    if (!videoMode && nowMs >= novaNext) { spawnNova(); novaNext = nowMs + 360000 + Math.random() * 360000; }
     for (var i = fxList.length - 1; i >= 0; i--) {
       var f = fxList[i], k = (nowMs - f.t0) / f.dur;
       if (k >= 1) { (f.obj.parent || fxGroup).remove(f.obj); f.mat.dispose(); if (f.mat2) f.mat2.dispose(); if (f.mat3) f.mat3.dispose(); if (f.geo) f.geo.dispose(); fxList.splice(i, 1); continue; }
@@ -5334,6 +5541,7 @@
     Array.prototype.forEach.call(audioList.children, function (c2, i) { c2.classList.toggle('on', i === musicTrack && musicOn); });
   }
   function musicPlay(i) {
+    if (videoMode) { musicOn = false; musicPaint(); return; }
     if (!musicEl) { musicEl = new Audio(); musicEl.loop = true; musicEl.volume = 0.35; }
     if (musicTrack !== i) { musicTrack = i; musicEl.src = 'audio/' + encodeURIComponent(MUSIC_TRACKS[i]); }
     musicEl.muted = false; musicOn = true;
@@ -5342,6 +5550,7 @@
   }
   function musicRemember(state) { try { localStorage.setItem('gx-music', state); } catch (e) {} } // only user-driven states persist (not autoplay blocks)
   function musicToggle() {
+    if (videoMode) { musicOn = false; musicPaint(); return; }
     if (!musicEl || musicTrack < 0) { musicPlay(0); return; } // first toggle starts track 1
     if (musicOn) { musicEl.muted = true; musicOn = false; musicRemember('off'); }
     else { musicEl.muted = false; musicOn = true; musicRemember('on'); musicEl.play().catch(function () {}); }
@@ -5352,7 +5561,7 @@
   // autoplay on load; browsers block sound before a user gesture, so if the initial
   // play() is refused, fall back to starting on the first click/key/touch.
   var musicPref = 'on'; try { musicPref = localStorage.getItem('gx-music') || 'on'; } catch (e) {}
-  if (MUSIC_TRACKS.length && musicPref !== 'off') { // skip autoplay if the user muted last visit
+  if (!videoMode && MUSIC_TRACKS.length && musicPref !== 'off') { // skip autoplay if the user muted last visit
     musicPlay(0);
     var kickMusic = function () {
       if (musicEl && musicEl.paused) musicPlay(0);
@@ -5365,14 +5574,18 @@
   // round-robin) so you can see each effect without waiting for the real schedule.
   // e.g. index.html?fx=1
   var fxDemoSeq = 0;
-  if (/[?&]fx/i.test(location.search)) setInterval(function () {
+  if (!videoMode && /[?&]fx/i.test(location.search)) setInterval(function () {
     if (document.hidden) return;
     var s = fxDemoSeq++ % 3;
     if (s === 0) spawnMeteor();
     else if (s === 1) {
       var rn = [Math.random() * 1.2 - 0.6, Math.random() * 0.8 - 0.1];
       var dd = [(Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.3), -(0.35 + Math.random() * 0.3)];
-      for (var i = 0; i < 7; i++) spawnMeteor([rn[0] + (Math.random() - 0.5) * 0.5, rn[1] + (Math.random() - 0.5) * 0.35], performance.now() + i * 320, dd);
+      for (var i = 0; i < 7; i++) spawnMeteor(
+        [rn[0] + (Math.random() - 0.5) * 0.5, rn[1] + (Math.random() - 0.5) * 0.35],
+        videoNow() + i * 320,
+        dd
+      );
     }
     else spawnNova();
   }, 4000);
@@ -5415,6 +5628,541 @@
     camera.position.copy(controls.target).addScaledVector(dir, d);
   });
   window.addEventListener('gestureend', function (e) { e.preventDefault(); gestureDist = 0; });
+
+  var VIDEO_CAMERA_PRESETS = {
+    // Galaxy-chapter cameras form one continuous path: each shot's START equals the previous
+    // shot's END (position + fov), so the opening reveal glides instead of jump-cutting.
+    'opening-milky-way-reveal': ['galaxy', [0, 720, 1080], [0, 529, 715], [0, 0, 0], 55, 52],
+    'milky-way-title-hold': ['galaxy', [0, 529, 715], [120, 560, 790], [0, 0, 0], 52, 52],
+    'galaxy-thirty-five-degree': ['galaxy', [120, 560, 790], [40, 430, 610], [0, 0, 0], 52, 52],
+    'spiral-arm-flyover': ['galaxy', [40, 430, 610], [260, 105, 360], [0, 0, 0], 52, 48],
+    'fixed-wide-galaxy': ['galaxy', [260, 105, 360], [0, 470, 700], [0, 0, 0], 48, 55],
+    'sgr-a-wide': ['galaxy', [0, 470, 700], [140, 310, 460], [0, 0, 0], 55, 48],
+    'sgr-a-card-to-solar-beacon': ['galaxy', [140, 310, 460], [-80, 300, 430], [0, 0, 0], 48, 46],
+    'solar-beacon-approach': ['galaxy', [-80, 300, 430], [-120, 290, 410], [0, 0, 0], 46, 44],
+    'solar-high-to-oblique': ['solar', [0, 150, 215], [100, 95, 155], [0, 0, 0], 52, 48],
+    'solar-scale-overview': ['solar', [0, 120, 210], [0, 120, 210], [0, 0, 0], 52, 52],
+    'sun-surface-orbit': ['solar', [42, 14, 26], [-30, 10, 32], [0, 0, 0], 48, 44],
+    'inner-planets-lateral': ['solar', [-60, 22, 45], [62, 18, 38], [0, 0, 0], 48, 46],
+    'earth-moon-terminator': ['solar', [24, 10, 20], [18, 8, 14], [0, 0, 0], 46, 42],
+    'jupiter-system': ['solar', [42, 22, 44], [32, 15, 32], [0, 0, 0], 48, 44],
+    'saturn-rings-low-angle': ['solar', [42, 8, 52], [32, 5, 38], [0, 0, 0], 48, 42],
+    'halley-side-follow': ['solar', [-48, 18, 45], [45, 15, 38], [0, 0, 0], 50, 44],
+    'earth-to-sky-transition': ['solar', [18, 8, 15], [8, 3, 7], [0, 0, 0], 44, 36],
+    'celestial-sphere-adaptation': ['sky', [0, 0.02, 0.1], [0.04, 0.01, 0.09], [0, 0, 0], 70, 60],
+    'sky-horizontal-pan-and-lift': ['sky', [-0.05, 0.01, 0.1], [0.05, 0.04, 0.08], [0, 0, 0], 60, 56],
+    'sagittarius-galactic-center': ['sky', [0.04, -0.02, 0.09], [0.04, -0.02, 0.09], [0, 0, 0], 52, 52],
+    'magellanic-clouds-wide': ['galaxy', [-320, 520, 820], [-260, 430, 690], [0, 0, 0], 60, 54],
+    'andromeda-disk-approach': ['galaxy', [310, 470, 720], [250, 350, 520], [0, 0, 0], 54, 46],
+    'm87-jet-axis': ['galaxy', [0, 260, 520], [0, 260, 520], [0, 0, 0], 48, 48],
+    'centaurus-a-dust-lane-and-jet': ['galaxy', [0, 260, 520], [0, 260, 520], [0, 0, 0], 48, 48],
+    'centaurus-a-pull-away': ['galaxy', [230, 240, 430], [420, 520, 850], [0, 0, 0], 43, 58],
+    'galaxy-slow-rotation': ['galaxy', [0, 520, 760], [100, 500, 740], [0, 0, 0], 54, 54],
+    'galaxy-ending-hold': ['galaxy', [60, 500, 740], [60, 500, 740], [0, 0, 0], 54, 54]
+  };
+  if (videoMode) {
+    let videoPresentationStyle = null, videoOpeningVeil = null;
+    const videoExternalGalaxyPreset = function (catalog, offset, fov) {
+      var galaxy = null;
+      for (var i = 0; i < BEACONS.length; i++) {
+        if (BEACONS[i].info.en.catalog === catalog) { galaxy = BEACONS[i]; break; }
+      }
+      if (!galaxy || !galaxy.gal) throw new Error('Missing external galaxy for video preset: ' + catalog);
+      var target = galaxy.p.toArray();
+      var position = galaxy.p.clone().add(new THREE.Vector3(offset[0], offset[1], offset[2])).toArray();
+      return ['galaxy', position, position.slice(), target, fov, fov];
+    };
+    VIDEO_CAMERA_PRESETS['m87-jet-axis'] = videoExternalGalaxyPreset('M87', [0, 260, 520], 48);
+    VIDEO_CAMERA_PRESETS['centaurus-a-dust-lane-and-jet'] = videoExternalGalaxyPreset('NGC 5128', [0, 260, 520], 48);
+    videoPresentationStyle = document.createElement('style');
+    videoPresentationStyle.dataset.gxVideoPresentation = 'true';
+    videoPresentationStyle.textContent =
+      'body.gx-video-opening #title,body.gx-video-opening #audio,body.gx-video-opening #beacons,' +
+      'body.gx-video-opening #lang,body.gx-video-opening #skyback,body.gx-video-opening #skylabels,' +
+      'body.gx-video-opening #solarback,body.gx-video-opening #solarlabels,body.gx-video-opening #beacon-panel,' +
+      'body.gx-video-opening .gx-video-cursor{display:none!important}' +
+      'body.gx-video-title-safe #audio,body.gx-video-title-safe #beacons,body.gx-video-title-safe #lang,' +
+      'body.gx-video-title-safe #skyback,body.gx-video-title-safe #skylabels,body.gx-video-title-safe #solarback,' +
+      'body.gx-video-title-safe #solarlabels,body.gx-video-title-safe #beacon-panel,' +
+      'body.gx-video-title-safe .gx-video-cursor{display:none!important}' +
+      '#beacon-panel.open{animation:none!important}';
+    document.head.appendChild(videoPresentationStyle);
+    videoOpeningVeil = document.createElement('div');
+    videoOpeningVeil.className = 'gx-video-opening-veil';
+    videoOpeningVeil.setAttribute('aria-hidden', 'true');
+    videoOpeningVeil.style.cssText =
+      'position:fixed;inset:0;z-index:2147483646;background:#000;opacity:0;pointer-events:none';
+    document.body.appendChild(videoOpeningVeil);
+  function setVideoPresentation(mode, veilOpacity) {
+    if (!videoOpeningVeil) return;
+    document.body.classList.toggle('gx-video-opening', mode === 'opening');
+    document.body.classList.toggle('gx-video-title-safe', mode === 'title-safe');
+    videoOpeningVeil.style.opacity = String(Math.max(0, Math.min(1, veilOpacity || 0)));
+  }
+  function videoElementVisible(element) {
+    if (!element) return false;
+    var style = getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) > 0;
+  }
+  function videoPresentationAudit() {
+    var cursor = document.querySelector('.gx-video-cursor');
+    return {
+      mode: document.body.classList.contains('gx-video-opening') ? 'opening' :
+        (document.body.classList.contains('gx-video-title-safe') ? 'title-safe' : 'none'),
+      openingVeilOpacity: Number(getComputedStyle(videoOpeningVeil).opacity),
+      cursorVisible: videoElementVisible(cursor),
+      titleVisible: videoElementVisible(document.getElementById('title')),
+      panelVisible: videoElementVisible(bpEl)
+    };
+  }
+  function lerpVideoVector(from, to, amount, target) {
+    target.set(
+      from[0] + (to[0] - from[0]) * amount,
+      from[1] + (to[1] - from[1]) * amount,
+      from[2] + (to[2] - from[2]) * amount
+    );
+  }
+  function applyVideoCameraPreset(preset, elapsedMs, durationMs) {
+    var spec = VIDEO_CAMERA_PRESETS[preset];
+    if (!spec) throw new Error('Unknown camera preset: ' + preset);
+    if (preset === 'opening-milky-way-reveal') {
+      var revealRaw = elapsedMs <= 1000 ? 0 : Math.min(1, (elapsedMs - 1000) / 5000);
+      var revealAmount = 1 - Math.pow(1 - revealRaw, 3);
+      setVideoPresentation('opening', 1 - revealAmount);
+    } else if (preset === 'milky-way-title-hold') {
+      setVideoPresentation('title-safe', 0);
+    } else {
+      setVideoPresentation('none', 0);
+    }
+    var raw = durationMs > 0 ? Math.min(1, Math.max(0, elapsedMs / durationMs)) : 1;
+    var amount = raw * raw * (3 - 2 * raw);
+    var activeCamera = spec[0] === 'solar' ? solarCamera : (spec[0] === 'sky' ? skyCamera : camera);
+    var activeControls = spec[0] === 'solar' ? solarControls : (spec[0] === 'sky' ? skyControls : controls);
+    lerpVideoVector(spec[1], spec[2], amount, activeCamera.position);
+    lerpVideoVector(spec[3], spec[3], amount, activeControls.target);
+    activeCamera.fov = spec[4] + (spec[5] - spec[4]) * amount;
+    activeCamera.updateProjectionMatrix();
+    activeControls.update();
+    return { preset: preset, elapsedMs: elapsedMs, view: spec[0] };
+  }
+  function clearVideoFx() {
+    while (fxList.length) {
+      var effect = fxList.pop();
+      if (effect.obj.parent) effect.obj.parent.remove(effect.obj);
+      if (effect.mat) effect.mat.dispose();
+      if (effect.mat2) effect.mat2.dispose();
+      if (effect.mat3) effect.mat3.dispose();
+      if (effect.geo) effect.geo.dispose();
+    }
+    while (solarFx.length) {
+      var solarEffect = solarFx.pop();
+      if (solarEffect.obj.parent) solarEffect.obj.parent.remove(solarEffect.obj);
+      if (solarEffect.mat) solarEffect.mat.dispose();
+    }
+    while (skyFx.length) {
+      var skyEffect = skyFx.pop();
+      if (skyEffect.obj.parent) skyEffect.obj.parent.remove(skyEffect.obj);
+      if (skyEffect.mat) skyEffect.mat.dispose();
+    }
+  }
+  const configureVideoCentaurusPullAway = function () {
+    var centaurus = null;
+    for (var i = 0; i < BEACONS.length; i++) {
+      if (BEACONS[i].info.en.catalog === 'NGC 5128') { centaurus = BEACONS[i]; break; }
+    }
+    if (!centaurus) throw new Error('Missing Centaurus A for video pull-away.');
+    var startPosition = camera.position.clone();
+    var startTarget = controls.target.clone();
+    var direction = startPosition.clone().sub(centaurus.p);
+    var startDistance = direction.length();
+    if (startDistance < 0.001) direction.copy(startPosition).sub(startTarget);
+    if (direction.lengthSq() < 0.000001) direction.set(0, 0.35, 1);
+    direction.normalize();
+    var endDistance = Math.max(startDistance * 1.9, startDistance + 360);
+    var endPosition = centaurus.p.clone().addScaledVector(direction, endDistance);
+    VIDEO_CAMERA_PRESETS['centaurus-a-pull-away'] = [
+      'galaxy',
+      startPosition.toArray(),
+      endPosition.toArray(),
+      startTarget.toArray(),
+      camera.fov,
+      Math.min(62, camera.fov + 12)
+    ];
+  };
+  var VIDEO_PREPARE_STATES = {
+    'galaxy-cinematic-black': { view: 'galaxy' },
+    'galaxy-title-safe': { view: 'galaxy' },
+    'galaxy-overview': { view: 'galaxy' },
+    'galaxy-low-angle': { view: 'galaxy' },
+    'galaxy-wide-effects': { view: 'galaxy' },
+    'galaxy-beacons': { view: 'galaxy' },
+    'sgr-a-selected': { view: 'galaxy', beaconCatalog: 'Sgr A*' },
+    'galaxy-solar-beacon': { view: 'galaxy' },
+    'solar-overview': { view: 'solar' },
+    'solar-size-comparison': { view: 'solar', solarSelection: 'sun', solarPanel: true, scaleComparison: true },
+    'sun-close-view': { view: 'solar', solarSelection: 'sun', solarPanel: true, solarFocus: 'sun' },
+    'sky-transition': { view: 'sky' },
+    'sky-overview': { view: 'sky' },
+    'sky-sagittarius-framed': { view: 'sky' },
+    'galaxy-external-overview': { view: 'galaxy' },
+    'andromeda-arrival': { view: 'galaxy', returnVisible: true },
+    'm87-arrival': { view: 'galaxy', returnVisible: true },
+    'centaurus-a-arrival': { view: 'galaxy', returnVisible: true },
+    'galaxy-ending-recall': { view: 'galaxy' },
+    'galaxy-ending-title': { view: 'galaxy' }
+  };
+  function setVideoBeaconSelection(catalog) {
+    clearSelection();
+    for (var i = 0; i < BEACONS.length; i++) {
+      if (BEACONS[i].info.en.catalog === catalog) {
+        selectBeacon(i);
+        return true;
+      }
+    }
+    return false;
+  }
+  var videoSolarBoundaryFrames = 0, videoSolarBoundaryPixelHash = null;
+  function videoByteHash(bytes) {
+    var hash = 2166136261;
+    for (var i = 0; i < bytes.length; i++) hash = Math.imul(hash ^ bytes[i], 16777619) >>> 0;
+    return hash.toString(16).padStart(8, '0');
+  }
+  function videoTextHash(value) {
+    var bytes = [];
+    for (var i = 0; i < value.length; i++) {
+      var code = value.charCodeAt(i);
+      bytes.push(code & 255, code >>> 8);
+    }
+    return videoByteHash(bytes);
+  }
+  function videoFloatBufferHash(array) {
+    return videoByteHash(new Uint8Array(array.buffer, array.byteOffset, array.byteLength));
+  }
+  function videoCanvasPixelHash() {
+    var gl = renderer.getContext();
+    var pixels = new Uint8Array(outputWidth * outputHeight * 4);
+    gl.finish();
+    gl.readPixels(0, 0, outputWidth, outputHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    return videoByteHash(pixels);
+  }
+  function solarAttachedTexture(body, key) {
+    var object = SOLAR_OBJECTS[body.id], material = object.mesh.material;
+    if (key === 'albedo') return material.map;
+    if (key === 'normal') return material.normalMap;
+    if (key === 'night') return material.emissiveMap;
+    if (key === 'clouds') return object.specialty.clouds && object.specialty.clouds.material.map;
+    if (key === 'ring') {
+      var rings = object.specialty.rings && object.specialty.rings.material;
+      return rings && rings.uniforms ? rings.uniforms.uMap.value : rings && rings.map;
+    }
+    return null;
+  }
+  function videoSolarResourceState() {
+    var slots = [];
+    SOLAR_BODIES.forEach(function (body) {
+      if (body.parent) return;
+      Object.keys(body.maps || {}).forEach(function (key) {
+        var url = body.maps[key], expected = solarTextures.cache[url], actual = solarAttachedTexture(body, key);
+        slots.push([body.id + ':' + key, url, !!expected && actual === expected, actual && actual.uuid || '']);
+      });
+    });
+    var sunUrl = 'images/solar-system/sun.jpg';
+    var sunExpected = solarTextures.cache[sunUrl];
+    var sunActual = SOLAR_OBJECTS.sun.mesh.material.uniforms.uMap.value;
+    slots.push(['sun:albedo', sunUrl, !!sunExpected && sunActual === sunExpected, sunActual && sunActual.uuid || '']);
+    var attached = slots.filter(function (slot) { return slot[2]; }).length;
+    var signature = videoTextHash(slots.map(function (slot) { return slot.join('|'); }).sort().join('\n'));
+    return {
+      ready: solarPreloadSettled && solarUploadQueue.length === 0 && attached === slots.length,
+      preloadSettled: solarPreloadSettled,
+      preloadCount: solarPreloadCount,
+      uploadQueueLength: solarUploadQueue.length,
+      requiredTextureSlots: slots.length,
+      attachedTextureSlots: attached,
+      detachCount: solarResourceDetachCount,
+      signature: signature,
+      boundaryFrames: videoSolarBoundaryFrames,
+      boundaryPixelHash: videoSolarBoundaryPixelHash
+    };
+  }
+  async function waitForVideoSolarResources() {
+    await preloadSolarMaps();
+    var safety = 0;
+    while (solarUploadQueue.length && safety++ < 1000) drainSolarUploadQueue();
+    var resources = videoSolarResourceState();
+    if (!resources.ready) {
+      throw new Error('Solar video resources did not reach a fully attached state (' +
+        resources.attachedTextureSlots + '/' + resources.requiredTextureSlots + ' textures)');
+    }
+  }
+  function renderVideoSolarBoundary() {
+    videoSolarBoundaryFrames = 0;
+    for (var i = 0; i < 2; i++) {
+      solarScene.updateMatrixWorld(true);
+      if (solarComposer) solarComposer.render(); else renderer.render(solarScene, solarCamera);
+      videoSolarBoundaryFrames++;
+    }
+    videoSolarBoundaryPixelHash = videoCanvasPixelHash();
+  }
+  function resetVideoSolarState() {
+    solarElapsed = 0;
+    solarShaderTime = 0;
+    solarPaused = false;
+    solarFrameLast = 0;
+    solarTimeScale = 1;
+    solarTimeResume = 1;
+    solarScaleAnim = null;
+    cancelSolarEventRide();
+    solarEventRide = null;
+    solarFly = null;
+    solarFollow = null;
+    cancelSolarWarp();
+    solarWarp = null;
+    solarArrivalSpin = null;
+    solarIdleSince = 0;
+    solarPointer.down = false;
+    solarPointer.moved = false;
+    solarCometSelected = null;
+    solarApplyScaleBlend(0);
+    resetSolarNavigation();
+    clearSolarCard();
+    solarCamera.position.set(0, 200, 285);
+    solarControls.target.set(0, 0, 0);
+    solarCamera.fov = 52;
+    solarCamera.far = 1800;
+    solarCamera.updateProjectionMatrix();
+    solarControls.minDistance = 2;
+    solarControls.maxDistance = 333;
+    solarControls.autoRotate = false;
+    solarControls.autoRotateSpeed = 0;
+    solarControls.enabled = viewMode === 'solar';
+    solarControls.update();
+    solarComets.forEach(function (comet) {
+      comet.angle = comet.initialAngle;
+      comet.tailsDormant = false;
+      comet.tails.visible = true;
+    });
+    if (solarCME) {
+      solarCME.active = false;
+      solarCME.t0 = 0;
+      solarCME.auroraT0 = null;
+      solarCME.lon = 0;
+      solarCME.points.visible = false;
+      solarCME.points.material.opacity = 0;
+    }
+    if (SOLAR_OBJECTS.earth && SOLAR_OBJECTS.earth.specialty.auroraN) {
+      SOLAR_OBJECTS.earth.specialty.auroraN.material.uniforms.uBoost.value = 0;
+    }
+    solarSunOcclusion.frame = 0;
+    solarSunOcclusion.target = 1;
+    solarSunOcclusion.value = 1;
+    solarSunGlows.forEach(function (layer) { layer.sprite.material.opacity = layer.baseOpacity; });
+    solarPromFrame = 0;
+    solarPerf.labelFrame = 0;
+    solarPerf.backgroundFrame = 0;
+    applySolarPerformanceTier(0);
+    resetSolarPerformanceWatchdog(0);
+    var scaleButton = document.getElementById('solarscale');
+    if (scaleButton) scaleButton.classList.remove('on');
+    var pauseButton = solarTimeEl && solarTimeEl.querySelector('button[data-scale="0"]');
+    if (pauseButton) { pauseButton.textContent = '⏸'; pauseButton.setAttribute('aria-label', 'Pause'); }
+    if (solarTimeEl) Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button[data-scale]'), function (button) {
+      button.classList.toggle('on', button.dataset.scale === '1');
+    });
+    solarForceProminenceUpdate = true;
+    try { updateSolarMotion(0); } finally { solarForceProminenceUpdate = false; }
+    solarPerf.labelFrame = 0;
+    solarPerf.backgroundFrame = 0;
+    if (solarBackdrop) {
+      solarBackdrop.rotation.y = 0;
+      if (solarBackdrop.material.uniforms && solarBackdrop.material.uniforms.uTime) solarBackdrop.material.uniforms.uTime.value = 0;
+    }
+  }
+  function setVideoSolarFocus(id) {
+    var overview = solarSnapshot();
+    solarNav.cameraStack = [overview];
+    setSolarNavigation({
+      level: 'focus', selectedId: id, parentId: SOLAR_BY_ID[id].parent || null, focusId: id,
+      panelOpen: true, minDistance: Math.max(2, SOLAR_OBJECTS[id].radius * 1.8), maxDistance: 333,
+      position: new THREE.Vector3(42, 14, 26), target: SOLAR_OBJECTS[id].positionNode.position.clone()
+    });
+  }
+  async function resetVideoForShot(prepareKey, absoluteStartMs) {
+    var prepareState = VIDEO_PREPARE_STATES[prepareKey];
+    if (!prepareState) throw new Error('Unknown prepare key: ' + prepareKey);
+    if (prepareKey === 'centaurus-a-arrival') configureVideoCentaurusPullAway();
+    clearVideoFx();
+    setVideoPresentation('none', 0);
+    toggleCinema(false);
+    scaleCmpEl.classList.remove('open');
+    flyState = null;
+    skyDive = null; skyArrival = null;
+    videoSolarPreparing = prepareState.view === 'solar';
+    try {
+      if (prepareState.view === 'solar') {
+        if (viewMode === 'sky') exitSky();
+        if (viewMode === 'galaxy') enterSolar();
+        if (viewMode !== 'solar') throw new Error('Unable to enter Solar view for preparation: ' + prepareKey);
+        await waitForVideoSolarResources();
+      } else if (prepareState.view === 'sky') {
+        if (viewMode === 'solar') exitSolar();
+        if (viewMode === 'galaxy') enterSky();
+      } else {
+        if (viewMode === 'sky') exitSky();
+        if (viewMode === 'solar') exitSolar();
+      }
+      videoClockMs = 0;
+      // Anchor the animation clock (galaxy spin, star twinkle) to this shot's absolute timeline
+      // position so it flows continuously across shots instead of snapping back to 0 at each cut.
+      t0 = -(Number(absoluteStartMs) || 0);
+      resetVideoRandom();
+      resetVideoSolarState();
+      clearSelection();
+      if (window.clearSkySelection) window.clearSkySelection();
+      clearSolarCard();
+      if (prepareState.beaconCatalog) setVideoBeaconSelection(prepareState.beaconCatalog);
+      if (prepareState.solarSelection) {
+        solarNav.selectedId = prepareState.solarSelection;
+        if (prepareState.solarPanel) renderSolarPanel(prepareState.solarSelection, beaconLang);
+      }
+      if (prepareState.solarFocus) setVideoSolarFocus(prepareState.solarFocus);
+      if (prepareState.scaleComparison) openSolarScaleOverlay();
+      showReturnBtn(prepareState.returnVisible === true);
+      if (prepareState.view === 'solar') renderVideoSolarBoundary();
+      return { prepareKey: prepareKey, viewMode: viewMode };
+    } finally {
+      videoSolarPreparing = false;
+    }
+  }
+  function triggerVideoEffect(effect) {
+    if (effect.type === 'meteor') {
+      spawnMeteor(effect.ndc, videoNow(), effect.direction);
+    } else if (effect.type === 'meteorShower') {
+      var count = Math.max(1, Math.min(12, effect.count || 7));
+      var radiant = effect.ndc || [0.1, 0.35], direction = effect.direction || [0.65, -0.48];
+      for (var i = 0; i < count; i++) {
+        spawnMeteor([radiant[0] + (Math.random() - 0.5) * 0.35, radiant[1] + (Math.random() - 0.5) * 0.25], videoNow() + i * 260, direction);
+      }
+    } else if (effect.type === 'supernova') {
+      spawnNova(effect);
+    } else {
+      throw new Error('Unknown deterministic effect: ' + effect.type);
+    }
+    return { type: effect.type, activeEffects: fxList.length };
+  }
+  function videoStatus() {
+    var activeCamera = viewMode === 'solar' ? solarCamera : (viewMode === 'sky' ? skyCamera : camera);
+    var activeControls = viewMode === 'solar' ? solarControls : (viewMode === 'sky' ? skyControls : controls);
+    return {
+      viewMode: viewMode,
+      frameCount: videoFrameCount,
+      camera: {
+        position: activeCamera.position.toArray(),
+        target: activeControls.target.toArray(),
+        fov: activeCamera.fov
+      }
+    };
+  }
+  function vectorState(vector) {
+    return vector.toArray();
+  }
+  function solarAuditState() {
+    return {
+      elapsed: solarElapsed,
+      shaderTime: solarShaderTime,
+      paused: solarPaused,
+      timeScale: solarTimeScale,
+      timeResume: solarTimeResume,
+      level: solarNav.level,
+      selectedId: solarNav.selectedId,
+      parentId: solarNav.parentId,
+      focusId: solarNav.focusId,
+      panelOpen: solarCardOpen,
+      scaleBlend: solarScaleBlend,
+      scaleOverlayOpen: !!scaleCmpEl && scaleCmpEl.classList.contains('open'),
+      flyActive: !!solarFly,
+      warpActive: !!solarWarp,
+      scaleAnimationActive: !!solarScaleAnim,
+      eventRideActive: !!solarEventRide,
+      followActive: !!solarFollow,
+      arrivalSpinActive: !!solarArrivalSpin,
+      camera: {
+        position: vectorState(solarCamera.position),
+        target: vectorState(solarControls.target),
+        fov: solarCamera.fov,
+        minDistance: solarControls.minDistance,
+        maxDistance: solarControls.maxDistance,
+        enabled: solarControls.enabled
+      },
+      performanceStage: solarPerf.stage,
+      performanceEMA: solarPerfEMA,
+      asteroidDrawCount: solarAsteroidBelt ? solarAsteroidBelt.geometry.drawRange.count : 0,
+      backdropDrawCount: solarBackdrop ? solarBackdrop.geometry.drawRange.count : 0,
+      resources: videoSolarResourceState(),
+      sunOcclusion: {
+        frame: solarSunOcclusion.frame,
+        target: solarSunOcclusion.target,
+        value: solarSunOcclusion.value,
+        glowOpacities: solarSunGlows.map(function (layer) { return layer.sprite.material.opacity; })
+      },
+      prominence: {
+        frame: solarPromFrame,
+        positionCount: solarProminences ? solarProminences.positions.length / 3 : 0,
+        colorCount: solarProminences ? solarProminences.colors.length / 3 : 0,
+        positionHash: solarProminences ? videoFloatBufferHash(solarProminences.positions) : null,
+        colorHash: solarProminences ? videoFloatBufferHash(solarProminences.colors) : null
+      },
+      bodyState: SOLAR_BODIES.map(function (body) {
+        var object = SOLAR_OBJECTS[body.id];
+        return [body.id, vectorState(object.positionNode.position), object.spinNode.rotation.y, object.radius, object.radiusScale];
+      }),
+      cometState: solarComets.map(function (comet) {
+        return [comet.angle, vectorState(comet.coma.position), vectorState(comet.nucleus.rotation)];
+      })
+    };
+  }
+    var videoBridge = {
+      renderer: renderer,
+      getFrameCount: function () { return videoFrameCount; },
+      getStatus: videoStatus,
+      resetForShot: resetVideoForShot,
+      applyCameraPreset: applyVideoCameraPreset,
+      triggerDeterministicEffect: triggerVideoEffect,
+      getAuditState: function () {
+        return {
+          randomCalls: videoRandomCalls,
+          randomSummary: videoRandomHash.toString(16).padStart(8, '0'),
+          clockMode: 'fixed-step',
+          clockMs: videoClockMs,
+          ambientScheduling: false,
+          activeEffects: fxList.length + solarFx.length + skyFx.length,
+          activeEffectDetails: fxList.map(function (effect) {
+            return {
+              kind: effect.kind,
+              durationMs: effect.dur,
+              ageMs: Math.max(0, videoNow() - effect.t0)
+            };
+          }),
+          perfScale: perfScale,
+          rendererPixelRatio: renderer.getPixelRatio(),
+          dustDrawCount: dustObj ? dustObj.geometry.drawRange.count : 0,
+          composerEnabled: !!composer,
+          musicOn: musicOn,
+          camera: videoStatus().camera,
+          selectedBeaconCatalog: selectedBeacon === null ? null : BEACONS[selectedBeacon].info.en.catalog,
+          beaconPanelOpen: bpEl.classList.contains('open'),
+          presentation: videoPresentationAudit(),
+          solar: solarAuditState(),
+          output: { width: outputWidth, height: outputHeight, fps: videoConfig.fps, quality: videoConfig.quality }
+        };
+      }
+    };
+    cv.dataset.videoRandomSummary = videoRandomHash.toString(16).padStart(8, '0');
+    import('./tools/video/runtime/director.mjs')
+      .then(function (module) { return module.installGalaxyVideoDirector(videoBridge, videoConfig); })
+      .catch(function (error) { cv.dataset.videoDirector = 'error'; setMsg(error.message); console.error(error); });
+  }
+  // ── video runtime end ────────────────────────────────────────────────────────
 
   if (/[?&]solarTest=1/.test(location.search)) runSolarSelfTests();
 
