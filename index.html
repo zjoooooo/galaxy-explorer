@@ -1592,10 +1592,17 @@
       { p: galPos(309.52, 19.42, 165), cls: 'ext', fixed: true, gal: { mode: 'ell', opts: { ell: 0.92, seed: 6.2, dustBand: true, tilt: 0.15 }, size: 245, fade: 0.7, stars: { kind: 'ellipsoid', count: 24000, radius: 120, ell: 0.9, dustBand: true, inc: 1.25, roll: 0.3, haloSize: 1.5, haloOpacity: 0.26, halo: 0xf0dfc4, coreSize: 0.22, coreOpacity: 0.5 } },
         t: {"en":["Centaurus A","nearest active galaxy"],"hans":["半人马座A","最近的活动星系"],"hant":["半人馬座A","最近的活躍星系"],"ja":["ケンタウルス座A","最も近い活動銀河"],"ko":["센타우루스자리 A","가장 가까운 활동 은하"]},
         info: { en:{"type":"Active galaxy · external · not to scale","distance":"~13 million light-years","constellation":"Centaurus","facts":[["Distance","~13 million ly"],["Feature","radio jets"]],"desc":"The nearest active galaxy to us: a giant elliptical crossed by a warped dark dust lane, the wreckage of a spiral it swallowed. Its central black hole launches jets that blaze across the radio sky, making it one of the brightest radio sources in the heavens. Drawn on the far sky, not to scale.","catalog":"NGC 5128"}, hans:{"type":"活动星系 · 银河系外 · 非真实比例","distance":"约 1300 万光年","constellation":"半人马座","facts":[["距离","约 1300 万光年"],["特征","射电喷流"]],"desc":"距离我们最近的活动星系：一个巨大的椭圆星系，被一条扭曲的暗尘埃带横贯，那是它吞并的旋涡星系的残骸。中心黑洞喷射出的喷流横扫射电天空，使它成为全天最明亮的射电源之一。这里画在远方天幕上，非真实比例。","catalog":"NGC 5128"}, hant:{"type":"活躍星系 · 銀河系外 · 非真實比例","distance":"約 1300 萬光年","constellation":"半人馬座","facts":[["距離","約 1300 萬光年"],["特徵","電波噴流"]],"desc":"距離我們最近的活躍星系：一個巨大的橢圓星系，被一條扭曲的暗塵埃帶橫貫，那是它吞併的螺旋星系的殘骸。中心黑洞噴射出的噴流橫掃電波天空，使它成為全天最明亮的電波源之一。這裡畫在遠方天幕上，非真實比例。","catalog":"NGC 5128"}, ja:{"type":"活動銀河 · 天の川銀河の外 · 実スケールではない","distance":"約1300万光年","constellation":"ケンタウルス座","facts":[["距離","約1300万光年"],["特徴","電波ジェット"]],"desc":"私たちに最も近い活動銀河で、飲み込んだ渦巻銀河の名残であるねじれた暗い塵の帯が横切る巨大な楕円銀河です。中心のブラックホールが噴き出すジェットは電波の空を貫き、全天で最も明るい電波源の一つです。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"NGC 5128"}, ko:{"type":"활동 은하 · 우리은하 밖 · 실제 비율 아님","distance":"약 1300만 광년","constellation":"센타우루스자리","facts":[["거리","약 1300만 광년"],["특징","전파 제트"]],"desc":"우리에게 가장 가까운 활동 은하로, 집어삼킨 나선 은하의 잔해인 뒤틀린 어두운 먼지 띠가 가로지르는 거대 타원 은하입니다. 중심 블랙홀이 내뿜는 제트는 전파 하늘을 가로질러 하늘에서 가장 밝은 전파원 중 하나입니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"NGC 5128"} } },
-      { p: galPos(280.47, -32.89, 155), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 21.7 }, size: 285, fade: 0.85, stars: { kind: 'irregular', count: 18000, radius: 122, offx: 0.14, offz: -0.05, bar: 0.32, barAng: 0.35, haloSize: 0.5, haloOpacity: 0.06, coreOpacity: 0 } },
+      { p: galPos(280.47, -32.89, 155), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 21.7 }, size: 285, fade: 0.85, stars: { kind: 'irregular', count: 18000, radius: 122, offx: 0.14, offz: -0.05, bar: 0.32, barAng: 0.35, haloSize: 0.5, haloOpacity: 0.06, coreOpacity: 0, veils: [
+        { x: 58, y: 2, z: 24, sz: 150, hex: 0xff6aa0, op: 0.10, T: 19 },  // rose-magenta veil over the Tarantula flank (bar's leading edge)
+        { x: 8, z: -6, sz: 240, hex: 0x7fa8ff, op: 0.08, T: 23, flat: 0.72 },  // cyan-blue veil across the disc — the cloud's body
+        { x: -30, y: -4, z: 10, sz: 200, hex: 0x9f7fff, op: 0.07, T: 16, flat: 0.78 },// violet counter-veil, offset for depth
+        { sz: 300, hex: 0xcabcff, op: 0.035, T: 25, flat: 0.68 },              // faint lavender outer halo — edgeless melt into the sky
+        { x: 62, y: 4, z: 26, sz: 64, hex: 0xff6aa0, op: 0.12, T: 8 },    // 30 Dor resident glow, visible from afar (anchored on the kid-beacon lp)
+        { x: 62, y: 4, z: 26, sz: 20, hex: 0xffe0ee, op: 0.5, T: 8 } ] } },// 30 Dor bright heart — its own quicker pulse
         t: {"en":["Large Magellanic Cloud","Milky Way satellite"],"hans":["大麦哲伦云","银河系的卫星星系"],"hant":["大麥哲倫雲","銀河系的衛星星系"],"ja":["大マゼラン雲","天の川銀河の伴銀河"],"ko":["대마젤란은하","우리은하의 위성 은하"]},
         info: { en:{"type":"Satellite galaxy · irregular · not to scale","distance":"~160,000 light-years","constellation":"Dorado","facts":[["Distance","~160,000 ly"],["Hosts","Tarantula, SN 1987A"]],"desc":"The largest satellite galaxy of the Milky Way, a barred irregular orbiting close by. It cradles the Tarantula Nebula — the most furious star-forming region in the Local Group — and hosted SN 1987A, the nearest supernova seen in the modern era. A naked-eye sight from southern skies. Drawn on the far sky, not to scale.","catalog":"LMC"}, hans:{"type":"卫星星系 · 不规则 · 非真实比例","distance":"约 16 万光年","constellation":"剑鱼座","facts":[["距离","约 16 万光年"],["拥有","蜘蛛星云、SN 1987A"]],"desc":"银河系最大的卫星星系，是一个在近旁绕行的棒状不规则星系。它孕育着蜘蛛星云——本星系群中恒星形成最剧烈的区域——并曾出现 SN 1987A，即现代观测到的最近的超新星。在南半球天空可用肉眼看到。这里画在远方天幕上，非真实比例。","catalog":"LMC"}, hant:{"type":"衛星星系 · 不規則 · 非真實比例","distance":"約 16 萬光年","constellation":"劍魚座","facts":[["距離","約 16 萬光年"],["擁有","蜘蛛星雲、SN 1987A"]],"desc":"銀河系最大的衛星星系，是一個在近旁繞行的棒狀不規則星系。它孕育著蜘蛛星雲——本星系群中恆星形成最劇烈的區域——並曾出現 SN 1987A，即現代觀測到的最近的超新星。在南半球天空可用肉眼看到。這裡畫在遠方天幕上，非真實比例。","catalog":"LMC"}, ja:{"type":"伴銀河 · 不規則 · 実スケールではない","distance":"約16万光年","constellation":"かじき座","facts":[["距離","約16万光年"],["擁する","タランチュラ星雲・SN 1987A"]],"desc":"天の川銀河で最大の伴銀河で、すぐ近くを周回する棒状不規則銀河です。局部銀河群で最も激しい星形成領域であるタランチュラ星雲を抱え、現代で観測された最も近い超新星 SN 1987A が現れました。南半球の空では肉眼で見えます。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"LMC"}, ko:{"type":"위성 은하 · 불규칙 · 실제 비율 아님","distance":"약 16만 광년","constellation":"황새치자리","facts":[["거리","약 16만 광년"],["보유","타란툴라 성운·SN 1987A"]],"desc":"우리은하에서 가장 큰 위성 은하로, 가까이서 공전하는 막대 불규칙 은하입니다. 국부 은하군에서 별 형성이 가장 격렬한 타란툴라 성운을 품고 있으며, 현대에 관측된 가장 가까운 초신성 SN 1987A가 나타났습니다. 남반구 하늘에서는 맨눈으로 볼 수 있습니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"LMC"} } },
-      { p: galPos(302.81, -44.33, 185), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 8.3, small: true, barAng: 1.1 }, size: 205, fade: 0.85, stars: { kind: 'irregular', count: 10000, radius: 86, small: true, offx: 0.1, offz: 0.06, bar: 0.28, barAng: 1.1, haloSize: 0.45, haloOpacity: 0.04, coreOpacity: 0 } },
+      { p: galPos(302.81, -44.33, 185), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 8.3, small: true, barAng: 1.1 }, size: 205, fade: 0.85, stars: { kind: 'irregular', count: 10000, radius: 86, small: true, offx: 0.1, offz: 0.06, bar: 0.28, barAng: 1.1, haloSize: 0.45, haloOpacity: 0.04, coreOpacity: 0, veils: [
+        { x: 6, z: 4, sz: 130, hex: 0x8fb8ff, op: 0.07, T: 21, flat: 0.76 } ] } },    // SMC light touch — one cyan veil so the sisters match in style
         t: {"en":["Small Magellanic Cloud","Milky Way satellite"],"hans":["小麦哲伦云","银河系的卫星星系"],"hant":["小麥哲倫雲","銀河系的衛星星系"],"ja":["小マゼラン雲","天の川銀河の衛星銀河"],"ko":["소마젤란은하","우리은하의 위성 은하"]},
         info: { en:{"type":"Dwarf galaxy · satellite · not to scale","distance":"~200,000 light-years","constellation":"Tucana","facts":[["Distance","~200,000 ly"],["Legacy","Leavitt’s Cepheid law"]],"desc":"A dwarf-irregular companion of the Milky Way, paired with its larger sibling as the Magellanic Clouds. By measuring its Cepheid variable stars, Henrietta Leavitt uncovered the period–luminosity law — the first rung of the cosmic distance ladder that let astronomers measure the universe. Drawn on the far sky, not to scale.","catalog":"SMC"}, hans:{"type":"矮星系 · 卫星星系 · 非真实比例","distance":"约 20 万光年","constellation":"杜鹃座","facts":[["距离","约 20 万光年"],["贡献","勒维特造父定律"]],"desc":"银河系的一个不规则矮伴星系，与更大的同伴合称麦哲伦云。亨丽埃塔·勒维特通过测量其中的造父变星，发现了周期—光度关系——这是宇宙距离阶梯的第一级，让天文学家得以测量宇宙。这里画在远方天幕上，非真实比例。","catalog":"SMC"}, hant:{"type":"矮星系 · 衛星星系 · 非真實比例","distance":"約 20 萬光年","constellation":"杜鵑座","facts":[["距離","約 20 萬光年"],["貢獻","勒維特造父定律"]],"desc":"銀河系的一個不規則矮伴星系，與更大的同伴合稱麥哲倫雲。亨麗埃塔·勒維特透過測量其中的造父變星，發現了週期—光度關係——這是宇宙距離階梯的第一級，讓天文學家得以測量宇宙。這裡畫在遠方天幕上，非真實比例。","catalog":"SMC"}, ja:{"type":"矮小銀河 · 衛星銀河 · 実スケールではない","distance":"約20万光年","constellation":"きょしちょう座","facts":[["距離","約20万光年"],["功績","リービットのセファイド則"]],"desc":"天の川銀河の不規則矮小伴銀河で、より大きな兄弟星系とともにマゼラン雲と呼ばれます。ヘンリエッタ・リービットはこの銀河のセファイド変光星を測定し、周期光度関係を発見しました。これは宇宙の距離はしごの最初の一段であり、天文学者が宇宙を測ることを可能にしました。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"SMC"}, ko:{"type":"왜소 은하 · 위성 은하 · 실제 비율 아님","distance":"약 20만 광년","constellation":"큰부리새자리","facts":[["거리","약 20만 광년"],["업적","리비트의 세페이드 법칙"]],"desc":"우리은하의 불규칙 왜소 동반 은하로, 더 큰 형제 은하와 함께 마젤란은하로 불립니다. 헨리에타 리비트는 이 은하의 세페이드 변광성을 측정해 주기-광도 관계를 밝혀냈습니다. 이는 천문학자가 우주를 측정하게 해준 우주 거리 사다리의 첫 단입니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"SMC"} } }
     ];
@@ -4628,6 +4635,10 @@
       L.mat.uniforms.uSize.value = L.baseSize * Math.min(3.2, Math.max(0.8, dst / L.refDist)) * renderer.getPixelRatio();
       if (!solarReducedMotion()) L.pts.quaternion.copy(L.q0).premultiply(galSpinTmp.setFromAxisAngle(L.axis, t * L.spin)); // spins in its own disc plane
     }
+    for (var gvi = 0; gvi < galaxyVeils.length; gvi++) { // Magellanic gas veils breathe ±30% on long desynced periods (still under reduced motion)
+      var GV = galaxyVeils[gvi];
+      GV.mat.opacity = GV.o * (solarReducedMotion() ? 1 : 1 + 0.3 * Math.sin(t * 6.2832 / GV.T + GV.ph));
+    }
     for (var ci = 0; ci < BEACONS.length; ci++) { // in-galaxy features: always on, but LOD-gated — hidden + not animated when sub-pixel at distance
       var cb = BEACONS[ci];
       if (!cb.child || !cb.feature) continue;
@@ -5124,6 +5135,7 @@
   }
 
   var galaxyLODs = []; // {pts, mat, center, maxN, refDist, baseSize, q0, axis, spin} per particle galaxy — LOD + self-rotation each frame
+  var galaxyVeils = []; // dreamy pastel gas veils (Magellanic Clouds) — slow desynced opacity breathing, updated in the frame loop
   var galSpinTmp = new THREE.Quaternion();
   (function galaxies() {
     // Each external-galaxy beacon carries a `stars` descriptor and is built as a real 3D
@@ -5171,6 +5183,7 @@
           var kn2 = Math.random();
           if (kn2 < 0.06) { mix.setHex(0xdbeaff).multiplyScalar(1.1); scl[i] = 0.9 + Math.random() * 0.8; }      // blue star-forming knots
           else if (kn2 < 0.075 && !o.small) { mix.setHex(0xff6aa0).multiplyScalar(1.0); scl[i] = 0.8 + Math.random() * 0.6; } // pink HII (Tarantula)
+          else if (kn2 < 0.095) { mix.setHex(kn2 < 0.082 ? 0xffd9a8 : (kn2 < 0.089 ? 0xa8ece0 : 0xd9c4ff)).multiplyScalar(0.95); scl[i] = 1.0 + Math.random() * 0.8; } // pastel sprinkle — peach-gold / aqua / lilac sugar grains
           colA[i * 3] = mix.r; colA[i * 3 + 1] = mix.g; colA[i * 3 + 2] = mix.b;
         }
       } else {                                    // spiral: log-spiral arms + clustered star knots (like the Milky Way)
@@ -5234,6 +5247,13 @@
       bulge(R * (o.coreSize || 0.2), o.coreOpacity || 0.9, o.core || 0xfff1dc);   // bright nucleus
       if (o.halo2Size) bulge(R * o.halo2Size, o.halo2Opacity || 0.07, o.halo2 || 0xfdf6ea); // extra faint extended envelope — stacked gaussians ≈ smooth edgeless falloff (Sombrero)
       if (o.nucleusSize) { bulge(R * o.nucleusSize * 1.9, 0.9, o.nucleus || 0xfffdf6); bulge(R * o.nucleusSize, 1.0, 0xffffff); } // a single blazing nucleus body — outshines the particle grain at the very centre
+      if (o.veils) for (var vi = 0; vi < o.veils.length; vi++) { // dreamy pastel gas veils — large faint additive blobs; depth comes from stacking thin layers, never one dense one
+        var V = o.veils[vi];
+        var vsp = new THREE.Sprite(new THREE.SpriteMaterial({ map: BULGE_TEX, color: new THREE.Color(V.hex), transparent: true, opacity: V.op, depthWrite: false, blending: THREE.AdditiveBlending }));
+        vsp.position.set(V.x || 0, V.y || 0, V.z || 0); vsp.scale.set(V.sz, V.sz * (V.flat || 1), 1); // flat<1 squashes the blob into a lens — reads as a disc, not a ball
+        pts.add(vsp); // child of the particle cloud — co-rotates, stays glued to the bar and the in-galaxy LOD features (same frame as kid-beacon lp)
+        galaxyVeils.push({ mat: vsp.material, o: V.op, T: V.T || 18, ph: vi * 2.6 });
+      }
       if (o.dustBand) { // a real dark dust lane lying in the disc plane, darkening the bulge/stars behind it
         var ringLane = o.dustBand === 'ring'; // 'ring' = Sombrero-style dust-torus rim; true = centred dark sheet (Cen A)
         var dl = document.createElement('canvas'); dl.width = dl.height = 128; var dcx = dl.getContext('2d');
