@@ -186,3 +186,8 @@ All 18 card photos come from one source family: NASA mission photography, via Wi
 ### Comet card images
 
 - `images/comet-halley.jpg` — NASA/W. Liller (Halley's Comet, 1986, Large Scale Phenomena Network) · Public domain · [source](https://commons.wikimedia.org/wiki/File:Lspn_comet_halley.jpg)
+
+### Galaxy-view photo plates (rendered in the 3D scene)
+
+- `images/lmc-plate.png` — Zdeněk Bardon/ESO (Large Magellanic Cloud) · CC BY 4.0 · cropped, pastel-graded, edge-feathered · [source](https://commons.wikimedia.org/wiki/File:Large_Magellanic_Cloud_(magellan-ch17-bardon-cc).jpg)
+- `images/smc-plate.png` — NOIRLab/NSF/AURA/P. Horálek (Institute of Physics in Opava) (Small Magellanic Cloud) · CC BY 4.0 · cropped, pastel-graded, edge-feathered · [source](https://commons.wikimedia.org/wiki/File:The_Small_Magellanic_Cloud_from_Cerro_Pach%C3%B3n_(iotw2615a).jpg)

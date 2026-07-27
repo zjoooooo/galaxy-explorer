@@ -1118,7 +1118,10 @@
 
   // glow point fragment shared by dust + planets
   var GLOW_FRAG = 'varying vec3 vColor; void main(){ float s = pow(max(0.0, 1.0 - distance(gl_PointCoord, vec2(0.5)) * 2.0), 2.0); if (s < 0.02) discard; gl_FragColor = vec4(vColor, s); }';
-  // softer GAUSSIAN falloff for the gas — no hard disc edge, so dense points blend into a continuous nebula instead of visible circles
+  // softer GAUSSIAN falloff for the gas — no hard dis edge, so dense points blend into a continuous nebula instead of visible circles
+  var STAR_FRAG = 'varying vec3 vColor; void main(){ float d = distance(gl_PointCoord, vec2(0.5)) * 2.0;' + // external-galaxy stars: hot core + coloured halo — reads as a star up close, not a cotton ball
+    ' float halo = pow(max(0.0, 1.0 - d), 2.2) * 0.65; float core = exp(-d * d * 18.0); float s = halo + core; if (s < 0.02) discard;' +
+    ' vec3 c = vColor * halo + (vColor * 0.55 + vec3(0.75)) * core; gl_FragColor = vec4(c, 1.0); }';
 
   // ── galactic-dust spiral backdrop (decorative; AUTO-FADES as real data grows) ──
   var dustObj = null, dustBuiltCount = -1;
@@ -1170,7 +1173,7 @@
       vertexShader: 'uniform float uSize; attribute float aScale; attribute vec3 aColor; varying vec3 vColor;' +
         'void main(){ vec4 mp = modelMatrix * vec4(position,1.0); vec4 vp = viewMatrix * mp; gl_Position = projectionMatrix * vp;' +
         ' gl_PointSize = uSize * aScale * (300.0 / -vp.z); vColor = aColor; }',
-      fragmentShader: GLOW_FRAG,
+      fragmentShader: STAR_FRAG,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
     });
     dustObj = new THREE.Points(g, mat); galaxyRoot.add(dustObj); // rotates with the galaxy
@@ -1368,6 +1371,27 @@
     return new THREE.CanvasTexture(c);
   }
   var BULGE_TEX = bulgeTexture();
+  function wispTexture(seed) { // turbulent filament cloud — domain-warped fBm under a radial mask; the "science-documentary nebula" look
+    var S = 256, c = document.createElement('canvas'); c.width = c.height = S;
+    var x = c.getContext('2d'), img = x.createImageData(S, S), d = img.data;
+    function h2(ix, iy) { var n = Math.sin(ix * 127.1 + iy * 311.7 + seed * 74.7) * 43758.5453; return n - Math.floor(n); }
+    function vn(vx, vy) { var xi = Math.floor(vx), yi = Math.floor(vy), xf = vx - xi, yf = vy - yi;
+      var a = h2(xi, yi), b = h2(xi + 1, yi), e = h2(xi, yi + 1), f = h2(xi + 1, yi + 1);
+      var u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+      return a + (b - a) * u + (e - a) * v + (a - b - e + f) * u * v; }
+    function fbm(fx, fy) { var s = 0, amp = 0.5, fr = 1; for (var o = 0; o < 4; o++) { s += amp * vn(fx * fr, fy * fr); amp *= 0.5; fr *= 2.1; } return s; }
+    for (var py = 0; py < S; py++) for (var px = 0; px < S; px++) {
+      var nx = px / S * 4, ny = py / S * 4;
+      var wx = fbm(nx + 5.2, ny + 1.3), wy = fbm(nx - 3.1, ny + 7.7);
+      var n = fbm(nx + 2.6 * wx, ny + 2.6 * wy);                       // strongly warped fBm → curling strands and knots, not a smooth blob
+      var dx = px / S - 0.5, dy = py / S - 0.5, r = Math.sqrt(dx * dx + dy * dy) * 2;
+      var mask = Math.max(0, 1 - r); mask *= mask;
+      var a = Math.pow(Math.max(0, n - 0.34) * 2.2, 1.5) * mask;       // fewer, bolder strands; melt at the rim
+      var o4 = (py * S + px) * 4; d[o4] = 255; d[o4 + 1] = 255; d[o4 + 2] = 255; d[o4 + 3] = Math.min(255, Math.round(a * 255));
+    }
+    x.putImageData(img, 0, 0);
+    return new THREE.CanvasTexture(c);
+  }
 
   // soft glow at the galactic CORE only — a faint tinted halo around the bright
   // centre (bloom does the rest). No scattered nebula clouds.
@@ -1592,17 +1616,12 @@
       { p: galPos(309.52, 19.42, 165), cls: 'ext', fixed: true, gal: { mode: 'ell', opts: { ell: 0.92, seed: 6.2, dustBand: true, tilt: 0.15 }, size: 245, fade: 0.7, stars: { kind: 'ellipsoid', count: 24000, radius: 120, ell: 0.9, dustBand: true, inc: 1.25, roll: 0.3, haloSize: 1.5, haloOpacity: 0.26, halo: 0xf0dfc4, coreSize: 0.22, coreOpacity: 0.5 } },
         t: {"en":["Centaurus A","nearest active galaxy"],"hans":["半人马座A","最近的活动星系"],"hant":["半人馬座A","最近的活躍星系"],"ja":["ケンタウルス座A","最も近い活動銀河"],"ko":["센타우루스자리 A","가장 가까운 활동 은하"]},
         info: { en:{"type":"Active galaxy · external · not to scale","distance":"~13 million light-years","constellation":"Centaurus","facts":[["Distance","~13 million ly"],["Feature","radio jets"]],"desc":"The nearest active galaxy to us: a giant elliptical crossed by a warped dark dust lane, the wreckage of a spiral it swallowed. Its central black hole launches jets that blaze across the radio sky, making it one of the brightest radio sources in the heavens. Drawn on the far sky, not to scale.","catalog":"NGC 5128"}, hans:{"type":"活动星系 · 银河系外 · 非真实比例","distance":"约 1300 万光年","constellation":"半人马座","facts":[["距离","约 1300 万光年"],["特征","射电喷流"]],"desc":"距离我们最近的活动星系：一个巨大的椭圆星系，被一条扭曲的暗尘埃带横贯，那是它吞并的旋涡星系的残骸。中心黑洞喷射出的喷流横扫射电天空，使它成为全天最明亮的射电源之一。这里画在远方天幕上，非真实比例。","catalog":"NGC 5128"}, hant:{"type":"活躍星系 · 銀河系外 · 非真實比例","distance":"約 1300 萬光年","constellation":"半人馬座","facts":[["距離","約 1300 萬光年"],["特徵","電波噴流"]],"desc":"距離我們最近的活躍星系：一個巨大的橢圓星系，被一條扭曲的暗塵埃帶橫貫，那是它吞併的螺旋星系的殘骸。中心黑洞噴射出的噴流橫掃電波天空，使它成為全天最明亮的電波源之一。這裡畫在遠方天幕上，非真實比例。","catalog":"NGC 5128"}, ja:{"type":"活動銀河 · 天の川銀河の外 · 実スケールではない","distance":"約1300万光年","constellation":"ケンタウルス座","facts":[["距離","約1300万光年"],["特徴","電波ジェット"]],"desc":"私たちに最も近い活動銀河で、飲み込んだ渦巻銀河の名残であるねじれた暗い塵の帯が横切る巨大な楕円銀河です。中心のブラックホールが噴き出すジェットは電波の空を貫き、全天で最も明るい電波源の一つです。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"NGC 5128"}, ko:{"type":"활동 은하 · 우리은하 밖 · 실제 비율 아님","distance":"약 1300만 광년","constellation":"센타우루스자리","facts":[["거리","약 1300만 광년"],["특징","전파 제트"]],"desc":"우리에게 가장 가까운 활동 은하로, 집어삼킨 나선 은하의 잔해인 뒤틀린 어두운 먼지 띠가 가로지르는 거대 타원 은하입니다. 중심 블랙홀이 내뿜는 제트는 전파 하늘을 가로질러 하늘에서 가장 밝은 전파원 중 하나입니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"NGC 5128"} } },
-      { p: galPos(280.47, -32.89, 155), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 21.7 }, size: 285, fade: 0.85, stars: { kind: 'irregular', count: 18000, radius: 122, offx: 0.14, offz: -0.05, bar: 0.32, barAng: 0.35, haloSize: 0.5, haloOpacity: 0.06, coreOpacity: 0, veils: [
-        { x: 58, y: 2, z: 24, sz: 150, hex: 0xff6aa0, op: 0.10, T: 19 },  // rose-magenta veil over the Tarantula flank (bar's leading edge)
-        { x: 8, z: -6, sz: 240, hex: 0x7fa8ff, op: 0.08, T: 23, flat: 0.72 },  // cyan-blue veil across the disc — the cloud's body
-        { x: -30, y: -4, z: 10, sz: 200, hex: 0x9f7fff, op: 0.07, T: 16, flat: 0.78 },// violet counter-veil, offset for depth
-        { sz: 300, hex: 0xcabcff, op: 0.035, T: 25, flat: 0.68 },              // faint lavender outer halo — edgeless melt into the sky
-        { x: 62, y: 4, z: 26, sz: 64, hex: 0xff6aa0, op: 0.12, T: 8 },    // 30 Dor resident glow, visible from afar (anchored on the kid-beacon lp)
-        { x: 62, y: 4, z: 26, sz: 20, hex: 0xffe0ee, op: 0.5, T: 8 } ] } },// 30 Dor bright heart — its own quicker pulse
+      { p: galPos(280.47, -32.89, 155), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 21.7 }, size: 285, fade: 0.85, stars: { kind: 'irregular', count: 15000, radius: 122, inc: 0.3, offx: 0.14, offz: -0.05, bar: 0.32, barAng: 0.35, haloSize: 0.5, haloOpacity: 0.03, coreOpacity: 0, photo: { src: 'images/lmc-plate.png', span: 250, thick: 9 }, veils: [
+        { x: -23, y: 3, z: -23, sz: 20, hex: 0xffe0ee, op: 0.28, T: 8 } ], vol: { flat: 2.4, hot: [-23, 3, -23], gain: 1.5, colA: 0x76b6d8, colB: 0xe887ae } } },// 30 Dor heart only — glow sprites removed so the volume reads as FOG, not glare
         t: {"en":["Large Magellanic Cloud","Milky Way satellite"],"hans":["大麦哲伦云","银河系的卫星星系"],"hant":["大麥哲倫雲","銀河系的衛星星系"],"ja":["大マゼラン雲","天の川銀河の伴銀河"],"ko":["대마젤란은하","우리은하의 위성 은하"]},
         info: { en:{"type":"Satellite galaxy · irregular · not to scale","distance":"~160,000 light-years","constellation":"Dorado","facts":[["Distance","~160,000 ly"],["Hosts","Tarantula, SN 1987A"]],"desc":"The largest satellite galaxy of the Milky Way, a barred irregular orbiting close by. It cradles the Tarantula Nebula — the most furious star-forming region in the Local Group — and hosted SN 1987A, the nearest supernova seen in the modern era. A naked-eye sight from southern skies. Drawn on the far sky, not to scale.","catalog":"LMC"}, hans:{"type":"卫星星系 · 不规则 · 非真实比例","distance":"约 16 万光年","constellation":"剑鱼座","facts":[["距离","约 16 万光年"],["拥有","蜘蛛星云、SN 1987A"]],"desc":"银河系最大的卫星星系，是一个在近旁绕行的棒状不规则星系。它孕育着蜘蛛星云——本星系群中恒星形成最剧烈的区域——并曾出现 SN 1987A，即现代观测到的最近的超新星。在南半球天空可用肉眼看到。这里画在远方天幕上，非真实比例。","catalog":"LMC"}, hant:{"type":"衛星星系 · 不規則 · 非真實比例","distance":"約 16 萬光年","constellation":"劍魚座","facts":[["距離","約 16 萬光年"],["擁有","蜘蛛星雲、SN 1987A"]],"desc":"銀河系最大的衛星星系，是一個在近旁繞行的棒狀不規則星系。它孕育著蜘蛛星雲——本星系群中恆星形成最劇烈的區域——並曾出現 SN 1987A，即現代觀測到的最近的超新星。在南半球天空可用肉眼看到。這裡畫在遠方天幕上，非真實比例。","catalog":"LMC"}, ja:{"type":"伴銀河 · 不規則 · 実スケールではない","distance":"約16万光年","constellation":"かじき座","facts":[["距離","約16万光年"],["擁する","タランチュラ星雲・SN 1987A"]],"desc":"天の川銀河で最大の伴銀河で、すぐ近くを周回する棒状不規則銀河です。局部銀河群で最も激しい星形成領域であるタランチュラ星雲を抱え、現代で観測された最も近い超新星 SN 1987A が現れました。南半球の空では肉眼で見えます。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"LMC"}, ko:{"type":"위성 은하 · 불규칙 · 실제 비율 아님","distance":"약 16만 광년","constellation":"황새치자리","facts":[["거리","약 16만 광년"],["보유","타란툴라 성운·SN 1987A"]],"desc":"우리은하에서 가장 큰 위성 은하로, 가까이서 공전하는 막대 불규칙 은하입니다. 국부 은하군에서 별 형성이 가장 격렬한 타란툴라 성운을 품고 있으며, 현대에 관측된 가장 가까운 초신성 SN 1987A가 나타났습니다. 남반구 하늘에서는 맨눈으로 볼 수 있습니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"LMC"} } },
-      { p: galPos(302.81, -44.33, 185), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 8.3, small: true, barAng: 1.1 }, size: 205, fade: 0.85, stars: { kind: 'irregular', count: 10000, radius: 86, small: true, offx: 0.1, offz: 0.06, bar: 0.28, barAng: 1.1, haloSize: 0.45, haloOpacity: 0.04, coreOpacity: 0, veils: [
-        { x: 6, z: 4, sz: 130, hex: 0x8fb8ff, op: 0.07, T: 21, flat: 0.76 } ] } },    // SMC light touch — one cyan veil so the sisters match in style
+      { p: galPos(302.81, -44.33, 185), cls: 'ext', fixed: true, gal: { mode: 'irr', opts: { seed: 8.3, small: true, barAng: 1.1 }, size: 205, fade: 0.85, stars: { kind: 'irregular', count: 8000, radius: 86, small: true, inc: 0.3, offx: 0.1, offz: 0.06, bar: 0.28, barAng: 1.1, haloSize: 0.45, haloOpacity: 0.02, coreOpacity: 0, photo: { src: 'images/smc-plate.png', span: 175, thick: 7 }, veils: [
+        ], vol: { flat: 2.2, gain: 1.15, colA: 0x8fc8e8, colB: 0x9d8fe0 } } }, // glow sprite removed — the raymarched volume carries the gas
         t: {"en":["Small Magellanic Cloud","Milky Way satellite"],"hans":["小麦哲伦云","银河系的卫星星系"],"hant":["小麥哲倫雲","銀河系的衛星星系"],"ja":["小マゼラン雲","天の川銀河の衛星銀河"],"ko":["소마젤란은하","우리은하의 위성 은하"]},
         info: { en:{"type":"Dwarf galaxy · satellite · not to scale","distance":"~200,000 light-years","constellation":"Tucana","facts":[["Distance","~200,000 ly"],["Legacy","Leavitt’s Cepheid law"]],"desc":"A dwarf-irregular companion of the Milky Way, paired with its larger sibling as the Magellanic Clouds. By measuring its Cepheid variable stars, Henrietta Leavitt uncovered the period–luminosity law — the first rung of the cosmic distance ladder that let astronomers measure the universe. Drawn on the far sky, not to scale.","catalog":"SMC"}, hans:{"type":"矮星系 · 卫星星系 · 非真实比例","distance":"约 20 万光年","constellation":"杜鹃座","facts":[["距离","约 20 万光年"],["贡献","勒维特造父定律"]],"desc":"银河系的一个不规则矮伴星系，与更大的同伴合称麦哲伦云。亨丽埃塔·勒维特通过测量其中的造父变星，发现了周期—光度关系——这是宇宙距离阶梯的第一级，让天文学家得以测量宇宙。这里画在远方天幕上，非真实比例。","catalog":"SMC"}, hant:{"type":"矮星系 · 衛星星系 · 非真實比例","distance":"約 20 萬光年","constellation":"杜鵑座","facts":[["距離","約 20 萬光年"],["貢獻","勒維特造父定律"]],"desc":"銀河系的一個不規則矮伴星系，與更大的同伴合稱麥哲倫雲。亨麗埃塔·勒維特透過測量其中的造父變星，發現了週期—光度關係——這是宇宙距離階梯的第一級，讓天文學家得以測量宇宙。這裡畫在遠方天幕上，非真實比例。","catalog":"SMC"}, ja:{"type":"矮小銀河 · 衛星銀河 · 実スケールではない","distance":"約20万光年","constellation":"きょしちょう座","facts":[["距離","約20万光年"],["功績","リービットのセファイド則"]],"desc":"天の川銀河の不規則矮小伴銀河で、より大きな兄弟星系とともにマゼラン雲と呼ばれます。ヘンリエッタ・リービットはこの銀河のセファイド変光星を測定し、周期光度関係を発見しました。これは宇宙の距離はしごの最初の一段であり、天文学者が宇宙を測ることを可能にしました。ここでは遠くの天空に描いており、実際のスケールではありません。","catalog":"SMC"}, ko:{"type":"왜소 은하 · 위성 은하 · 실제 비율 아님","distance":"약 20만 광년","constellation":"큰부리새자리","facts":[["거리","약 20만 광년"],["업적","리비트의 세페이드 법칙"]],"desc":"우리은하의 불규칙 왜소 동반 은하로, 더 큰 형제 은하와 함께 마젤란은하로 불립니다. 헨리에타 리비트는 이 은하의 세페이드 변광성을 측정해 주기-광도 관계를 밝혀냈습니다. 이는 천문학자가 우주를 측정하게 해준 우주 거리 사다리의 첫 단입니다. 여기서는 먼 하늘에 그려져 있으며 실제 비율은 아닙니다.","catalog":"SMC"} } }
     ];
@@ -1694,7 +1713,7 @@
           ko: { type: '상대론적 제트 · M87', facts: [['길이', '약 5,000광년'], ['원천', 'M87* 블랙홀']], desc: 'M87 중심의 블랙홀이 거의 빛의 속도로 내뿜는 좁은 플라스마 빔으로, 그 블랙홀은 사건의 지평선 망원경이 촬영한 바로 그 거대 블랙홀입니다. 1918년에 발견된 사상 최초의 제트이며, 빛나는 매듭들이 이어진 곧은 파란 탐조등 빛줄기가 타원 은하의 황금빛 안개를 가로지릅니다.', catalog: 'M87 jet' }
         },
         img: 'images/m87-jet.jpg', credit: 'NASA/Hubble Heritage (STScI/AURA)' },
-      { parent: 'LMC', lp: new THREE.Vector3(62, 4, 26), feat: { kind: 'nebula', size: 1.5, color: 0xff5f98, stars: 46 },
+      { parent: 'LMC', lp: new THREE.Vector3(-23, 3, -23), feat: { kind: 'nebula', size: 1.5, color: 0xff5f98, stars: 46 },
         t: { en: ['Tarantula Nebula', 'star factory'], hans: ['蜘蛛星云', '恒星工厂'], hant: ['蜘蛛星雲', '恆星工廠'], ja: ['タランチュラ星雲', '星の工場'], ko: ['타란툴라 성운', '별 공장'] },
         info: {
           en: { type: 'Nebula · inside the LMC', facts: [['Type', 'Giant HII region'], ['Heart', 'R136 super cluster']], desc: 'The most furious star factory in the Local Group. At its core sits R136, a cluster packed with the most massive stars known — some 200 times the Sun’s mass. Were it as close to us as the Orion Nebula, it would cast shadows at night.', catalog: '30 Doradus' },
@@ -1704,7 +1723,7 @@
           ko: { type: '성운 · 대마젤란은하 내부', facts: [['종류', '거대 HII 영역'], ['중심', 'R136 초성단']], desc: '국부 은하군에서 가장 격렬한 별 공장입니다. 중심에는 R136 성단이 자리하며, 태양 질량의 약 200배에 이르는, 알려진 것 중 가장 무거운 별들이 모여 있습니다. 오리온 성운만큼 가까이 있다면 밤에 그림자를 드리울 만큼 밝을 것입니다.', catalog: '30 Doradus' }
         },
         img: 'images/tarantula.jpg', credit: 'ESA/Hubble & NASA, C. Murray, E. Sabbi' },
-      { parent: 'LMC', lp: new THREE.Vector3(44, -2, 46), feat: { kind: 'supernova' },
+      { parent: 'LMC', lp: new THREE.Vector3(-12, 0, -12), feat: { kind: 'supernova' },
         t: { en: ['SN 1987A', 'supernova of 1987'], hans: ['SN 1987A', '1987年的超新星'], hant: ['SN 1987A', '1987年的超新星'], ja: ['SN 1987A', '1987年の超新星'], ko: ['SN 1987A', '1987년의 초신성'] },
         info: {
           en: { type: 'Supernova remnant · inside the LMC', facts: [['Seen', '23 Feb 1987'], ['Legacy', 'nearest modern supernova']], desc: 'The closest supernova observed since the invention of the telescope. Its light — and a burst of neutrinos — swept past Earth in February 1987, and Hubble still watches its glowing ring flare as the blast wave slams into gas shed by the dying star.', catalog: 'SN 1987A' },
@@ -1714,7 +1733,7 @@
           ko: { type: '초신성 잔해 · 대마젤란은하 내부', facts: [['관측', '1987년 2월 23일'], ['의의', '현대의 가장 가까운 초신성']], desc: '망원경이 발명된 이후 관측된 가장 가까운 초신성입니다. 1987년 2월, 그 빛은 중성미자 폭발과 함께 지구를 스쳐 지나갔고, 허블은 지금도 충격파가 죽어가는 별이 내뿜은 가스와 충돌할 때마다 환하게 타오르는 빛의 고리를 지켜보고 있습니다.', catalog: 'SN 1987A' }
         },
         img: 'images/sn1987a.jpg', credit: 'ESA/Hubble & NASA' },
-      { parent: 'SMC', lp: new THREE.Vector3(32, 3, -22), feat: { kind: 'nebula', size: 0.8, color: 0xff8fc0, stars: 20 },
+      { parent: 'SMC', lp: new THREE.Vector3(-5, 2, 30), feat: { kind: 'nebula', size: 0.8, color: 0xff8fc0, stars: 20 },
         t: { en: ['NGC 346', 'stellar nursery'], hans: ['NGC 346', '恒星摇篮'], hant: ['NGC 346', '恆星搖籃'], ja: ['NGC 346', '星のゆりかご'], ko: ['NGC 346', '별의 요람'] },
         info: {
           en: { type: 'Star-forming region · inside the SMC', facts: [['Type', 'Young cluster + nebula'], ['Stars', '~2,500 infants']], desc: 'The brightest stellar nursery of the Small Magellanic Cloud — thousands of infant stars carving glowing arcs of gas. Its nearly primordial chemistry gives astronomers a window onto how stars formed in the early universe.', catalog: 'NGC 346' },
@@ -4633,11 +4652,20 @@
       var L = galaxyLODs[li], dst = camera.position.distanceTo(L.center); L.dst = dst; // cached for the feature LOD gate below
       L.pts.geometry.setDrawRange(0, Math.max(400, Math.floor(L.maxN * Math.min(1, Math.max(0.14, L.refDist / dst)) * perfScale)));
       L.mat.uniforms.uSize.value = L.baseSize * Math.min(3.2, Math.max(0.8, dst / L.refDist)) * renderer.getPixelRatio();
+      if (L.mat.uniforms.uCap) L.mat.uniforms.uCap.value = 34 * renderer.getPixelRatio(); // keeps the close-up star cap in sync if the perf watchdog drops pixelRatio
       if (!solarReducedMotion()) L.pts.quaternion.copy(L.q0).premultiply(galSpinTmp.setFromAxisAngle(L.axis, t * L.spin)); // spins in its own disc plane
     }
     for (var gvi = 0; gvi < galaxyVeils.length; gvi++) { // Magellanic gas veils breathe ±30% on long desynced periods (still under reduced motion)
       var GV = galaxyVeils[gvi];
-      GV.mat.opacity = GV.o * (solarReducedMotion() ? 1 : 1 + 0.3 * Math.sin(t * 6.2832 / GV.T + GV.ph));
+      var gvf = GV.hn ? Math.min(1, Math.max(0, (GV.lod.dst - GV.hn[0]) / (GV.hn[1] - GV.hn[0]))) : 1; // photo plates dissolve up close — the sampled particles carry the close-up
+      GV.mat.opacity = GV.o * gvf * (solarReducedMotion() ? 1 : 1 + GV.amp * Math.sin(t * 6.2832 / GV.T + GV.ph));
+      if (GV.dr && !solarReducedMotion()) GV.mat.rotation = GV.r0 + t * GV.dr; // slow filament crawl
+    }
+    for (var gli = 0; gli < galaxyVols.length; gli++) { // volumetric nebulae: face the camera, evolve imperceptibly
+      var GVL = galaxyVols[gli];
+      GVL.mesh.visible = perfScale > 0.3; // watchdog escape hatch — raymarch is the priciest decoration
+      GVL.mesh.lookAt(camera.position);
+      if (!solarReducedMotion()) GVL.mat.uniforms.uTime.value = t;
     }
     for (var ci = 0; ci < BEACONS.length; ci++) { // in-galaxy features: always on, but LOD-gated — hidden + not animated when sub-pixel at distance
       var cb = BEACONS[ci];
@@ -5136,12 +5164,60 @@
 
   var galaxyLODs = []; // {pts, mat, center, maxN, refDist, baseSize, q0, axis, spin} per particle galaxy — LOD + self-rotation each frame
   var galaxyVeils = []; // dreamy pastel gas veils (Magellanic Clouds) — slow desynced opacity breathing, updated in the frame loop
+  var galaxyVols = []; // raymarched volumetric nebulae — REAL gas clouds with depth/parallax, updated in the frame loop
+  var VEIL_TEX_LOADER = new THREE.TextureLoader(); // for real-photo plates (ESO/NOIRLab imagery, credited in THIRD-PARTY-NOTICES)
   var galSpinTmp = new THREE.Quaternion();
   (function galaxies() {
     // Each external-galaxy beacon carries a `stars` descriptor and is built as a real 3D
     // particle galaxy (spiral / ellipsoid / irregular), oriented in 3D on the far sky with
     // a bulge glow — real depth + resolved stars, with per-galaxy LOD by camera distance.
 
+    function buildVolumeNebula(P, q0, R, v) { // TRUE volumetric gas — raymarched 3D noise density, real depth + parallax while orbiting
+      var frag =
+        'uniform vec3 uCenter; uniform float uR; uniform float uFlat; uniform vec3 uHot; uniform float uHotW;' +
+        'uniform float uGain; uniform float uTime; uniform mat3 uBasis; uniform vec3 uColA; uniform vec3 uColB; varying vec3 vWorld;' +
+        'float h3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }' +
+        'float vn3(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);' +
+        ' float a = h3(i), b = h3(i + vec3(1,0,0)), c = h3(i + vec3(0,1,0)), d = h3(i + vec3(1,1,0));' +
+        ' float e = h3(i + vec3(0,0,1)), g = h3(i + vec3(1,0,1)), h = h3(i + vec3(0,1,1)), k = h3(i + vec3(1,1,1));' +
+        ' return mix(mix(mix(a,b,f.x), mix(c,d,f.x), f.y), mix(mix(e,g,f.x), mix(h,k,f.x), f.y), f.z); }' +
+        'float fbm3(vec3 p){ float s = 0.0, a = 0.55, q = 1.0; for (int o = 0; o < 3; o++){ s += a * vn3(p * q); a *= 0.5; q *= 2.15; } return s; }' +
+        'void main(){' +
+        ' vec3 rd = normalize(vWorld - cameraPosition); vec3 oc = cameraPosition - uCenter;' +
+        ' float RR = uR * 1.15; float b = dot(oc, rd); float c = dot(oc, oc) - RR * RR; float hh = b * b - c;' +
+        ' if (hh < 0.0) discard; float sh = sqrt(hh); float t0 = max(-b - sh, 0.0), t1 = -b + sh; if (t1 <= t0) discard;' +
+        ' float dj = h3(vec3(gl_FragCoord.xy * 0.37, 1.7)); float seg = (t1 - t0) / 26.0; vec3 col = vec3(0.0);' +
+        ' for (int i = 0; i < 26; i++){' +
+        '  vec3 p = cameraPosition + rd * (t0 + seg * (float(i) + dj));' +
+        '  vec3 q = uBasis * (p - uCenter) / uR; vec3 qf = vec3(q.x, q.y * uFlat, q.z);' +
+        '  float body = smoothstep(1.05, 0.2, length(qf));' +
+        '  if (body < 0.003) continue;' +
+        '  vec3 w = q * 1.35 + uTime * vec3(0.010, 0.006, 0.008);' +
+        '  vec3 warp = vec3(fbm3(w + 5.2), fbm3(w - 3.1), fbm3(w + 9.7));' +
+        '  float n = fbm3(q * 2.7 + 1.9 * warp);' +
+        '  float d = max(0.0, n - 0.44) * 2.7 * body;' +
+        '  if (d <= 0.0) continue;' +
+        '  float cn = fbm3(q * 1.15 + vec3(8.3, 2.1, 5.7) + uTime * vec3(0.004, 0.003, 0.005));' +
+        '  vec3 tint = mix(uColA, uColB, smoothstep(0.30, 0.70, cn));' + // warm heart → cyan-blue rim
+        '  float hw = uHotW * exp(-dot(q - uHot, q - uHot) * 7.0);' +
+        '  tint = mix(tint, vec3(1.0, 0.5, 0.68), clamp(hw, 0.0, 0.85)); d *= 1.0 + hw * 1.6;' + // rose boost wrapping 30 Dor
+        '  col += d * (0.35 + d * 1.2) * tint * seg;' +
+        ' }' +
+        ' col *= uGain / uR; if (max(col.r, max(col.g, col.b)) < 0.004) discard;' +
+        ' gl_FragColor = vec4(col, 1.0); }';
+      var basis = new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(q0.clone().invert()));
+      var vmat = new THREE.ShaderMaterial({
+        uniforms: { uCenter: { value: P.clone() }, uR: { value: R }, uFlat: { value: v.flat || 2.4 },
+          uHot: { value: new THREE.Vector3().fromArray(v.hot || [0, 0, 0]).divideScalar(R) }, uHotW: { value: v.hot ? 1.0 : 0.0 },
+          uGain: { value: v.gain || 1.0 }, uTime: { value: 0 }, uBasis: { value: basis },
+          uColA: { value: new THREE.Color(v.colA != null ? v.colA : 0x76b6d8) }, uColB: { value: new THREE.Color(v.colB != null ? v.colB : 0xe887ae) } },
+        vertexShader: 'varying vec3 vWorld; void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vWorld = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }',
+        fragmentShader: frag, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending
+      });
+      var vmesh = new THREE.Mesh(new THREE.PlaneGeometry(R * 2.4, R * 2.4), vmat); // camera-facing proxy quad; the shader marches the real ellipsoid behind it
+      vmesh.position.copy(P); vmesh.renderOrder = 6; scene.add(vmesh);
+      galaxyVols.push({ mesh: vmesh, mat: vmat });
+    }
     function buildGalaxyStars(P, o) {
       var TAU = 6.28318530718, N = Math.max(600, (o.count || 12000) | 0); // full LOD count; per-frame drawRange trims by distance
       var R = o.radius || 120, kind = o.kind || 'spiral';
@@ -5221,12 +5297,46 @@
       g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       g.setAttribute('aColor', new THREE.BufferAttribute(colA, 3));
       g.setAttribute('aScale', new THREE.BufferAttribute(scl, 1));
+      if (o.photo) (function (gg, NN) { // repaint the cloud from a real photograph once it loads: positions importance-sampled by brightness, colors straight from the pixels — crisp at ANY zoom, unlike a billboard
+        var im = new Image();
+        im.onload = function () {
+          var PS = 256, pc = document.createElement('canvas'); pc.width = pc.height = PS;
+          var px = pc.getContext('2d'); px.drawImage(im, 0, 0, PS, PS);
+          var idata = px.getImageData(0, 0, PS, PS).data;
+          var span = o.photo.span || R * 2, thick = o.photo.thick || R * 0.07;
+          var pa = gg.getAttribute('position'), ca = gg.getAttribute('aColor'), sa = gg.getAttribute('aScale');
+          var placed = 0, guard = 0;
+          while (placed < NN && guard++ < NN * 80) {
+            var u = Math.random(), v = Math.random();
+            var i4 = (((v * PS) | 0) * PS + ((u * PS) | 0)) * 4;
+            var lum = (idata[i4] + idata[i4 + 1] + idata[i4 + 2]) / 765;
+            if (Math.random() > Math.pow(lum, 2.2) + 0.002) continue;    // steep weighting: structure wins the particles, the flat star-field mostly loses
+            var j = placed * 3;
+            pa.array[j] = (u - 0.5) * span; pa.array[j + 1] = grand() * thick; pa.array[j + 2] = (v - 0.5) * span;
+            var bb = 0.6 + Math.random() * 0.35;
+            var cr = idata[i4] / 255, cg = idata[i4 + 1] / 255, cb2 = idata[i4 + 2] / 255, cl = (cr + cg + cb2) / 3;
+            var csat = Math.max(cr, cg, cb2) - Math.min(cr, cg, cb2);
+            if (csat < 0.07) { // colourless = foreground star (small pin) → stellar palette: 50% blue-white / 30% blue / 10% yellow / 10% red
+              var pst = Math.random(), st = pst < 0.5 ? [0.88, 0.93, 1.0] : (pst < 0.8 ? [0.6, 0.75, 1.0] : (pst < 0.9 ? [1.0, 0.87, 0.58] : [1.0, 0.5, 0.4]));
+              ca.array[j] = st[0] * bb; ca.array[j + 1] = st[1] * bb; ca.array[j + 2] = st[2] * bb;
+              sa.array[placed] = 0.25 + Math.random() * 0.45;
+            } else {
+              ca.array[j] = Math.max(0, cl + (cr - cl) * 1.6) * bb; ca.array[j + 1] = Math.max(0, cl + (cg - cl) * 1.6) * bb; ca.array[j + 2] = Math.max(0, cl + (cb2 - cl) * 1.6) * bb; // saturation push — keep the photo's warm bar / pink HII / blue clusters from washing to white
+              if (cr > cg && cr > cb2 && Math.random() < 0.18) { ca.array[j] = 1.0 * bb; ca.array[j + 1] = 0.42 * bb; ca.array[j + 2] = 0.36 * bb; sa.array[placed] = 0.9 + Math.random() * 0.7; } // red-leaning gas pixel → a ruby star decorating the red cloud
+              else sa.array[placed] = (lum > 0.6 && Math.random() < 0.08) ? 1.5 + Math.random() : 0.5 + Math.random() * 1.0; // colourful = nebular knot (fat glow), sparse bright ones sparkle
+            }
+            placed++;
+          }
+          pa.needsUpdate = ca.needsUpdate = sa.needsUpdate = true;
+        };
+        im.src = o.photo.src;
+      })(g, N);
       var gmat = new THREE.ShaderMaterial({
-        uniforms: { uSize: { value: (o.pointSize || 1.9) * renderer.getPixelRatio() } },
-        vertexShader: 'uniform float uSize; attribute float aScale; attribute vec3 aColor; varying vec3 vColor;' +
+        uniforms: { uSize: { value: (o.pointSize || 1.9) * renderer.getPixelRatio() }, uCap: { value: 34 * renderer.getPixelRatio() } },
+        vertexShader: 'uniform float uSize; uniform float uCap; attribute float aScale; attribute vec3 aColor; varying vec3 vColor;' +
           'void main(){ vec4 mp = modelMatrix * vec4(position,1.0); vec4 vp = viewMatrix * mp; gl_Position = projectionMatrix * vp;' +
-          ' gl_PointSize = uSize * aScale * (300.0 / -vp.z); vColor = aColor; }',
-        fragmentShader: GLOW_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+          ' gl_PointSize = min(uSize * aScale * (300.0 / -vp.z), uCap); vColor = aColor; }', // cap: a close fly-by magnifies stars into crisp points, not screen-filling cotton
+        fragmentShader: STAR_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
       });
       var pts = new THREE.Points(g, gmat);
       pts.frustumCulled = false;
@@ -5247,13 +5357,16 @@
       bulge(R * (o.coreSize || 0.2), o.coreOpacity || 0.9, o.core || 0xfff1dc);   // bright nucleus
       if (o.halo2Size) bulge(R * o.halo2Size, o.halo2Opacity || 0.07, o.halo2 || 0xfdf6ea); // extra faint extended envelope — stacked gaussians ≈ smooth edgeless falloff (Sombrero)
       if (o.nucleusSize) { bulge(R * o.nucleusSize * 1.9, 0.9, o.nucleus || 0xfffdf6); bulge(R * o.nucleusSize, 1.0, 0xffffff); } // a single blazing nucleus body — outshines the particle grain at the very centre
+      var lodRef = galaxyLODs[galaxyLODs.length - 1];
       if (o.veils) for (var vi = 0; vi < o.veils.length; vi++) { // dreamy pastel gas veils — large faint additive blobs; depth comes from stacking thin layers, never one dense one
         var V = o.veils[vi];
-        var vsp = new THREE.Sprite(new THREE.SpriteMaterial({ map: BULGE_TEX, color: new THREE.Color(V.hex), transparent: true, opacity: V.op, depthWrite: false, blending: THREE.AdditiveBlending }));
+        var vmap = V.img != null ? VEIL_TEX_LOADER.load(V.img) : (V.wisp != null ? wispTexture(V.wisp) : BULGE_TEX); // real-photo plate > procedural strands > smooth glow
+        var vsp = new THREE.Sprite(new THREE.SpriteMaterial({ map: vmap, color: new THREE.Color(V.hex), transparent: true, opacity: V.op, rotation: V.rot || 0, depthWrite: false, blending: THREE.AdditiveBlending }));
         vsp.position.set(V.x || 0, V.y || 0, V.z || 0); vsp.scale.set(V.sz, V.sz * (V.flat || 1), 1); // flat<1 squashes the blob into a lens — reads as a disc, not a ball
         pts.add(vsp); // child of the particle cloud — co-rotates, stays glued to the bar and the in-galaxy LOD features (same frame as kid-beacon lp)
-        galaxyVeils.push({ mat: vsp.material, o: V.op, T: V.T || 18, ph: vi * 2.6 });
+        galaxyVeils.push({ mat: vsp.material, o: V.op, T: V.T || 18, ph: vi * 2.6, r0: V.rot || 0, dr: V.drift || 0, amp: V.amp != null ? V.amp : 0.3, lod: lodRef, hn: V.hideNear ? [R * 1.4, R * 2.4] : null }); // drift: filaments crawl imperceptibly; amp: photo plates breathe gently
       }
+      if (o.vol) buildVolumeNebula(P, q0, R, o.vol); // the real gas — raymarched volume sharing this disc's orientation
       if (o.dustBand) { // a real dark dust lane lying in the disc plane, darkening the bulge/stars behind it
         var ringLane = o.dustBand === 'ring'; // 'ring' = Sombrero-style dust-torus rim; true = centred dark sheet (Cen A)
         var dl = document.createElement('canvas'); dl.width = dl.height = 128; var dcx = dl.getContext('2d');
@@ -5306,7 +5419,7 @@
       return new THREE.Points(g, new THREE.ShaderMaterial({
         uniforms: { uSize: { value: 2.4 * renderer.getPixelRatio() } },
         vertexShader: 'uniform float uSize; attribute float aScale; attribute vec3 aColor; varying vec3 vColor; void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp; gl_PointSize = uSize * aScale * (300.0/-vp.z); vColor = aColor; }',
-        fragmentShader: GLOW_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+        fragmentShader: STAR_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
       }));
     }
     var SMOKE_TEXS = null;
