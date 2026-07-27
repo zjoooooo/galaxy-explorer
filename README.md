@@ -15,10 +15,10 @@ An interactive, procedurally-generated **Milky Way galaxy** — with a full 3D
 entirely in the browser with WebGL (three.js). No backend, no build step, no
 dependencies to install, no API keys — just open the page and explore.
 
-The galaxy itself is generated in code at load time: **no image assets** — the
-spiral arms, nebula gas, star clusters, distant galaxies and supernovae are all
-math. The Solar System layers real NASA-based surface textures on top for the
-planets, moons and Sun.
+The galaxy itself is generated in code at load time — the spiral arms, nebula
+gas, star clusters, distant galaxies and supernovae are all math, and the galaxy
+scene uses no textures. The Solar System, constellation sky and info cards layer
+real NASA / photographic imagery on top.
 
 **Free for any use** — personal, commercial, academic and teaching — under the
 [MIT License](LICENSE).
