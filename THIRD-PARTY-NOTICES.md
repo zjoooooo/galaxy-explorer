@@ -191,3 +191,4 @@ All 18 card photos come from one source family: NASA mission photography, via Wi
 
 - `images/lmc-plate.png` — Zdeněk Bardon/ESO (Large Magellanic Cloud) · CC BY 4.0 · cropped, pastel-graded, edge-feathered · [source](https://commons.wikimedia.org/wiki/File:Large_Magellanic_Cloud_(magellan-ch17-bardon-cc).jpg)
 - `images/smc-plate.png` — NOIRLab/NSF/AURA/P. Horálek (Institute of Physics in Opava) (Small Magellanic Cloud) · CC BY 4.0 · cropped, pastel-graded, edge-feathered · [source](https://commons.wikimedia.org/wiki/File:The_Small_Magellanic_Cloud_from_Cerro_Pach%C3%B3n_(iotw2615a).jpg)
+- `images/cena-plate.png` — ESO (Centaurus A, NGC 5128) · CC BY 4.0 · cropped, rotated, graded, edge-feathered (particle-sampling source) · [source](https://commons.wikimedia.org/wiki/File:Centaurus_A.jpg)
