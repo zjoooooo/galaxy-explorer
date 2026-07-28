@@ -20,8 +20,10 @@ spiral arms, nebula gas, star clusters, distant galaxies and supernovae are all
 math. The Solar System layers real NASA-based surface textures on top for the
 planets, moons and Sun.
 
-**Free for any use** — personal, commercial, academic and teaching — under the
-[MIT License](LICENSE).
+**Free for study, teaching and research** — personal projects, classrooms,
+universities and museums — under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). Commercial use requires a
+separate licence; please [open an issue](https://github.com/zjoooooo/galaxy-explorer/issues) to arrange one.
 
 
 ## ✨ Features
@@ -195,13 +197,23 @@ to be learned from and built on.
 - Test your change by serving the folder and opening it in a browser; there is no
   build or test suite to run.
 
-By contributing you agree that your contributions are licensed under the MIT
-License.
+By contributing you agree that your contributions are licensed under the
+PolyForm Noncommercial License 1.0.0.
 
 ## 📄 License
 
-[MIT](LICENSE) — free for any use, including commercial and educational.
+[PolyForm Noncommercial 1.0.0](LICENSE) — free for any **noncommercial**
+purpose: personal study, hobby projects, classroom teaching, academic research,
+and use by schools, museums, planetariums and other noncommercial institutions.
 Attribution is appreciated but not required.
 
+**Commercial use requires a separate licence.** Please
+[open an issue](https://github.com/zjoooooo/galaxy-explorer/issues) to arrange one.
+
+Releases up to and including `v2.2.0` were published under the MIT License and
+remain available under those terms.
+
 three.js and its example modules (bundled under `vendor/`) are © the three.js
-authors, also under the MIT License.
+authors under the MIT License, and the bundled astronomy photography carries its
+own licences — see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Those terms
+are unaffected by this project's licence.

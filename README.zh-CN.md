@@ -13,7 +13,8 @@ https://zjoooooo.github.io/galaxy-explorer/
 远处的星系和超新星，全都是数学运算的结果。太阳系则在此之上为行星、卫星和
 太阳叠加了基于真实 NASA 数据的表面纹理。
 
-**可自由用于任何用途**——个人、商业、学术与教学——遵循 [MIT 许可证](LICENSE)。
+**可自由用于学习、教学与研究**——个人项目、课堂、高校与博物馆——遵循
+[PolyForm 非商业许可证 1.0.0](LICENSE)。商业用途需另行获得授权，请[提交 issue](https://github.com/zjoooooo/galaxy-explorer/issues)洽谈。
 
 
 ## ✨ 特性
@@ -170,11 +171,18 @@ var MUSIC_TRACKS = ['ambient 1.mp3', 'ambient 2.mp3'];
 - **尽量保持无依赖、单文件**——这正是它易于学习、易于放进任何项目的原因。
 - 通过托管文件夹并在浏览器中打开来测试你的修改；没有需要运行的构建或测试套件。
 
-提交贡献即表示你同意你的贡献以 MIT 许可证授权。
+提交贡献即表示你同意你的贡献以 PolyForm 非商业许可证 1.0.0 授权。
 
 ## 📄 许可证
 
-[MIT](LICENSE) — 可自由用于任何用途，包括商业和教育。欢迎署名但不强制。
+[PolyForm 非商业许可证 1.0.0](LICENSE) — 可自由用于任何**非商业**用途：个人学习、
+业余项目、课堂教学、学术研究，以及学校、博物馆、天文馆等非营利机构的使用。欢迎署名
+但不强制。
 
-three.js 及其示例模块（打包在 `vendor/` 下）版权归 three.js 作者所有，同样遵循
-MIT 许可证。
+**商业用途需另行获得授权。**请[提交 issue](https://github.com/zjoooooo/galaxy-explorer/issues)洽谈。
+
+`v2.2.0` 及更早的版本以 MIT 许可证发布，这些版本仍可按 MIT 条款使用。
+
+three.js 及其示例模块（打包在 `vendor/` 下）版权归 three.js 作者所有，遵循 MIT
+许可证；随附的天文摄影作品各有其许可条款，详见
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。本项目的许可证不影响这些条款。
