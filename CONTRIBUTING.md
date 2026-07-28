@@ -36,4 +36,4 @@ New ambient effects · additional galaxy morphologies · a UI settings panel ·
 colour themes · mobile/touch and VR support · performance tuning · accessibility.
 
 By contributing you agree your work is licensed under the project's
-[MIT License](LICENSE).
+[PolyForm Noncommercial License 1.0.0](LICENSE).
