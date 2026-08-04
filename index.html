@@ -2016,11 +2016,48 @@
     dwarf: new THREE.MeshPhongMaterial({ shininess: 4, specular: 0x111111 }),
     sun: new THREE.MeshBasicMaterial({ color: 0xffd36b })
   };
+  // The corona as an eclipse photograph shows it: a pearl-white ring pressed against the limb,
+  // feathering outward into a warm haze. Brightness piles up where the BackSide shell turns edge-on,
+  // so the ring hugs the disc from every angle — no billboarding — and the Sun's own disc occludes
+  // the near half, leaving exactly the annulus. Angular striations stand in for coronal streamers.
   var solarCoronaMaterial = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(0xffbf57) } },
-    transparent: true, depthWrite: false, side: THREE.BackSide,
-    vertexShader: 'varying vec3 vNormal; void main(){ vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; varying vec3 vNormal; void main(){ float edge = pow(1.0 - abs(vNormal.z), 2.0); float pulse = 0.72 + sin(uTime * 1.7) * 0.12; gl_FragColor = vec4(uColor, edge * pulse * 0.24 * uOpacity); }'
+    uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(0xffbf57) },
+      uRing: { value: new THREE.Color(0xfffdf7) }, uCool: { value: new THREE.Color(0xc3dcff) }, uShell: { value: 1.9 } },
+    transparent: true, depthWrite: false, side: THREE.BackSide, blending: THREE.AdditiveBlending,
+    vertexShader: [
+      'uniform float uShell; varying vec3 vObj; varying float vR;',
+      'void main(){',
+      '  vObj = normal;',
+      '  vec4 mvP = modelViewMatrix * vec4(position, 1.0);',
+      '  vec4 mvC = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);',
+      '  vec4 clipP = projectionMatrix * mvP, clipC = projectionMatrix * mvC;',
+      // measure the radius the fragment ACTUALLY lands at on screen: the far hemisphere sits
+      // deeper than the disc, so a view-space offset would read ~35% too large after the
+      // perspective divide. Undo the projection's x/y scales to get a plain angular radius.
+      '  vec2 dn = clipP.xy / clipP.w - clipC.xy / clipC.w;',
+      '  dn.x /= projectionMatrix[0][0]; dn.y /= projectionMatrix[1][1];',
+      '  float discR = length(modelViewMatrix[0].xyz) / uShell;',
+      '  vR = length(dn) * (-mvC.z) / max(discR, 0.0001);',                      // projected radius, measured in DISC radii
+      '  gl_Position = clipP; }'
+    ].join('\n'),
+    fragmentShader: [
+      'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; uniform vec3 uRing; uniform vec3 uCool;',
+      'varying vec3 vObj; varying float vR;',
+      'void main(){',
+      '  vec3 n = normalize(vObj);',
+      '  float lon = atan(n.z, n.x), lat = asin(clamp(n.y, -1.0, 1.0));',
+      '  float d = max(vR - 1.0, 0.0);',                                             // height above the limb, in disc radii
+      '  float ring = exp(-d * 15.0);',                                              // pearl ring pressed on the limb
+      '  float haze = exp(-d * 3.0);',                                               // broad warm feather, gone before the shell edge
+      '  float fine = 0.60 + 0.40 * sin(lon * 33.0 + lat * 6.0 + uTime * 0.07);',    // fine streamer striations
+      '  float broad = 0.74 + 0.26 * sin(lon * 12.0 - lat * 4.0 - uTime * 0.05);',
+      '  float helmet = 0.84 + 0.16 * sin(lon * 3.0 + lat * 1.5 + uTime * 0.02);',   // a few broad helmet streamers
+      '  float streamers = (0.58 + 0.42 * fine * broad) * helmet;',
+      '  float pulse = 0.90 + sin(uTime * 1.7) * 0.05;',
+      '  float a = (ring * 1.75 * streamers + haze * 0.10) * pulse * uOpacity;',
+      '  vec3 color = mix(uColor, mix(uCool, uRing, ring), min(ring * 1.35, 1.0));', // warm haze → cool white at the ring
+      '  gl_FragColor = vec4(color, min(a, 1.0)); }'
+    ].join('\n')
   });
   var solarSunGlows = [];
   function solarAtmosphereMaterial(colorHex, falloff, intensity) {
@@ -2047,9 +2084,9 @@
     var material = new THREE.ShaderMaterial({
       uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: new THREE.Color(0xffd36b) }, uMap: { value: null }, uHasMap: { value: 0 } },
       transparent: true,
-      vertexShader: 'varying vec3 vNormal; varying float vViewZ; varying vec2 vUv; varying float vCamDist; void main(){ vNormal = normal; vViewZ = normalize(normalMatrix * normal).z; vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); vCamDist = length(mv.xyz); gl_Position = projectionMatrix * mv; }',
+      vertexShader: 'varying vec3 vNormal; varying float vViewZ; varying vec2 vUv; void main(){ vNormal = normal; vViewZ = normalize(normalMatrix * normal).z; vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; }',
       fragmentShader: [
-        'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; uniform sampler2D uMap; uniform float uHasMap; varying vec3 vNormal; varying float vViewZ; varying vec2 vUv; varying float vCamDist;',
+        'uniform float uTime; uniform float uOpacity; uniform vec3 uColor; uniform sampler2D uMap; uniform float uHasMap; varying vec3 vNormal; varying float vViewZ; varying vec2 vUv;',
         'float spot(vec3 n, vec3 c, float s, float t, float k){',
         '  float d = 1.0 - dot(n, c);',
         '  vec3 e1 = normalize(cross(c, vec3(0.0, 1.0, 0.0))); vec3 e2 = cross(c, e1);',
@@ -2076,7 +2113,6 @@
         '  vec2 wob = vec2(sin(vUv.y * 34.0 + uTime * 0.7), cos(vUv.x * 30.0 - uTime * 0.55)) * 0.0018;',
         '  vec3 tex = texture2D(uMap, vUv + wob + vec2(uTime * 0.0025, 0.0)).rgb * 1.04;',
         '  vec3 base = mix(uColor * (0.94 + granule * 0.1), tex, uHasMap);',
-        '  base = mix(base, uColor, smoothstep(45.0, 170.0, vCamDist) * 0.92);', // the map's low mips run dark red — hold the far disc at one constant warm color
         '  gl_FragColor = vec4(base * limb * spots, uOpacity); }'
       ].join('\n')
     });
@@ -2086,6 +2122,7 @@
   var solarProminences = null, solarCME = null, solarForceProminenceUpdate = false;
   var solarRingFx = null, solarRingQuat = new THREE.Quaternion(); // Saturn's analytic ring/planet shadow rig
   var solarSunOcclusion = { frame: 0, target: 1, value: 1 }; // eclipse blackout: sun glows fade behind an occluding planet
+  var solarSunFxDim = 1; // close-up-only sun FX (corona/prominences/CME) fade out as the disc shrinks to a dot
   var solarTrojans = null, solarJupiterShadow = null, solarEarthPatch = null, solarPromFrame = 0;
   var solarArrivalSpin = null, solarIdleSince = videoNow(); // orbital settle on arrival + idle attract drift
   function solarFlareShellMaterial() {
@@ -2212,8 +2249,8 @@
   }
   function makeSolarCoreLayers(radius, parent) {
     var layers = [
-      { color: 0xfffdf6, scale: 2.7, opacity: 0.6 },
-      { color: 0xfff3da, scale: 3.6, opacity: 0.38 },
+      { color: 0xfffdf6, scale: 2.1, opacity: 0.30 },
+      { color: 0xfff3da, scale: 3.4, opacity: 0.26 },
       { color: 0xffcf78, scale: 5.0, opacity: 0.2 },
       { color: 0xff9b3f, scale: 6.8, opacity: 0.09 }
     ];
@@ -2249,6 +2286,10 @@
       var object = SOLAR_OBJECTS[body.id];
       if (body.id === 'sun') {
         solarSunGlows = makeSolarCoreLayers(radius, lodGroup);
+        var corona = new THREE.Mesh(solarSphereHigh, solarCoronaMaterial); // the ring lives between the disc and the prominence shell
+        corona.scale.set(radius * 1.9, radius * 1.9, radius * 1.9); // matches uShell so the shader knows its own reach
+        corona.userData.solarId = 'sun'; lodGroup.add(corona);
+        object.specialty.corona = corona;
         var prominences = new THREE.Mesh(solarSphereHigh, solarFlareShellMaterial());
         prominences.scale.set(radius * 1.06, radius * 1.06, radius * 1.06);
         prominences.userData.solarId = 'sun'; lodGroup.add(prominences);
@@ -2736,7 +2777,26 @@
     }
     solarSunOcclusion.value += (solarSunOcclusion.target - solarSunOcclusion.value) * 0.12;
     var visibleShare = solarSunOcclusion.value;
-    solarSunGlows.forEach(function (layer) { layer.sprite.material.opacity = layer.baseOpacity * visibleShare; });
+    // Once the Sun shrinks to a dot, the additive halo + corona pile their whole energy onto a few
+    // pixels and bloom smears it into a white blob. Fade them with apparent size so the disc's own
+    // granulation keeps reading from the system overview.
+    var sunObj = SOLAR_OBJECTS.sun;
+    var apparent = sunObj ? sunObj.mesh.scale.x / Math.max(solarCamera.position.length(), 1) : 1;
+    var farDim = Math.max(0.0, Math.min(1, (apparent - 0.030) / 0.045));
+    solarSunGlows.forEach(function (layer) { layer.sprite.material.opacity = layer.baseOpacity * visibleShare * farDim; });
+    // Corona, prominences and CME are all close-up features. Shrunk to a dot they stop reading as
+    // structure and just dump additive light onto the disc — which bloom then smears into a yellow
+    // blob (worst during a prominence storm, hence the intermittent flashes). Fade them with
+    // apparent size so the photosphere's own orange survives every zoom level.
+    solarSunFxDim = Math.max(0.0, Math.min(1, (apparent - 0.030) / 0.070));
+    var fx = visibleShare * solarSunFxDim;
+    if (sunObj && sunObj.specialty.corona) sunObj.specialty.corona.material.uniforms.uOpacity.value = fx;
+    if (sunObj && sunObj.specialty.prominences) sunObj.specialty.prominences.material.uniforms.uOpacity.value = fx;
+    var promFlow = sunObj && sunObj.specialty.prominenceFlow;
+    if (promFlow) {
+      if (promFlow.userData.baseOpacity == null) promFlow.userData.baseOpacity = promFlow.material.opacity;
+      promFlow.material.opacity = promFlow.userData.baseOpacity * fx;
+    }
   }
   function updateSolarCameraLife() { // 3s decaying orbit-insertion sweep on arrival; slow attract drift when idle
     var now = videoNow(), spinning = false;
@@ -2832,7 +2892,7 @@
               positions[index * 3] = r * cl * Math.cos(lon); positions[index * 3 + 1] = r * Math.sin(lat); positions[index * 3 + 2] = r * cl * Math.sin(lon);
             });
             solarCME.points.geometry.attributes.position.needsUpdate = true;
-            solarCME.points.material.opacity = 0.85 * Math.pow(1 - life, 1.5); // thins out as the plume disperses
+            solarCME.points.material.opacity = 0.85 * Math.pow(1 - life, 1.5) * solarSunFxDim; // thins out as the plume disperses; gone once the Sun is a dot
           }
         }
         if (solarCME.auroraT0 != null && SOLAR_OBJECTS.earth && SOLAR_OBJECTS.earth.specialty.auroraN) {
