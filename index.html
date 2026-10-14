@@ -52,7 +52,10 @@
   #solarstrip i, #galaxystrip i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
   #galaxystrip button.sel { border-color: #9cc0ff; color: #fff; background: rgba(30,42,68,.9); }
   button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid #9cc0ff; outline-offset: 3px; }
-  #skylabels, #solarlabels { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+  /* clip — a label straddling the screen edge must not widen the mobile layout viewport: labels are placed from
+     innerWidth/innerHeight, so any overflow fed back into ever-wider placement (375 → 1500 px). 'clip' rather than
+     'hidden' so the layer never becomes a scroll container that focus/find-in-page could shift off the canvas */
+  #skylabels, #solarlabels { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; overflow: clip; }
   .skylabel { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
     font-size: 13px; letter-spacing: .08em; color: #cfe0ff; white-space: nowrap; text-align: center;
     text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(120,170,255,.45); transition: opacity .2s ease; }
@@ -70,7 +73,7 @@
   /* location beacons: borderless glow-dot + pulse rings + floating label (no boxes, no borders) */
   /* absolute (not fixed): under Safari pinch/page-zoom, fixed layers detach from the
      canvas while absolute ones transform with the content and stay glued to the galaxy */
-  #beacons { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+  #beacons { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; overflow: clip; }
   .beacon { position: absolute; --bc: #8fc2ff; text-align: center; transform: translate(-50%, -7px);
     display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .beacon.up { flex-direction: column-reverse; transform: translate(-50%, calc(-100% + 7px)); } /* label above the dot — avoids pile-ups in the crowded solar neighbourhood */
@@ -196,7 +199,7 @@
 
 <button id="skyback" class="overlay" type="button" aria-label="← Back to Galaxy">← Back to Galaxy</button>
 <button id="solarback" class="overlay" type="button" aria-label="← Back to Galaxy">← Back to Galaxy</button>
-<div id="solarlabels" aria-live="polite" style="display:none"><div id="solarstrip" role="group" aria-label="Bodies"></div><div id="solartime" role="group" aria-label="Time speed"><button type="button" data-scale="0" aria-label="Pause">⏸</button><button type="button" data-scale="1" class="on" aria-label="Normal speed">1×</button><button type="button" data-scale="16" aria-label="16x speed">16×</button><button type="button" data-scale="128" aria-label="128x speed">128×</button><button type="button" id="solarscale" aria-label="True scale">⚖︎</button></div></div>
+<div id="solarlabels" style="display:none"><div id="solarstrip" role="group" aria-label="Bodies"></div><div id="solartime" role="group" aria-label="Time speed"><button type="button" data-scale="0" aria-label="Pause">⏸</button><button type="button" data-scale="1" class="on" aria-label="Normal speed">1×</button><button type="button" data-scale="16" aria-label="16x speed">16×</button><button type="button" data-scale="128" aria-label="128x speed">128×</button><button type="button" id="solarscale" aria-label="True scale">⚖︎</button></div></div>
 
 <div id="msg" class="overlay"></div>
 <div id="scalecmp" role="dialog" aria-modal="true" aria-label="True sizes"><button id="scalecmp-close" type="button" aria-label="Close">×</button><h3></h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1820 560"></svg><div class="note"></div></div>
@@ -1600,7 +1603,7 @@
         info: { en:{"type":"Red hypergiant","distance":"~5,100 light-years","constellation":"Scutum","facts":[["Radius","~750× the Sun (Gaia-revised)"],["Volume","~400 million Suns"]],"desc":"UY Scuti is a colossal red hypergiant roughly 750 times wider than the Sun. If it replaced the Sun at the center of our solar system, its glowing surface would engulf the orbits of Mercury, Venus, Earth, and Mars. It was long billed as the largest star known, until Gaia's sharper distance measurement trimmed its estimated size.","catalog":"UY Sct"}, hans:{"type":"红特超巨星","distance":"约 5,100 光年","constellation":"盾牌座","facts":[["半径","约为太阳的 750 倍（依 Gaia 修订）"],["体积","约 4 亿个太阳"]],"desc":"盾牌座UY是一颗巨大的红特超巨星，直径约为太阳的 750 倍。如果把它放在太阳的位置，它炙热的表面会吞没水星、金星、地球和火星的轨道。它曾长期被称为已知最大的恒星，直到盖亚卫星更精确的距离测量将其估算尺寸下调。","catalog":"UY Sct"}, hant:{"type":"紅特超巨星","distance":"約 5,100 光年","constellation":"盾牌座","facts":[["半徑","約為太陽的 750 倍（依 Gaia 修訂）"],["體積","約 4 億個太陽"]],"desc":"盾牌座UY是一顆巨大的紅特超巨星，直徑約為太陽的 750 倍。如果把它放在太陽的位置，它熾熱的表面會吞沒水星、金星、地球和火星的軌道。它曾長期被稱為已知最大的恆星，直到蓋亞衛星更精確的距離測量將其估算尺寸下調。","catalog":"UY Sct"}, ja:{"type":"赤色極超巨星","distance":"約5,100光年","constellation":"たて座","facts":[["半径","太陽の約750倍（Gaia改訂値）"],["体積","太陽約4億個分"]],"desc":"たて座UY星は太陽の約750倍もの大きさをもつ巨大な赤色極超巨星です。もし太陽の位置に置けば、その輝く表面は水星・金星・地球・火星の軌道まで飲み込んでしまいます。長らく既知最大の恒星とされてきましたが、ガイア衛星のより精密な距離測定により、推定サイズは下方修正されました。","catalog":"UY Sct"}, ko:{"type":"적색 극대거성","distance":"약 5,100광년","constellation":"방패자리","facts":[["반지름","태양의 약 750배 (가이아 수정값)"],["부피","태양 약 4억 개"]],"desc":"방패자리 UY는 지름이 태양의 약 750배에 이르는 거대한 적색 극대거성입니다. 만약 태양 자리에 놓는다면 그 이글거리는 표면이 수성, 금성, 지구, 화성의 궤도까지 삼켜 버립니다. 오랫동안 알려진 가장 큰 별로 불렸지만, 가이아 위성의 더 정밀한 거리 측정으로 추정 크기가 하향 조정되었습니다.","catalog":"UY Sct"} } },
       { p: galPos(69.5, -47.2, 0.0409),
         t: {"en":["TRAPPIST-1"],"hans":["TRAPPIST-1"],"hant":["TRAPPIST-1"],"ja":["トラピスト1"],"ko":["트라피스트-1"]},
-        info: { en:{"type":"Ultracool red dwarf star","distance":"~40 light-years","constellation":"Aquarius","facts":[["Planets","7 (all Earth-size)"],["In habitable zone","3-4"]],"desc":"This dim, ultracool red dwarf is circled by seven roughly Earth-size planets — more than are known around any other single star. Three or four of them orbit within the habitable zone, where liquid water could exist. That makes TRAPPIST-1 the richest known laboratory for studying potentially habitable worlds.","catalog":"TRAPPIST-1"}, hans:{"type":"超冷红矮星","distance":"约 40 光年","constellation":"宝瓶座","facts":[["行星数量","7 颗（均为地球大小）"],["宜居带内","3–4 颗"]],"desc":"这颗昏暗的超冷红矮星拥有七颗与地球大小相近的行星，是目前已知单颗恒星周围行星数量最多的系统。其中三到四颗位于可能存在液态水的宜居带内。这使 TRAPPIST-1 成为研究潜在宜居世界最丰富的天然实验室。","catalog":"TRAPPIST-1"}, hant:{"type":"超冷紅矮星","distance":"約 40 光年","constellation":"寶瓶座","facts":[["行星數量","7 顆（均為地球大小）"],["宜居帶內","3–4 顆"]],"desc":"這顆昏暗的超冷紅矮星擁有七顆與地球大小相近的行星，是目前已知單一恆星周圍行星數量最多的系統。其中三到四顆位於可能存在液態水的宜居帶內。這使 TRAPPIST-1 成為研究潛在宜居世界最豐富的天然實驗室。","catalog":"TRAPPIST-1"}, ja:{"type":"超低温の赤色矮星","distance":"約40光年","constellation":"みずがめ座","facts":[["惑星の数","7個（すべて地球サイズ）"],["ハビタブルゾーン内","3〜4個"]],"desc":"この暗く低温の赤色矮星の周りには、地球とほぼ同じ大きさの惑星が7個も回っており、単一の恒星の周囲としては知られる中で最多です。そのうち3〜4個は液体の水が存在しうるハビタブルゾーンに位置しています。トラピスト1は、生命を宿しうる世界を研究するうえで最も恵まれた天然の実験場です。","catalog":"TRAPPIST-1"}, ko:{"type":"극저온 적색왜성","distance":"약 40광년","constellation":"물병자리","facts":[["행성 수","7개 (모두 지구 크기)"],["생명체 거주가능 영역 내","3~4개"]],"desc":"이 어둡고 극저온인 적색왜성 주위에는 지구와 비슷한 크기의 행성이 7개나 돌고 있으며, 이는 하나의 항성 주위로는 알려진 것 중 가장 많은 수입니다. 그중 3~4개는 액체 물이 존재할 수 있는 생명체 거주가능 영역에 놓여 있습니다. 이 덕분에 트라피스트-1은 잠재적 거주 가능 행성을 연구하기에 가장 풍부한 자연 실험실입니다.","catalog":"TRAPPIST-1"} } },
+        info: { en:{"type":"Ultracool red dwarf star","distance":"~40 light-years","constellation":"Aquarius","facts":[["Planets","7 (all Earth-size)"],["In habitable zone","3-4"]],"desc":"This dim, ultracool red dwarf is circled by seven roughly Earth-size planets — more Earth-size worlds than are known around any other single star. Three or four of them orbit within the habitable zone, where liquid water could exist. That makes TRAPPIST-1 the richest known laboratory for studying potentially habitable worlds.","catalog":"TRAPPIST-1"}, hans:{"type":"超冷红矮星","distance":"约 40 光年","constellation":"宝瓶座","facts":[["行星数量","7 颗（均为地球大小）"],["宜居带内","3–4 颗"]],"desc":"这颗昏暗的超冷红矮星拥有七颗与地球大小相近的行星，是目前已知拥有地球大小行星最多的单星系统。其中三到四颗位于可能存在液态水的宜居带内。这使 TRAPPIST-1 成为研究潜在宜居世界最丰富的天然实验室。","catalog":"TRAPPIST-1"}, hant:{"type":"超冷紅矮星","distance":"約 40 光年","constellation":"寶瓶座","facts":[["行星數量","7 顆（均為地球大小）"],["宜居帶內","3–4 顆"]],"desc":"這顆昏暗的超冷紅矮星擁有七顆與地球大小相近的行星，是目前已知擁有地球大小行星最多的單一恆星系統。其中三到四顆位於可能存在液態水的宜居帶內。這使 TRAPPIST-1 成為研究潛在宜居世界最豐富的天然實驗室。","catalog":"TRAPPIST-1"}, ja:{"type":"超低温の赤色矮星","distance":"約40光年","constellation":"みずがめ座","facts":[["惑星の数","7個（すべて地球サイズ）"],["ハビタブルゾーン内","3〜4個"]],"desc":"この暗く低温の赤色矮星の周りには、地球とほぼ同じ大きさの惑星が7個も回っており、単一の恒星を回る地球サイズの惑星の数としては知られる中で最多です。そのうち3〜4個は液体の水が存在しうるハビタブルゾーンに位置しています。トラピスト1は、生命を宿しうる世界を研究するうえで最も恵まれた天然の実験場です。","catalog":"TRAPPIST-1"}, ko:{"type":"극저온 적색왜성","distance":"약 40광년","constellation":"물병자리","facts":[["행성 수","7개 (모두 지구 크기)"],["생명체 거주가능 영역 내","3~4개"]],"desc":"이 어둡고 극저온인 적색왜성 주위에는 지구와 비슷한 크기의 행성이 7개나 돌고 있으며, 이는 하나의 항성을 도는 지구 크기 행성 수로는 알려진 것 중 가장 많습니다. 그중 3~4개는 액체 물이 존재할 수 있는 생명체 거주가능 영역에 놓여 있습니다. 이 덕분에 트라피스트-1은 잠재적 거주 가능 행성을 연구하기에 가장 풍부한 자연 실험실입니다.","catalog":"TRAPPIST-1"} } },
       { p: galPos(121, -21.6, 202), cls: 'ext', fixed: true, gal: { mode: 'spiral', opts: { sq: 0.42, arms: 2 }, size: 330, fade: 0.7, stars: { count: 26000, radius: 132, arms: 2, tight: 0.9, inc: 1.3, roll: 0.6, warm: 0.32, warmK: 2.2 } },
         t: {"en":["Andromeda Galaxy","beyond the Milky Way"],"hans":["仙女座星系","银河系之外"],"hant":["仙女座星系","銀河系之外"],"ja":["アンドロメダ銀河","天の川銀河の外"],"ko":["안드로메다 은하","우리은하 너머"]},
         info: { en:{"type":"Spiral galaxy · external · not to scale","distance":"~2.5 million light-years","constellation":"Andromeda","facts":[["Diameter","~152,000 ly"],["Group","Local Group"]],"desc":"The nearest large galaxy to the Milky Way and the most distant object easily visible to the naked eye. In about 4.5 billion years it will collide and merge with our galaxy. Shown on the far sky — far beyond the Milky Way and not to scale.","catalog":"M31"}, hans:{"type":"旋涡星系 · 银河系外 · 非真实比例","distance":"约 250 万光年","constellation":"仙女座","facts":[["直径","约 15.2 万光年"],["所属","本星系群"]],"desc":"距离银河系最近的大型星系，也是肉眼容易看到的最远天体。约 45 亿年后它将与银河系相撞并合。这里画在远方天幕上——远在银河系之外，非真实比例。","catalog":"M31"}, hant:{"type":"螺旋星系 · 銀河系外 · 非真實比例","distance":"約 250 萬光年","constellation":"仙女座","facts":[["直徑","約 15.2 萬光年"],["所屬","本星系群"]],"desc":"距離銀河系最近的大型星系，也是肉眼容易看到的最遠天體。約 45 億年後它將與銀河系相撞合併。這裡畫在遠方天幕上——遠在銀河系之外，非真實比例。","catalog":"M31"}, ja:{"type":"渦巻銀河 · 天の川銀河の外 · 実スケールではない","distance":"約250万光年","constellation":"アンドロメダ座","facts":[["直径","約15.2万光年"],["所属","局部銀河群"]],"desc":"天の川銀河に最も近い大型銀河で、肉眼でたやすく見える最も遠い天体です。約45億年後には天の川銀河と衝突・合体します。ここでは遠くの天空に描いており、天の川銀河のはるか外側で実際のスケールではありません。","catalog":"M31"}, ko:{"type":"나선 은하 · 우리은하 밖 · 실제 비율 아님","distance":"약 250만 광년","constellation":"안드로메다자리","facts":[["지름","약 15.2만 광년"],["소속","국부 은하군"]],"desc":"우리은하에서 가장 가까운 대형 은하이며 맨눈으로 쉽게 볼 수 있는 가장 먼 천체입니다. 약 45억 년 뒤 우리은하와 충돌·병합합니다. 여기서는 먼 하늘에 그려져 있으며 우리은하 훨씬 바깥이고 실제 비율은 아닙니다.","catalog":"M31"} } },
@@ -2735,7 +2738,18 @@
     solarEventRide = { type: type, id: id, fromElapsed: solarElapsed, toElapsed: target, start: videoNow(), dur: 8000, e: 0, banner: solarEventBanner(type, id) };
     return true;
   }
-  function cancelSolarEventRide() { if (solarEventRide) { solarEventRide = null; solarControls.enabled = true; } }
+  var solarBannerShown = '';
+  function clearSolarBanner() { // only ever clears our own banner, never someone else's message
+    var el = document.getElementById('msg');
+    if (el && solarBannerShown && el.textContent === solarBannerShown) setMsg('');
+    solarBannerShown = '';
+  }
+  function cancelSolarEventRide() {
+    if (!solarEventRide) return;
+    var linger = solarEventRide.phase === 'watch' ? 0 : 4000; // align ends the moment it arrives — let its banner read
+    solarEventRide = null; solarControls.enabled = true;
+    setTimeout(clearSolarBanner, linger);
+  }
   function stepSolarEventRide() {
     if (!solarEventRide) return false;
     var ride = solarEventRide, now = videoNow();
@@ -2746,7 +2760,7 @@
       solarElapsed = ride.fromElapsed + (ride.toElapsed - ride.fromElapsed) * e;
       if (ride.type === 'transit') aimSolarTransitRig();
       if (e >= 1) {
-        setMsg(ride.banner);
+        setMsg(ride.banner); solarBannerShown = ride.banner;
         if (ride.type === 'align') cancelSolarEventRide();
         else { ride.phase = 'watch'; ride.watchUntil = now + 20000; }
       }
@@ -3673,7 +3687,7 @@
       solarApplyScaleBlend(0); solarControls.maxDistance = 333; solarCamera.far = 1800; solarCamera.updateProjectionMatrix();
       var scaleButton = document.getElementById('solarscale'); if (scaleButton) scaleButton.classList.remove('on');
     }
-    cancelSolarEventRide();
+    cancelSolarEventRide(); clearSolarBanner(); // an alignment caption still lingering must not follow us to the galaxy
     solarArrivalSpin = null; solarControls.autoRotate = false;
     // Interactive mode releases the heavy Solar texture set on exit. Video mode
     // keeps it attached for the capture session so later preparations cannot race
@@ -4581,6 +4595,7 @@
     if (viewMode !== 'solar' || solarNav.selectedId !== 'earth' || solarNav.parentId !== null) return false;
     cancelSolarWarp(); // never snapshot a mid-warp camera — the dormant warp would resume on return
     solarFly = null;
+    cancelSolarEventRide(); clearSolarBanner(); // a transit rig must not be the snapshot, nor its caption hang over the sky
     skyReturnContext = { solar: solarSnapshot(), paused: solarPaused };
     clearSolarCard();
     var entered = enterSky('earth');
@@ -4757,11 +4772,14 @@
         setMsg('low frame rate — dust density reduced');
         setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('dust density') !== -1) setMsg(''); }, 2500);
       } else if (perfEMA > 40 && renderer.getPixelRatio() > 1) { // still fill-rate bound → drop to 1x resolution (4x fewer pixels on hidpi)
+        var prDrop = 1 / renderer.getPixelRatio();
         renderer.setPixelRatio(1);
         renderer.setSize(window.innerWidth, window.innerHeight);
-        if (composer) composer.setSize(window.innerWidth, window.innerHeight);
-        if (skyComposer) skyComposer.setSize(window.innerWidth, window.innerHeight);
-        if (solarComposer) solarComposer.setSize(window.innerWidth, window.innerHeight);
+        // composers cache the ratio they were built with: setSize alone left their targets + bloom at 2x
+        if (composer) composer.setPixelRatio(1);
+        if (skyComposer) skyComposer.setPixelRatio(1);
+        if (solarComposer) solarComposer.setPixelRatio(1);
+        rescalePointSizes(prDrop);
         setMsg('low frame rate — resolution reduced');
         setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('resolution') !== -1) setMsg(''); }, 2500);
       } else if (perfEMA > 40 && composer) { // last resort: drop the bloom pass, render() falls back to plain
@@ -4774,6 +4792,18 @@
     render();
     updateBeacons(); // after render: galaxyRoot/camera world matrices are fresh
     rafId = requestAnimationFrame(frame);
+  }
+  function rescalePointSizes(f) { // point shaders bake renderer.getPixelRatio() into uSize/uCap at build time
+    var seen = [];
+    [scene, skyScene, solarScene].forEach(function (root) {
+      root.traverse(function (o) {
+        var u = o.material && o.material.uniforms;
+        if (!u || seen.indexOf(u) !== -1) return;
+        seen.push(u);
+        if (u.uSize) u.uSize.value *= f;
+        if (u.uCap) u.uCap.value *= f;
+      });
+    });
   }
   function startLoop() { if (rafId == null && !document.hidden) rafId = requestAnimationFrame(frame); }
   document.addEventListener('visibilitychange', function () { perfLast = 0; solarFrameLast = 0; resetSolarPerformanceWatchdog(); startLoop(); }); // reset frame clocks so resume gaps do not enter animation timing
