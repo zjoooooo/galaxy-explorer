@@ -30,7 +30,7 @@ that availability does not erase a source record's attribution instruction.
 | `venus.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `4k_venus_atmosphere.jpg (cloud tops)` | 2048×1024 JPEG. |
 | `earth.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_earth_daymap.jpg` | 4096×2048 JPEG. |
 | `earth-night.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_earth_nightmap.jpg` | 4096×2048 JPEG. |
-| `earth-clouds.png` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_earth_clouds.jpg` | 2048×1024 RGBA PNG; source luminance is alpha. |
+| `earth-clouds.png` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_earth_clouds.jpg` | 2048×1024 grey+alpha PNG; source luminance is alpha (grey 255 under cloud, 0 where fully clear). |
 | `moon.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_moon.jpg` | 4096×2048 JPEG. |
 | `moon-normal.png` | NASA SVS, [CGI Moon Kit (LOLA displacement map)](https://svs.gsfc.nasa.gov/4720/); Ernie Wright (USRA), Noah Petro (NASA/GSFC), LOLA team | `ldem_4_uint.tif`, a 1440×720 unsigned 16-bit LOLA elevation/displacement map (half-metre units), → 1024×512 RGB tangent-space normal PNG. |
 | `mars.jpg` | [Solar System Scope textures](https://www.solarsystemscope.com/textures/) · CC BY 4.0 · based on NASA imagery/elevation data — `8k_mars.jpg` | 4096×2048 JPEG. |
@@ -74,6 +74,8 @@ sips -s format jpeg -s formatOptions 85 -z 512 1024 ceres_dawn_fc_dlr_global_feb
 # Solar System Scope textures (sun, mercury, venus, earth day/night/clouds, moon, mars, jupiter, saturn, uranus, neptune)
 # were downloaded directly from https://www.solarsystemscope.com/textures/ and resampled with the sips command above.
 ffmpeg -f lavfi -i 'color=c=white:s=4096x2048:d=1' -i 8k_earth_clouds.jpg -filter_complex '[1]scale=4096:2048,format=gray[a];[0][a]alphamerge' -frames:v 1 earth-clouds.png
+# then repacked losslessly from RGBA to grey+alpha (identical decoded pixels, ~30% smaller):
+python3 -c "from PIL import Image; im = Image.open('earth-clouds.png'); a = im.getchannel('A'); Image.merge('LA', (a.point(lambda v: 255 if v else 0), a)).save('earth-clouds.png', optimize=True)"
 ffmpeg -i PIA06175~orig.jpg -filter_complex "[0]scale=1024:1024,format=rgb24,geq=r='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)':g='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)':b='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)'[rgb];[0]scale=1024:1024,format=gray,geq=lum='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)'[a];[rgb][a]alphamerge" -frames:v 1 saturn-rings.png
 ./images/solar-system/build-relief-maps.sh
 ```

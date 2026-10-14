@@ -5888,10 +5888,15 @@
   }
   function musicPlay(i) {
     if (videoMode) { musicOn = false; musicPaint(); return; }
-    if (!musicEl) { musicEl = new Audio(); musicEl.loop = true; musicEl.volume = 0.35; }
+    if (!musicEl) { musicEl = new Audio(); musicEl.preload = 'none'; musicEl.loop = true; musicEl.volume = 0.35; } // preload none: an 8 MB track must not stream in behind a blocked autoplay
     if (musicTrack !== i) { musicTrack = i; musicEl.src = 'audio/' + encodeURIComponent(MUSIC_TRACKS[i]); }
     musicEl.muted = false; musicOn = true;
-    musicEl.play().then(function () { musicRemember('on'); musicPaint(); }).catch(function () { musicOn = false; musicPaint(); });
+    var attempt = musicEl.src;
+    musicEl.play().then(function () { musicRemember('on'); musicPaint(); }).catch(function () {
+      if (musicEl.src !== attempt) return; // a newer track took over — its own play() reports
+      musicOn = false; musicPaint();
+      if (musicEl.paused || musicEl.error) { musicEl.removeAttribute('src'); musicEl.load(); musicTrack = -1; } // blocked autoplay or failed load: drop the half-started download; the next gesture starts afresh
+    });
     musicPaint();
   }
   function musicRemember(state) { try { localStorage.setItem('gx-music', state); } catch (e) {} } // only user-driven states persist (not autoplay blocks)
