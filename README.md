@@ -11,7 +11,7 @@ Latest View
 
 
 An interactive, procedurally-generated **Milky Way galaxy** — with a full 3D
-**Solar System**, roaming **comets**, and real **radio-galaxy jets** — that runs
+**Solar System**, a roaming **comet**, and real **radio-galaxy jets** — that runs
 entirely in the browser with WebGL (three.js). No backend, no build step, no
 dependencies to install, no API keys — just open the page and explore.
 
@@ -45,10 +45,21 @@ separate licence; please [open an issue](https://github.com/zjoooooo/galaxy-expl
   info cards with a glowing 3D ring on the selected object. Fly close to an
   external galaxy and its own **in-galaxy objects** appear — star-forming regions,
   globular clusters, supernova remnants, and radio jets, each with its own card.
-- **Radio-galaxy jets** — **Centaurus A** fires two needle-thin plasma beams
-  (blue north, violet south) that flow, ripple and surge like living streams,
-  each ending in a giant churning **radio lobe** — the anatomy radio telescopes
-  see. **M87** keeps its famous *one-sided* jet, because its counter-jet is
+  A bottom strip lists all 25 beacons inside the Milky Way, so nothing needs
+  hunting.
+- **Photo-sampled neighbour galaxies** — the Magellanic Clouds and Centaurus A
+  take their star positions and colours from real ESO/NOIRLab photographs. The
+  Clouds are raymarched volumes (26 steps through domain-warped 3D noise, two
+  hues blending through their own noise field), and Centaurus A's dust lane is a
+  raymarched absorption slab that reddens at its thin edges. Every star in the
+  external galaxies and along the Milky Way's arms has a hot core inside a
+  coloured halo; in the external galaxies they are also size-capped so close
+  fly-bys stay crisp.
+- **Radio-galaxy jets** — **Centaurus A**'s jet borrows the comet's ion-tail
+  technique: particles stream out of a pulsing nucleus, dense and slow at the
+  core, sparse and rushing at the tip, with drifting magnetic kinks, a dimmed
+  violet counter-stream and an orange crescent plume capping the outflow.
+  **M87** keeps its famous *one-sided* jet, because its counter-jet is
   Doppler-dimmed into invisibility.
 - **Solar System guide** — follow the **Solar System** beacon and ride a
   six-second **wormhole** into a full 3D Solar System: the Sun, all eight
@@ -56,12 +67,13 @@ separate licence; please [open an issue](https://github.com/zjoooooo/galaxy-expl
   NASA-based imagery (4K for the main worlds) and lit by a single sunlight
   source at the Sun. Click any world for its illustrated five-language card,
   then hit **Fly to this world** to sweep over and *ride along* with the
-  orbiting planet while its moons appear. A **living Sun** shows drifting
-  granulation, migrating sunspots, and prominences that pour out and disperse;
+  orbiting planet while its moons appear. A **living Sun** keeps its drifting
+  granulation and migrating sunspots at every zoom, and up close wears a
+  pearl-white corona ring with prominences that pour out and disperse;
   a true-span **asteroid belt** with the Kirkwood gap, a **Kuiper belt**, faint
   rings on the giants, and translucent limb **atmospheres** complete the scene.
-  Two **comets** roam eccentric orbits, unfurling the classic twin tails — a
-  straight blue ion tail and a curved white dust tail — near the Sun; click one
+  A **comet** roams an eccentric orbit, unfurling the classic twin tails — a
+  straight blue ion tail and a curved white dust tail — near the Sun; click it
   to read how they work, or **chase** it. Orbital and axial motion are
   intentionally slowed for observation; display scale and starting positions
   are arranged for readability, not a literal scale model or real-time ephemeris.
@@ -69,13 +81,15 @@ separate licence; please [open an issue](https://github.com/zjoooooo/galaxy-expl
   atmosphere-white flash into an Earth-centred, rotatable star dome with **25
   constellations** (the 12 zodiac plus 13 famous others) drawn from real J2000
   star positions, and the **7 external galaxies** sitting inside their true host
-  constellations — each with its own five-language photo card.
+  constellations — each with its own five-language photo card. Pick a zodiac
+  constellation and its figure blooms overhead in gold: a shimmering wireframe
+  with the constellation's own stars twinkling on top.
 - **Five languages** — labels, cards and navigation switch between English,
   Simplified Chinese, Traditional Chinese, Japanese and Korean (top-right
   selector; choice remembered).
 - **Cinematic look** — selective bloom + ACES tone-mapping.
-- **Performance-aware** — an FPS watchdog automatically reduces dust density on
-  weak GPUs so it stays smooth on laptops, TVs and kiosks.
+- **Performance-aware** — an FPS watchdog steps down dust density, resolution
+  and bloom on weak GPUs so it stays smooth on laptops, TVs and kiosks.
 
 ## 🎯 Where you can use it
 
