@@ -668,8 +668,8 @@
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: 'uniform sampler2D tDiffuse; uniform float uExposure; varying vec2 vUv;' +
         'vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14), 0.0, 1.0); }' +
-        'float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }' + // static interleaved-gradient noise: ±1 LSB dither, fixed per pixel so encodes don't shimmer
-        'void main(){ vec3 c = pow(aces(texture2D(tDiffuse, vUv).rgb * uExposure), vec3(1.0/2.2)); c += (ign(gl_FragCoord.xy) + ign(gl_FragCoord.xy + vec2(59.0, 83.0)) - 1.0) / 255.0 * sign(c); gl_FragColor = vec4(c, 1.0); }'
+        'float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }' + // static interleaved-gradient noise: 1 LSB peak-to-peak dither, fixed per pixel so encodes don't shimmer
+        'void main(){ vec3 c = pow(aces(texture2D(tDiffuse, vUv).rgb * uExposure), vec3(1.0/2.2)); c += (ign(gl_FragCoord.xy) - 0.5) / 255.0 * sign(c); gl_FragColor = vec4(c, 1.0); }'
     }));
     composer.setSize(outputWidth, outputHeight);
   } catch (e) { composer = null; }
@@ -1631,7 +1631,7 @@
   }
   var solarAnimatedMaterials = [];
   var solarMaterialBases = {
-    terrestrial: new THREE.MeshPhongMaterial({ shininess: 12, specular: 0x222222 }),
+    terrestrial: new THREE.MeshPhongMaterial({ shininess: 12, specular: 0x000000 }), // Venus is a cloud deck and Mercury/Mars dusty regolith: with true-colour albedo a specular lobe showed as a white blob at full phase
     giant: new THREE.MeshPhongMaterial({ shininess: 6, specular: 0x000000 }), // gas giants have no solid surface to glint — specular read as a plastic hotspot
     moon: new THREE.MeshPhongMaterial({ shininess: 4, specular: 0x111111 }),
     dwarf: new THREE.MeshPhongMaterial({ shininess: 4, specular: 0x111111 }),
