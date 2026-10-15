@@ -62,9 +62,10 @@ layers real NASA-based surface textures on top for the planets, moons and Sun.
 - **Solar System guide** — follow the **Solar System** beacon and ride a
   six-second **wormhole** into a full 3D Solar System: the Sun, all eight
   planets, the Moon, Ceres, Pluto and seven more famous moons, wrapped in real
-  NASA-based imagery (4K for the main worlds) and lit by a single sunlight
-  source at the Sun. Click any world for its illustrated five-language card,
-  then hit **Fly to this world** to sweep over and *ride along* with the
+  NASA-based imagery (4K for the main worlds on desktop, 2K on touch devices)
+  and lit by a single sunlight source at the Sun. Click any world for its
+  illustrated five-language card, then hit **Fly to this world** to sweep over
+  and *ride along* with the
   orbiting planet while its moons appear. A **living Sun** keeps its drifting
   granulation and migrating sunspots at every zoom, and up close wears a
   pearl-white corona ring with prominences that pour out and disperse;
