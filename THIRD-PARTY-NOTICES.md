@@ -2,9 +2,8 @@
 
 This project bundles third-party software under `vendor/` and third-party
 imagery under `images/`. Their copyright and license notices are reproduced
-below. The project itself is under the
-[PolyForm Noncommercial License 1.0.0](LICENSE); releases up to and including
-`v2.2.0` were published under the MIT License.
+below. The project itself is under the [MIT License](LICENSE); release `v2.4.0`
+alone was published under the PolyForm Noncommercial License 1.0.0.
 
 ## Solar-system textures (`images/solar-system/`)
 
