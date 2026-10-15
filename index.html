@@ -831,7 +831,7 @@
   var cv = document.getElementById('cv');
   var outputWidth = videoMode ? videoConfig.width : window.innerWidth;
   var outputHeight = videoMode ? videoConfig.height : window.innerHeight;
-  var renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+  var renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false }); // frames go through the composers' render targets; an MSAA backbuffer only cost memory
   renderer.setPixelRatio(videoMode ? 1 : Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(outputWidth, outputHeight);
   renderer.toneMapping = THREE.NoToneMapping; // tone-mapped AFTER bloom via a final ACES pass instead
@@ -1172,10 +1172,10 @@
     g.setAttribute('aColor', new THREE.BufferAttribute(colA, 3));
     g.setAttribute('aScale', new THREE.BufferAttribute(scl, 1));
     var mat = new THREE.ShaderMaterial({
-      uniforms: { uSize: { value: DUST.size * renderer.getPixelRatio() } },
-      vertexShader: 'uniform float uSize; attribute float aScale; attribute vec3 aColor; varying vec3 vColor;' +
+      uniforms: { uSize: { value: DUST.size * renderer.getPixelRatio() }, uCap: { value: 34 * renderer.getPixelRatio() } },
+      vertexShader: 'uniform float uSize; uniform float uCap; attribute float aScale; attribute vec3 aColor; varying vec3 vColor;' +
         'void main(){ vec4 mp = modelMatrix * vec4(position,1.0); vec4 vp = viewMatrix * mp; gl_Position = projectionMatrix * vp;' +
-        ' gl_PointSize = uSize * aScale * (300.0 / -vp.z); vColor = aColor; }',
+        ' gl_PointSize = min(uSize * aScale * (300.0 / -vp.z), uCap); vColor = aColor; }', // cap: a close pass shows crisp points, not screen-filling blobs
       fragmentShader: STAR_FRAG,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
     });
@@ -1427,10 +1427,10 @@
     bg.setAttribute('aColor', new THREE.BufferAttribute(colA, 3));
     bg.setAttribute('aScale', new THREE.BufferAttribute(scl, 1));
     galaxyRoot.add(new THREE.Points(bg, new THREE.ShaderMaterial({
-      uniforms: { uSize: { value: DUST.size * renderer.getPixelRatio() } },
-      vertexShader: 'uniform float uSize; attribute float aScale; attribute vec3 aColor; varying vec3 vColor;' +
+      uniforms: { uSize: { value: DUST.size * renderer.getPixelRatio() }, uCap: { value: 34 * renderer.getPixelRatio() } },
+      vertexShader: 'uniform float uSize; uniform float uCap; attribute float aScale; attribute vec3 aColor; varying vec3 vColor;' +
         'void main(){ vec4 mp = modelMatrix * vec4(position,1.0); vec4 vp = viewMatrix * mp; gl_Position = projectionMatrix * vp;' +
-        ' gl_PointSize = uSize * aScale * (300.0 / -vp.z); vColor = aColor; }',
+        ' gl_PointSize = min(uSize * aScale * (300.0 / -vp.z), uCap); vColor = aColor; }', // cap: a close pass shows crisp points, not screen-filling blobs
       fragmentShader: GLOW_FRAG,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
     })));
@@ -1974,14 +1974,22 @@
   var solarTextures = { cache: {}, pending: {}, warned: {}, textureLoader: null };
   var solarPerf = { stage: 0, epoch: 0, beltFraction: 1, backgroundFraction: 1, backgroundEvery: 1, labelEvery: 1, labelFrame: 0, backgroundFrame: 0 };
   var solarMotionOverride = null, solarCompactOverride = null;
+  // These two helpers run many times per frame, so they read cached booleans kept current by
+  // 'change' events. Never poll mql.matches per frame: Chrome then stops firing 'change' on that list.
+  var solarMotionMedia = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  var solarPointerMedia = window.matchMedia ? window.matchMedia('(pointer:coarse)') : null;
+  var solarMotionReduced = !!(solarMotionMedia && solarMotionMedia.matches), solarPointerCoarse = !!(solarPointerMedia && solarPointerMedia.matches);
+  function onMediaChange(mql, fn) { if (mql) { if (mql.addEventListener) mql.addEventListener('change', fn); else if (mql.addListener) mql.addListener(fn); } }
+  onMediaChange(solarMotionMedia, function (e) { solarMotionReduced = e.matches; }); // registered first, so later listeners see the new value
+  onMediaChange(solarPointerMedia, function (e) { solarPointerCoarse = e.matches; });
   function solarIsCompact() {
     if (videoMode) return videoConfig.width <= 640;
-    return solarCompactOverride !== null ? !!solarCompactOverride : window.innerWidth <= 640 || !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
+    return solarCompactOverride !== null ? !!solarCompactOverride : window.innerWidth <= 640 || solarPointerCoarse;
   }
   function solarReducedMotion() {
     if (videoMode) return false;
     if (solarMotionOverride !== null) return !!solarMotionOverride;
-    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    return solarMotionReduced;
   }
   function applySolarPerformanceTier(stage) {
     stage = Math.max(0, Math.min(3, stage | 0));
@@ -3860,7 +3868,6 @@
   skyControls.rotateSpeed = -0.35;              // inverted: drag the SKY, not the camera
   skyControls.autoRotate = !solarReducedMotion(); skyControls.autoRotateSpeed = 0.12; // slow idle drift
   skyControls.enabled = false;                  // only active in sky view
-  var solarMotionMedia = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   function shortenActiveFlights() {
     var now = videoNow();
     if (flyState) { flyState.p0.copy(camera.position); flyState.t0.copy(controls.target); flyState.start = now; flyState.dur = 120; }
@@ -3870,10 +3877,7 @@
     skyControls.autoRotate = !reduced;
     if (reduced) shortenActiveFlights();
   }
-  if (solarMotionMedia) {
-    if (solarMotionMedia.addEventListener) solarMotionMedia.addEventListener('change', refreshReducedMotion);
-    else if (solarMotionMedia.addListener) solarMotionMedia.addListener(refreshReducedMotion);
-  }
+  onMediaChange(solarMotionMedia, refreshReducedMotion);
   var skyTwinkleMat = null;
   (function skyBackdrop() {
     // faint twinkling background stars
@@ -3944,6 +3948,7 @@
       solarComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(outputWidth, outputHeight), 0.42, 0.38, 0.93)); // restrained: the Sun glows without whiting out at distance
       solarComposer.addPass(new THREE.ShaderPass(THREE.CopyShader));
       solarComposer.setSize(outputWidth, outputHeight);
+      if (perfBloomOff) setBloomEnabled(solarComposer, false);
     } catch (e) { solarComposer = null; }
   }
   var skyComposer = null, skyComposerTried = false;
@@ -3956,6 +3961,7 @@
       skyComposer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(outputWidth, outputHeight), 0.7, 0.6, 0.15));
       skyComposer.addPass(new THREE.ShaderPass(THREE.CopyShader)); // final output pass — UnrealBloomPass alone renders black to screen
       skyComposer.setSize(outputWidth, outputHeight);
+      if (perfBloomOff) setBloomEnabled(skyComposer, false);
     } catch (e) { skyComposer = null; }
   }
   // occasional shooting stars streaking across the dome (reuses the galaxy meteor texture)
@@ -4649,12 +4655,44 @@
 
   // ── render loop (continuous while visible; drives spin + twinkle + breathe + fx) ──
   var t0 = videoNow(), rafId = null, videoFrameCount = 0, videoSolarPreparing = false;
-  // FPS watchdog: weak GPUs choke on 85k dust points. Keep an EMA of frame time
-  // (samples clamped to 500ms; tab-switch gaps excluded by resetting perfLast on
-  // visibilitychange); every 10s, if sustained under ~25fps (40ms — a healthy 30Hz
-  // panel sits at 33.3ms, safely below), halve perfScale (1 → .5 → .25 floor) and
-  // rebuild the dust at the reduced density. Never scales back up (no oscillation).
-  var perfScale = 1, perfEMA = 16.7, perfLast = 0, perfNextCheck = videoNow() + 12000;
+  // FPS watchdog: keep an EMA of frame time (samples clamped to 500ms; tab-switch gaps
+  // excluded by resetting perfLast on visibilitychange). First look after 8s, then every
+  // 10s: if sustained under ~25fps (40ms — a healthy 30Hz panel sits at 33.3ms, safely
+  // below), take ONE step down degradeRendering()'s ladder, ordered by measured payoff —
+  // halve the raymarch steps, drop to 1x resolution, drop bloom (tone-mapping stays), hide
+  // the raymarched nebulae, and only then halve the dust (perfScale 1 → .5 → .25). Never scales back up.
+  var perfScale = 1, perfEMA = 16.7, perfLast = 0, perfNextCheck = videoNow() + 8000;
+  var perfVolHalved = false, perfVolHidden = false, perfBloomOff = false;
+  function flashMsg(text) { setMsg(text); setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent === text) setMsg(''); }, 2500); }
+  function setBloomEnabled(c, on) { if (c) for (var i = 0; i < c.passes.length; i++) if (c.passes[i] instanceof THREE.UnrealBloomPass) c.passes[i].enabled = on; }
+  function degradeRendering(withVolumes) { // one step down the shared, one-way ladder; returns what changed ('' when exhausted)
+    if (withVolumes && !perfVolHalved && galaxyVols.length) { // raymarched nebulae: up to ~85% of a close-up frame
+      perfVolHalved = true;
+      galaxyVols.forEach(function (v) { v.mat.uniforms.uSteps.value = v.steps * 0.5; });
+      return 'nebula detail reduced';
+    }
+    if (renderer.getPixelRatio() > 1) { // fill-rate: 4x fewer pixels on hidpi
+      var prDrop = 1 / renderer.getPixelRatio();
+      renderer.setPixelRatio(1);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      // composers cache the ratio they were built with: setSize alone left their targets + bloom at 2x
+      if (composer) composer.setPixelRatio(1);
+      if (skyComposer) skyComposer.setPixelRatio(1);
+      if (solarComposer) solarComposer.setPixelRatio(1);
+      rescalePointSizes(prDrop);
+      return 'resolution reduced';
+    }
+    if (!perfBloomOff && (composer || skyComposer || solarComposer)) { // bloom passes off; the composers (and the galaxy's ACES grade) keep running
+      perfBloomOff = true;
+      setBloomEnabled(composer, false); setBloomEnabled(skyComposer, false); setBloomEnabled(solarComposer, false);
+      return 'glow disabled';
+    }
+    if (withVolumes && !perfVolHidden && galaxyVols.length) { // still slow: drop the raymarched nebulae altogether (~13x near the LMC)
+      perfVolHidden = true;
+      return 'nebulae hidden';
+    }
+    return '';
+  }
   var solarPerfEMA = 16.7, solarPerfLast = 0, solarPerfNextCheck = 0;
   function resetSolarPerformanceWatchdog(now) {
     now = now == null ? videoNow() : now;
@@ -4666,9 +4704,11 @@
     if (!videoMode && now > solarPerfNextCheck) {
       solarPerfNextCheck = now + 10000;
       if (solarPerfEMA > 40 && solarPerf.stage < 3) {
-      applySolarPerformanceTier(solarPerf.stage + 1);
-      setMsg('low frame rate — Solar System detail reduced');
-      setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('Solar System detail') !== -1) setMsg(''); }, 2500);
+        applySolarPerformanceTier(solarPerf.stage + 1);
+        flashMsg('low frame rate — Solar System detail reduced');
+      } else if (solarPerfEMA > 40) { // its own stages are spent: resolution, then bloom
+        var solarStep = degradeRendering(false);
+        if (solarStep) flashMsg('low frame rate — ' + solarStep);
       }
     }
   }
@@ -4684,7 +4724,7 @@
     var nowMs = videoNow(), t = (nowMs - t0) / 1000;
     if (viewMode === 'sky') {
       if (skyDive && stepSkyDive()) { // dive-into-Earth prologue: render the solar scene one last stretch
-        renderer.render(solarScene, solarCamera);
+        if (solarComposer) solarComposer.render(); else renderer.render(solarScene, solarCamera);
         rafId = requestAnimationFrame(frame);
         return;
       }
@@ -4715,10 +4755,10 @@
       if (!stepSolarWarp() && !stepSolarFly() && !stepSolarScale() && !stepSolarEventRide()) { stepSolarFollow(); solarControls.update(); } // warp, fly, scale, event ride, then free orbit
         updateSolarBackdrop();
       if (!solarReducedMotion()) updateSolarFx(solarNow);
+      sampleSolarPerformance(solarNow); // before drawing: a resolution step resizes the canvas, which would blank this frame
       if (solarComposer) solarComposer.render(); else renderer.render(solarScene, solarCamera);
       solarPerf.labelFrame++;
       if (solarPerf.labelFrame % solarPerf.labelEvery === 0) updateSolarLabels();
-      sampleSolarPerformance(solarNow);
       rafId = requestAnimationFrame(frame);
       return;
     }
@@ -4738,7 +4778,7 @@
     }
     for (var gli = 0; gli < galaxyVols.length; gli++) { // volumetric nebulae: face the camera, evolve imperceptibly
       var GVL = galaxyVols[gli];
-      GVL.mesh.visible = perfScale > 0.3; // watchdog escape hatch — raymarch is the priciest decoration
+      GVL.mesh.visible = !perfVolHidden; // watchdog escape hatch — raymarch is the priciest decoration
       GVL.mesh.lookAt(camera.position);
       if (!solarReducedMotion()) GVL.mat.uniforms.uTime.value = t;
     }
@@ -4766,26 +4806,10 @@
     perfLast = fnow;
     if (!videoMode && fnow > perfNextCheck) {
       perfNextCheck = fnow + 10000;
-      if (perfEMA > 40 && perfScale > 0.26) { // sustained < ~25fps → shed decorative dust
-        perfScale *= 0.5;
-        buildDust(dustFor());
-        setMsg('low frame rate — dust density reduced');
-        setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('dust density') !== -1) setMsg(''); }, 2500);
-      } else if (perfEMA > 40 && renderer.getPixelRatio() > 1) { // still fill-rate bound → drop to 1x resolution (4x fewer pixels on hidpi)
-        var prDrop = 1 / renderer.getPixelRatio();
-        renderer.setPixelRatio(1);
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        // composers cache the ratio they were built with: setSize alone left their targets + bloom at 2x
-        if (composer) composer.setPixelRatio(1);
-        if (skyComposer) skyComposer.setPixelRatio(1);
-        if (solarComposer) solarComposer.setPixelRatio(1);
-        rescalePointSizes(prDrop);
-        setMsg('low frame rate — resolution reduced');
-        setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('resolution') !== -1) setMsg(''); }, 2500);
-      } else if (perfEMA > 40 && composer) { // last resort: drop the bloom pass, render() falls back to plain
-        composer = null;
-        setMsg('low frame rate — glow disabled');
-        setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent.indexOf('glow') !== -1) setMsg(''); }, 2500);
+      if (perfEMA > 40) { // sustained < ~25fps
+        var galaxyStep = degradeRendering(true);
+        if (!galaxyStep && perfScale > 0.26) { perfScale *= 0.5; buildDust(dustFor()); galaxyStep = 'dust density reduced'; } // measured ~5% — last resort
+        if (galaxyStep) flashMsg('low frame rate — ' + galaxyStep);
       }
     }
     if (!stepFly()) controls.update(); // while flying to a galaxy, stepFly drives the camera
@@ -4822,11 +4846,7 @@
     applyOutputSize();
     refreshSolarResponsiveState();
   });
-  var solarPointerMedia = window.matchMedia ? window.matchMedia('(pointer:coarse)') : null;
-  if (solarPointerMedia) {
-    if (solarPointerMedia.addEventListener) solarPointerMedia.addEventListener('change', refreshSolarResponsiveState);
-    else if (solarPointerMedia.addListener) solarPointerMedia.addListener(refreshSolarResponsiveState);
-  }
+  onMediaChange(solarPointerMedia, refreshSolarResponsiveState);
 
   // ── ambient effects: shooting stars + supernovae ────────────────────────────
   // A one-shot FX micro-system: short-lived sprites/points, updated by updateFx()
@@ -5265,7 +5285,7 @@
     function buildDustLaneVol(P, q0, R, v) { // volumetric ABSORPTION lane — a thin turbulent dust slab raymarched for optical depth.
       // Multiply blending: transmission exp(-tau·k) with wavelength-biased k → edges redden to warm brown, exactly like real dust.
       var frag =
-        'uniform vec3 uCenter; uniform float uR; uniform float uGain; uniform float uTime; uniform mat3 uBasis; varying vec3 vWorld;' +
+        'uniform vec3 uCenter; uniform float uR; uniform float uGain; uniform float uTime; uniform mat3 uBasis; uniform float uSteps; varying vec3 vWorld;' +
         'float h3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }' +
         'float vn3(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);' +
         ' float a = h3(i), b = h3(i + vec3(1,0,0)), c = h3(i + vec3(0,1,0)), d = h3(i + vec3(1,1,0));' +
@@ -5276,8 +5296,8 @@
         ' vec3 rd = normalize(vWorld - cameraPosition); vec3 oc = cameraPosition - uCenter;' +
         ' float RR = uR * 1.35; float b = dot(oc, rd); float c = dot(oc, oc) - RR * RR; float hh = b * b - c;' +
         ' if (hh < 0.0) discard; float sh = sqrt(hh); float t0 = max(-b - sh, 0.0), t1 = -b + sh; if (t1 <= t0) discard;' +
-        ' float dj = h3(vec3(gl_FragCoord.xy * 0.37, 3.1)); float seg = (t1 - t0) / 18.0; float tau = 0.0;' +
-        ' for (int i = 0; i < 18; i++){' +
+        ' float dj = h3(vec3(gl_FragCoord.xy * 0.37, 3.1)); float seg = (t1 - t0) / uSteps; float tau = 0.0;' +
+        ' for (int i = 0; i < 18; i++){ if (float(i) >= uSteps) break;' +
         '  vec3 p = cameraPosition + rd * (t0 + seg * (float(i) + dj));' +
         '  vec3 q = uBasis * (p - uCenter) / uR;' +
         '  float bz = q.z - 0.10 * sin(q.x * 3.1);' +                       // the lane's S-warp
@@ -5292,18 +5312,18 @@
         ' gl_FragColor = vec4(T, 1.0); }';
       var basis = new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(q0.clone().invert()));
       var vmat = new THREE.ShaderMaterial({
-        uniforms: { uCenter: { value: P.clone() }, uR: { value: R }, uGain: { value: (v.gain || 1.0) * 13.0 }, uTime: { value: 0 }, uBasis: { value: basis } },
+        uniforms: { uCenter: { value: P.clone() }, uR: { value: R }, uGain: { value: (v.gain || 1.0) * 13.0 }, uTime: { value: 0 }, uBasis: { value: basis }, uSteps: { value: 18 } },
         vertexShader: 'varying vec3 vWorld; void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vWorld = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }',
         fragmentShader: frag, transparent: true, depthWrite: false, depthTest: false, blending: THREE.MultiplyBlending
       });
       var vmesh = new THREE.Mesh(new THREE.PlaneGeometry(R * 2.8, R * 2.8), vmat);
       vmesh.position.copy(P); vmesh.renderOrder = 7; scene.add(vmesh); // multiplies AFTER the galaxy's additive layers
-      galaxyVols.push({ mesh: vmesh, mat: vmat }); // same per-frame care: face camera, slow churn, watchdog gate
+      galaxyVols.push({ mesh: vmesh, mat: vmat, steps: 18 }); // same per-frame care: face camera, slow churn, watchdog gate
     }
     function buildVolumeNebula(P, q0, R, v) { // TRUE volumetric gas — raymarched 3D noise density, real depth + parallax while orbiting
       var frag =
         'uniform vec3 uCenter; uniform float uR; uniform float uFlat; uniform vec3 uHot; uniform float uHotW; uniform float uSoft;' +
-        'uniform float uGain; uniform float uTime; uniform mat3 uBasis; uniform vec3 uColA; uniform vec3 uColB; varying vec3 vWorld;' +
+        'uniform float uGain; uniform float uTime; uniform mat3 uBasis; uniform vec3 uColA; uniform vec3 uColB; uniform float uSteps; varying vec3 vWorld;' +
         'float h3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }' +
         'float vn3(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);' +
         ' float a = h3(i), b = h3(i + vec3(1,0,0)), c = h3(i + vec3(0,1,0)), d = h3(i + vec3(1,1,0));' +
@@ -5314,8 +5334,8 @@
         ' vec3 rd = normalize(vWorld - cameraPosition); vec3 oc = cameraPosition - uCenter;' +
         ' float RR = uR * 1.15; float b = dot(oc, rd); float c = dot(oc, oc) - RR * RR; float hh = b * b - c;' +
         ' if (hh < 0.0) discard; float sh = sqrt(hh); float t0 = max(-b - sh, 0.0), t1 = -b + sh; if (t1 <= t0) discard;' +
-        ' float dj = h3(vec3(gl_FragCoord.xy * 0.37, 1.7)); float seg = (t1 - t0) / 26.0; vec3 col = vec3(0.0);' +
-        ' for (int i = 0; i < 26; i++){' +
+        ' float dj = h3(vec3(gl_FragCoord.xy * 0.37, 1.7)); float seg = (t1 - t0) / uSteps; vec3 col = vec3(0.0);' +
+        ' for (int i = 0; i < 26; i++){ if (float(i) >= uSteps) break;' +
         '  vec3 p = cameraPosition + rd * (t0 + seg * (float(i) + dj));' +
         '  vec3 q = uBasis * (p - uCenter) / uR; vec3 qf = vec3(q.x, q.y * uFlat, q.z);' +
         '  float body = smoothstep(1.05, 0.2, length(qf));' +
@@ -5338,13 +5358,13 @@
         uniforms: { uCenter: { value: P.clone() }, uR: { value: R }, uFlat: { value: v.flat || 2.4 },
           uHot: { value: new THREE.Vector3().fromArray(v.hot || [0, 0, 0]).divideScalar(R) }, uHotW: { value: v.hot ? 1.0 : 0.0 }, uSoft: { value: v.soft || 0 },
           uGain: { value: v.gain || 1.0 }, uTime: { value: 0 }, uBasis: { value: basis },
-          uColA: { value: new THREE.Color(v.colA != null ? v.colA : 0x76b6d8) }, uColB: { value: new THREE.Color(v.colB != null ? v.colB : 0xe887ae) } },
+          uColA: { value: new THREE.Color(v.colA != null ? v.colA : 0x76b6d8) }, uColB: { value: new THREE.Color(v.colB != null ? v.colB : 0xe887ae) }, uSteps: { value: 26 } },
         vertexShader: 'varying vec3 vWorld; void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vWorld = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }',
         fragmentShader: frag, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending
       });
       var vmesh = new THREE.Mesh(new THREE.PlaneGeometry(R * 2.4, R * 2.4), vmat); // camera-facing proxy quad; the shader marches the real ellipsoid behind it
       vmesh.position.copy(P); vmesh.renderOrder = 6; scene.add(vmesh);
-      galaxyVols.push({ mesh: vmesh, mat: vmat });
+      galaxyVols.push({ mesh: vmesh, mat: vmat, steps: 26 });
     }
     function buildGalaxyStars(P, o) {
       var TAU = 6.28318530718, N = Math.max(600, (o.count || 12000) | 0); // full LOD count; per-frame drawRange trims by distance
@@ -5558,8 +5578,8 @@
       var g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aColor', new THREE.BufferAttribute(col, 3)); g.setAttribute('aScale', new THREE.BufferAttribute(scl, 1));
       return new THREE.Points(g, new THREE.ShaderMaterial({
-        uniforms: { uSize: { value: 2.4 * renderer.getPixelRatio() } },
-        vertexShader: 'uniform float uSize; attribute float aScale; attribute vec3 aColor; varying vec3 vColor; void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp; gl_PointSize = uSize * aScale * (300.0/-vp.z); vColor = aColor; }',
+        uniforms: { uSize: { value: 2.4 * renderer.getPixelRatio() }, uCap: { value: 34 * renderer.getPixelRatio() } },
+        vertexShader: 'uniform float uSize; uniform float uCap; attribute float aScale; attribute vec3 aColor; varying vec3 vColor; void main(){ vec4 vp = viewMatrix * modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * vp; gl_PointSize = min(uSize * aScale * (300.0/-vp.z), uCap); vColor = aColor; }',
         fragmentShader: STAR_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
       }));
     }
