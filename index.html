@@ -267,17 +267,18 @@
   // Video capture is an opt-in runtime. Keep this bootstrap before every
   // procedural scene allocation so a capture never observes unseeded geometry.
   var videoParams = new URLSearchParams(location.search);
-  var videoMode = videoParams.get('video') === '1';
-  function videoParamInt(name, fallback) {
+  // ?video=1 is for the local capture rig only — on a public host it is ignored (the director module is not deployed)
+  var videoMode = videoParams.get('video') === '1' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  function videoParamInt(name, fallback, max) {
     var value = Number(videoParams.get(name));
-    return Number.isSafeInteger(value) && value > 0 ? value : fallback;
+    return Number.isSafeInteger(value) && value > 0 && value <= max ? value : fallback;
   }
   var videoConfig = Object.freeze({
     enabled: videoMode,
-    seed: videoParamInt('seed', 20260723),
-    width: videoParamInt('width', 1920),
-    height: videoParamInt('height', 1080),
-    fps: videoParamInt('fps', 30),
+    seed: videoParamInt('seed', 20260723, 4294967295),
+    width: videoParamInt('width', 1920, 7680),
+    height: videoParamInt('height', 1080, 7680),
+    fps: videoParamInt('fps', 30, 240),
     quality: videoParams.get('quality') || 'final'
   });
   var videoRandomCalls = 0, videoRandomHash = 2166136261;
@@ -891,7 +892,28 @@
   var cv = document.getElementById('cv');
   var outputWidth = videoMode ? videoConfig.width : window.innerWidth;
   var outputHeight = videoMode ? videoConfig.height : window.innerHeight;
-  var renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false }); // frames go through the composers' render targets; an MSAA backbuffer only cost memory
+  var renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false }); // frames go through the composers' render targets; an MSAA backbuffer only cost memory
+  } catch (glError) { // WebGL off or unavailable: explain, then stop (nothing below can run without it)
+    var noGlLang = 'en'; try { noGlLang = localStorage.getItem('gx-lang') || 'en'; } catch (e) {}
+    setMsg({ en: 'Galaxy Explorer needs WebGL, which is turned off or unavailable in this browser.', hans: '本页面需要 WebGL,但当前浏览器未启用或不支持。',
+      hant: '本頁面需要 WebGL,但目前的瀏覽器未啟用或不支援。', ja: 'このページには WebGL が必要ですが、このブラウザーでは無効か利用できません。',
+      ko: '이 페이지에는 WebGL이 필요하지만 현재 브라우저에서 꺼져 있거나 지원되지 않습니다.' }[noGlLang] || 'Galaxy Explorer needs WebGL, which is turned off or unavailable in this browser.');
+    throw glError;
+  }
+  var glLostTimer = null, GL_LOST = {
+    en: ['Graphics were interrupted — restoring…', 'Graphics were interrupted — please reload the page.'],
+    hans: ['图形渲染中断 —— 正在恢复…', '图形渲染中断 —— 请刷新页面。'], hant: ['圖形渲染中斷 —— 正在恢復…', '圖形渲染中斷 —— 請重新整理頁面。'],
+    ja: ['グラフィックスが中断されました — 復旧中…', 'グラフィックスが中断されました — ページを再読み込みしてください。'],
+    ko: ['그래픽이 중단되었습니다 — 복구하는 중…', '그래픽이 중단되었습니다 — 페이지를 새로 고쳐 주세요.']
+  };
+  cv.addEventListener('webglcontextlost', function (e) { // F086: GPU reset / tab eviction — let the browser restore it, and say what is happening
+    e.preventDefault();
+    var m = GL_LOST[typeof beaconLang === 'string' ? beaconLang : 'en'] || GL_LOST.en; setMsg(m[0]);
+    clearTimeout(glLostTimer); glLostTimer = setTimeout(function () { setMsg(m[1]); }, 4000);
+  });
+  cv.addEventListener('webglcontextrestored', function () { clearTimeout(glLostTimer); setMsg(''); }); // three re-uploads textures/buffers on the next frame; render-target bakes redo themselves (bakeNebula)
   renderer.setPixelRatio(videoMode ? 1 : Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(outputWidth, outputHeight);
   renderer.toneMapping = THREE.NoToneMapping; // tone-mapped AFTER bloom via a final ACES pass instead
@@ -1048,7 +1070,9 @@
     var wp = new THREE.Vector3(); comet.coma.getWorldPosition(wp);
     var dir = solarCamera.position.clone().sub(wp); dir.y = 0;
     if (dir.lengthSq() < 1e-4) dir.set(0.6, 0, 1); dir.normalize();
-    solarNav.cameraStack.push(solarSnapshot());
+    var fromTransit = !!solarEventRide && solarEventRide.type === 'transit'; // the transit already saved the view from before it
+    cancelSolarEventRide(); // a fly takes over the camera
+    if (!fromTransit) solarNav.cameraStack.push(solarSnapshot());
     solarControls.enabled = false;
     solarFly = { cometIndex: cometIndex, dir: dir, dist: 15, lift: 4, p0: solarCamera.position.clone(), t0: solarControls.target.clone(), start: videoNow(), dur: solarReducedMotion() ? 120 : 2600, wp: wp };
     return true;
@@ -1339,12 +1363,17 @@
       var bakeScene = new THREE.Scene(); bakeScene.add(new THREE.Mesh(geo, bakeMat));
       var bakeCam = new THREE.OrthographicCamera(-bakeHalf, bakeHalf, bakeHalf, -bakeHalf, 0.1, 10);
       bakeCam.position.z = 1; bakeCam.lookAt(0, 0, 0);
-      var bakeClear = renderer.getClearColor(new THREE.Color()), bakeAlpha = renderer.getClearAlpha();
-      renderer.setRenderTarget(bakeRT); renderer.setClearColor(0x000000, 0); renderer.clear();
-      renderer.render(bakeScene, bakeCam);
-      renderer.setRenderTarget(null); renderer.setClearColor(bakeClear, bakeAlpha);
+      var bakeNebula = function () {
+        var bakeClear = renderer.getClearColor(new THREE.Color()), bakeAlpha = renderer.getClearAlpha();
+        renderer.setRenderTarget(bakeRT); renderer.setClearColor(0x000000, 0); renderer.clear();
+        renderer.render(bakeScene, bakeCam);
+        renderer.setRenderTarget(null); renderer.setClearColor(bakeClear, bakeAlpha);
+        bakeMat.dispose(); // frees the program; three recompiles it if a restore needs another bake
+      };
+      bakeNebula();
+      cv.addEventListener('webglcontextrestored', bakeNebula); // a restored context brings the target back empty (three's own restore listener runs first)
       plane.material = new THREE.MeshBasicMaterial({ map: bakeRT.texture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
-      bakeMat.dispose(); nebMat.dispose();
+      nebMat.dispose();
     } // +π/2 so local y → world +z (matches the dust's world angle, no mirror)
     galaxyRoot.add(plane); // lies flat in the disc, rotates with the galaxy + the stars
   })();
@@ -2230,6 +2259,7 @@
       function finish(texture) {
         settled = true;
         if (texture) texture.wrapS = THREE.RepeatWrapping; // equirectangular maps: blend mips across the 0°/360° longitude seam
+        if (texture) texture.anisotropy = Math.min(solarIsCompact() ? 4 : 8, renderer.capabilities.getMaxAnisotropy()); // rings and limbs stay sharp at grazing angles
         if (texture && albedo) {
           if (typeof THREE.SRGBColorSpace !== 'undefined') texture.colorSpace = THREE.SRGBColorSpace;
           else if (typeof THREE.sRGBEncoding !== 'undefined') texture.encoding = THREE.sRGBEncoding;
@@ -2711,6 +2741,7 @@
   function toggleSolarScale() {
     if (viewMode !== 'solar' || solarWarp || solarFly || solarScaleAnim) return false;
     if (solarNav.level !== 'overview') return false; // a statement about the whole system — offered from the overview
+    cancelSolarEventRide(); // the scale ride takes over the camera
     var to = solarScaleBlend > 0.5 ? 0 : 1;
     var scaleButton = document.getElementById('solarscale');
     if (scaleButton) setOn(scaleButton, to === 1);
@@ -2820,7 +2851,7 @@
     solarEventRide = null; solarControls.enabled = true;
     setTimeout(clearSolarBanner, linger);
   }
-  function stepSolarEventRide() {
+  function stepSolarEventRide(dt) {
     if (!solarEventRide) return false;
     var ride = solarEventRide, now = videoNow();
     if (ride.phase !== 'watch') {
@@ -2836,7 +2867,7 @@
       }
       return true;
     }
-    solarElapsed += 0.016 * 8; // slow-motion crossing while the rig holds the shot
+    solarElapsed += (dt || 0) * 7.68; // slow-motion crossing while the rig holds the shot (the 60 fps pace it was tuned at, now frame-rate independent)
     aimSolarTransitRig();
     if (now >= ride.watchUntil) cancelSolarEventRide();
     return true;
@@ -3131,7 +3162,8 @@
   var clickDragGuard = { x: 0, y: 0 };
   window.addEventListener('pointerdown', function (e) { clickDragGuard.x = e.clientX; clickDragGuard.y = e.clientY; }, true);
   function clickWasDrag(e) { return Math.abs(e.clientX - clickDragGuard.x) > 6 || Math.abs(e.clientY - clickDragGuard.y) > 6; }
-  window.addEventListener('click', function (e) { if (!clickWasDrag(e) && selectedBeacon !== null) clearSelection(); }); // outside click closes — but an orbit drag is not a click
+  function onPageControl(e) { return !!(e.target && e.target.closest && e.target.closest('.overlay, #beacon-panel')); } // language, music, top bar, card, back buttons
+  window.addEventListener('click', function (e) { if (!clickWasDrag(e) && !onPageControl(e) && selectedBeacon !== null) clearSelection(); }); // outside click closes — but an orbit drag is not a click
   bpEl.addEventListener('click', function (e) { e.stopPropagation(); }); // clicks inside the panel don't close it
   bpBody.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'bp-solar-link') enterSolar();
@@ -3559,7 +3591,9 @@
       if (dir.dot(wp) > 0) dir.negate(); // point toward the Sun (at the origin): sunward = -wp
     }
     if (dir.lengthSq() < 1e-4) dir.set(0.6, 0, 1); dir.normalize();
-    solarNav.cameraStack.push(solarSnapshot());
+    var fromTransit = !!solarEventRide && solarEventRide.type === 'transit'; // the transit already saved the view from before it
+    cancelSolarEventRide(); // a fly takes over the camera
+    if (!fromTransit) solarNav.cameraStack.push(solarSnapshot());
     solarControls.enabled = false;
     solarFly = { id: id, dir: dir, dist: r * 5.5, lift: r * 1.4, p0: solarCamera.position.clone(), t0: solarControls.target.clone(), start: videoNow(), dur: solarReducedMotion() ? 120 : 2600, wp: wp };
     return true;
@@ -4556,18 +4590,32 @@
     if (ZFIG_ANIM[c.z.key]) { // animated loop on a dark bg — additive blending keys the dark away, no alpha channel needed
       var v = document.createElement('video'); v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.setAttribute('muted', ''); v.src = path + '.mp4'; e.videoEl = v;
       v.style.cssText = 'position:fixed;left:-4px;top:-4px;width:2px;height:2px;opacity:0.01;pointer-events:none;z-index:-1'; document.body.appendChild(v); // attached (hidden) so playback is reliable
-      v.addEventListener('loadeddata', function () { v.play().catch(function () {}); var tx = new THREE.VideoTexture(v); if ('colorSpace' in tx) tx.colorSpace = THREE.SRGBColorSpace; buildFigureSprite(e, c, tx, (v.videoWidth / v.videoHeight) || 1, true); });
+      v.addEventListener('loadeddata', function () { if (e.released) return; v.play().catch(function () {}); var tx = new THREE.VideoTexture(v); if ('colorSpace' in tx) tx.colorSpace = THREE.SRGBColorSpace; buildFigureSprite(e, c, tx, (v.videoWidth / v.videoHeight) || 1, true); });
       v.load();
     } else {
       var hasStars = !!ZFIG_STARS[c.z.key]; e.twinkle = true; // wireframe base always shimmers (pixel-phase); the stars layer twinkles per-star on top
       var skyLdr = (skyFigLoader = skyFigLoader || new THREE.TextureLoader());
-      skyLdr.load(path + '.png', function (tex) { if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace; buildFigureSprite(e, c, tex, (tex.image && tex.image.width / tex.image.height) || 1, true, FIG_FRAG); });
-      if (hasStars) skyLdr.load(path + '_stars.png', function (tex) { if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace; buildStarsLayer(e, c, tex, (tex.image && tex.image.width / tex.image.height) || 1); }); // extracted glowing stars, twinkled over the star-free wireframe
+      skyLdr.load(path + '.png', function (tex) { if (e.released) { tex.dispose(); return; } if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace; buildFigureSprite(e, c, tex, (tex.image && tex.image.width / tex.image.height) || 1, true, FIG_FRAG); });
+      if (hasStars) skyLdr.load(path + '_stars.png', function (tex) { if (e.released) { tex.dispose(); return; } if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace; buildStarsLayer(e, c, tex, (tex.image && tex.image.width / tex.image.height) || 1); }); // extracted glowing stars, twinkled over the star-free wireframe
     }
     return e;
   }
   function revealSkyFigure(i) { for (var j in skyFigures) if (skyFigures[j]) skyFigures[j].target = 0; var e = ensureSkyFigure(i); if (e) e.target = 0.74; }
   function hideSkyFigures() { for (var j in skyFigures) if (skyFigures[j]) skyFigures[j].target = 0; }
+  function releaseSkyFigures() { // F075: leaving the sky frees the figure art (two ~760x1014 layers per sign) instead of carrying it into the galaxy
+    for (var j in skyFigures) {
+      var e = skyFigures[j]; delete skyFigures[j];
+      if (!e) continue;
+      e.released = true; // a texture still loading is dropped when it arrives
+      [e.sprite, e.starsSprite].forEach(function (m) {
+        if (!m) return;
+        skyScene.remove(m); m.geometry.dispose();
+        if (m.material.uniforms && m.material.uniforms.map && m.material.uniforms.map.value) m.material.uniforms.map.value.dispose();
+        m.material.dispose();
+      });
+      if (e.videoEl) { e.videoEl.pause(); e.videoEl.removeAttribute('src'); e.videoEl.load(); if (e.videoEl.parentNode) e.videoEl.parentNode.removeChild(e.videoEl); }
+    }
+  }
   function updateSkyFigures() { // the real stick-figure lines fade out as the art fades in; the art gently breathes + shimmers so it feels alive
     var sel = window.skySelected, t = videoNow() * 0.001, still = solarReducedMotion();
     for (var j in skyFigures) { var e = skyFigures[j]; if (!e || !e.sprite) continue;
@@ -4615,7 +4663,7 @@
       e.stopImmediatePropagation(); // consume: the NEXT Esc exits the sky view, not this one
     }
   });
-  window.addEventListener('click', function (e) { if (!clickWasDrag(e) && viewMode === 'sky' && (skySelected != null || window.skyGalSelected != null)) clearSkySelection(); });
+  window.addEventListener('click', function (e) { if (!clickWasDrag(e) && !onPageControl(e) && viewMode === 'sky' && (skySelected != null || window.skyGalSelected != null)) clearSkySelection(); });
   var skybackEl = document.getElementById('skyback'), skyVeilEl = document.getElementById('skyveil');
   function updateSolarNavigationText() {
     var L = typeof beaconLang === 'string' ? beaconLang : 'en';
@@ -4738,6 +4786,7 @@
     skyArrival = null; skyDive = null; skyVeilEl.style.opacity = '0'; skyCamera.fov = 60; skyCamera.updateProjectionMatrix();
     var context = skyReturnContext;
     if (window.clearSkySelection) clearSkySelection();
+    releaseSkyFigures();
     viewMode = 'solar';
     skyControls.enabled = false; controls.enabled = false; solarControls.enabled = true;
     document.getElementById('beacons').style.display = 'none';
@@ -4758,6 +4807,7 @@
     if (viewMode !== 'sky') return;
     if (skyReturnContext) { returnSkyToEarth(); return; }
     if (window.clearSkySelection) clearSkySelection(); // close a sky card if open
+    releaseSkyFigures();
     viewMode = 'galaxy';
     skyControls.enabled = false; controls.enabled = true;
     document.getElementById('beacons').style.display = '';
@@ -4874,7 +4924,7 @@
       drainSolarUploadQueue();
       updateSolarSunOcclusion();
       updateSolarCameraLife();
-      if (!stepSolarWarp() && !stepSolarFly() && !stepSolarScale() && !stepSolarEventRide()) { stepSolarFollow(); solarControls.update(); } // warp, fly, scale, event ride, then free orbit
+      if (!stepSolarWarp() && !stepSolarFly() && !stepSolarScale() && !stepSolarEventRide(solarDt)) { stepSolarFollow(); solarControls.update(); } // warp, fly, scale, event ride, then free orbit
         updateSolarBackdrop();
       if (!solarReducedMotion()) updateSolarFx(solarNow);
       sampleSolarPerformance(solarNow); // before drawing: a resolution step resizes the canvas, which would blank this frame
@@ -6039,7 +6089,8 @@
     if (musicTrack !== i) { musicTrack = i; musicEl.src = 'audio/' + encodeURIComponent(MUSIC_TRACKS[i]); }
     musicEl.muted = false; musicOn = true;
     var attempt = musicEl.src;
-    musicEl.play().then(function () { musicRemember('on'); musicPaint(); }).catch(function () {
+    musicEl.play().then(function () { if (musicOn) musicRemember('on'); musicPaint(); }) // muted while it loaded? their 'off' stands
+    .catch(function () {
       if (musicEl.src !== attempt) return; // a newer track took over — its own play() reports
       musicOn = false; musicPaint();
       if (musicEl.paused || musicEl.error) { musicEl.removeAttribute('src'); musicEl.load(); musicTrack = -1; } // blocked autoplay or failed load: drop the half-started download; the next gesture starts afresh
@@ -6051,7 +6102,7 @@
     if (videoMode) { musicOn = false; musicPaint(); return; }
     if (!musicEl || musicTrack < 0) { musicPlay(0); return; } // first toggle starts track 1
     if (musicOn) { musicEl.muted = true; musicOn = false; musicRemember('off'); }
-    else { musicEl.muted = false; musicOn = true; musicRemember('on'); musicEl.play().catch(function () {}); }
+    else { musicRemember('on'); musicPlay(musicTrack); }
     musicPaint();
   }
   audioBtn.addEventListener('click', musicToggle);
@@ -6061,7 +6112,8 @@
   var musicPref = 'on'; try { musicPref = localStorage.getItem('gx-music') || 'on'; } catch (e) {}
   if (!videoMode && MUSIC_TRACKS.length && musicPref !== 'off') { // skip autoplay if the user muted last visit
     musicPlay(0);
-    var kickMusic = function () {
+    var kickMusic = function (e) {
+      if (e && ((e.target && e.target.closest && e.target.closest('#audio')) || (e.type === 'keydown' && (e.key || '').toLowerCase() === 'm'))) return; // the music control's own handler decides
       if (musicEl && musicEl.paused) musicPlay(0);
       if (musicEl && !musicEl.paused) ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { window.removeEventListener(ev, kickMusic); });
     };
@@ -6091,7 +6143,7 @@
   // keyboard: F cinema (hide UI) · M music (never steals from inputs)
   window.addEventListener('keydown', function (e) {
     var tg = e.target;
-    if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA')) return;
+    if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT')) return; // typing to pick a language is not a shortcut
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     var k = (e.key || '').toLowerCase();
     if (k === 'f') toggleCinema();
