@@ -342,6 +342,18 @@
         if (b.parent) ok(o.orbitPivot.parent === SOLAR_OBJECTS[b.parent].positionNode, b.id + ' is not attached to its parent');
       });
     });
+    check('solar-2k-tier', function () {
+      var oldCoarse = solarPointerCoarse;
+      try {
+        solarPointerCoarse = false;
+        ok(solarTextureSource('images/solar-system/jupiter.jpg') === 'images/solar-system/jupiter.jpg', 'desktop lost 4k Jupiter');
+        solarPointerCoarse = true;
+        Object.keys(SOLAR_TEX_2K).forEach(function (url) {
+          ok(url === 'images/solar-system/sun.jpg' || SOLAR_BODIES.some(function (b) { return Object.keys(b.maps).some(function (k) { return b.maps[k] === url; }); }), url + ' is not a solar map');
+          ok(solarTextureSource(url) === (videoMode ? url : SOLAR_TEX_2K[url]), url + ' did not switch to 2k on touch');
+        });
+      } finally { solarPointerCoarse = oldCoarse; }
+    });
     check('solar-sun-core-layers', function () {
       var oldMotionOverride = solarMotionOverride, oldShaderTime = solarShaderTime, oldPaused = solarPaused, oldScales;
       try {

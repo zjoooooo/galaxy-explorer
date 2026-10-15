@@ -6,6 +6,11 @@ runtime. NASA 3D Resources states that its assets are free to download and use.
 NASA SVS states that its content is public domain unless otherwise noted. NASA
 material is subject to the [NASA media-usage guidance](https://www.nasa.gov/nasa-brand-center/images-and-media/).
 
+`2k/` holds 2048×1024 copies of the seven 4096×2048 maps (sun, earth,
+earth-night, moon, mars, jupiter, saturn), made from the delivery files with the
+`magick` loop below. `solarLoadTexture` fetches them instead on touch
+(`pointer: coarse`) devices; desktop and video captures keep the 4k files.
+
 ### USGS and PDS status
 
 The [USGS data-licensing policy](https://www.usgs.gov/data-management/data-licensing)
@@ -78,6 +83,8 @@ ffmpeg -f lavfi -i 'color=c=white:s=4096x2048:d=1' -i 8k_earth_clouds.jpg -filte
 python3 -c "from PIL import Image; im = Image.open('earth-clouds.png'); a = im.getchannel('A'); Image.merge('LA', (a.point(lambda v: 255 if v else 0), a)).save('earth-clouds.png', optimize=True)"
 ffmpeg -i PIA06175~orig.jpg -filter_complex "[0]scale=1024:1024,format=rgb24,geq=r='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)':g='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)':b='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)'[rgb];[0]scale=1024:1024,format=gray,geq=lum='if(between(sqrt((X-511.5)^2+(Y-511.5)^2)\,256\,512)\,p((sqrt((X-511.5)^2+(Y-511.5)^2)-256)*1023/256\,512)\,0)'[a];[rgb][a]alphamerge" -frames:v 1 saturn-rings.png
 ./images/solar-system/build-relief-maps.sh
+# 2k/ copies for touch devices (ImageMagick keeps the embedded sRGB profile; do not add -strip):
+for n in sun earth earth-night moon mars jupiter saturn; do magick $n.jpg -filter Lanczos -resize 2048x1024 -quality 85 -sampling-factor 4:2:0 2k/$n.jpg; done
 ```
 
 `build-relief-maps.sh` contains the exact source URLs and FFmpeg expression for

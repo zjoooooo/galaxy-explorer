@@ -1759,6 +1759,10 @@
     solarAnimatedMaterials.push(material);
     return material;
   }
+  // Touch devices fetch 2048×1024 q85 copies of the seven 4096×2048 maps (~10 MB less to download, ~4× less GPU memory per map);
+  // desktop and video captures keep 4k. The cache stays keyed by the 4k URL, so every cache lookup is unchanged.
+  var SOLAR_TEX_2K = { 'images/solar-system/sun.jpg': 'images/solar-system/2k/sun.jpg', 'images/solar-system/earth.jpg': 'images/solar-system/2k/earth.jpg', 'images/solar-system/earth-night.jpg': 'images/solar-system/2k/earth-night.jpg', 'images/solar-system/moon.jpg': 'images/solar-system/2k/moon.jpg', 'images/solar-system/mars.jpg': 'images/solar-system/2k/mars.jpg', 'images/solar-system/jupiter.jpg': 'images/solar-system/2k/jupiter.jpg', 'images/solar-system/saturn.jpg': 'images/solar-system/2k/saturn.jpg' };
+  function solarTextureSource(url) { return (!videoMode && solarPointerCoarse && SOLAR_TEX_2K[url]) || url; }
   function solarLoadTexture(url, albedo) {
     if (Object.prototype.hasOwnProperty.call(solarTextures.cache, url)) return Promise.resolve(solarTextures.cache[url]);
     if (solarTextures.pending[url]) return solarTextures.pending[url];
@@ -1779,7 +1783,7 @@
         if (!solarTextures.warned[url]) { solarTextures.warned[url] = true; console.warn('Solar texture unavailable: ' + url); }
         resolve(null);
       }
-      try { loader.load(url, finish, undefined, fail); } catch (error) { fail(); }
+      try { loader.load(solarTextureSource(url), finish, undefined, fail); } catch (error) { fail(); }
     });
     if (!settled) solarTextures.pending[url] = request;
     return request;
