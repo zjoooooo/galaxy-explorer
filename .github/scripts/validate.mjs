@@ -4,8 +4,8 @@
 // Dependency-free CI check (Node built-ins only) that catches the mistakes most
 // likely to break this single-file WebGL site before it ships to GitHub Pages:
 //
-//   1. JS syntax   — every vendored script and the big inline <script> in
-//                    index.html must parse.
+//   1. JS syntax   — every vendored script, the on-demand self-test under
+//                    test/, and the big inline <script> in index.html must parse.
 //   2. Assets      — every locally-referenced image/audio/vendor file must
 //                    actually exist on disk (a typo'd path is invisible until
 //                    the browser 404s).
@@ -53,8 +53,10 @@ function checkJsSyntax(html) {
     }
   };
 
-  for (const f of fs.readdirSync(path.join(root, 'vendor')).sort()) {
-    if (f.endsWith('.js')) compile(read(`vendor/${f}`), `vendor/${f}`);
+  for (const dir of ['vendor', 'test']) {
+    for (const f of fs.readdirSync(path.join(root, dir)).sort()) {
+      if (f.endsWith('.js')) compile(read(`${dir}/${f}`), `${dir}/${f}`);
+    }
   }
   inlineScripts(html).forEach((code, i) => compile(code, `index.html <script #${i}>`));
 
@@ -68,7 +70,7 @@ const ASSET_EXT = 'jpg|jpeg|png|webp|gif|svg|mp3|ogg|m4a|js|css|json';
 // built by string concatenation don't end in an extension, so they're skipped).
 function checkHtmlAssets(html) {
   const re = new RegExp(
-    `['"]((?:images|audio|vendor|docs)/[^'"]+?\\.(?:${ASSET_EXT}))['"]`,
+    `['"]((?:images|audio|vendor|test|docs)/[^'"]+?\\.(?:${ASSET_EXT}))['"]`,
     'gi'
   );
   const seen = new Set();
