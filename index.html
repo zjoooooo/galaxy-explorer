@@ -23,13 +23,24 @@
   #skyveil { position: fixed; inset: 0; background: #e8f1ff; opacity: 0; pointer-events: none; z-index: 999; }
 
   /* cinema mode (F): hide all UI chrome */
-  body.gx-cinema #title, body.gx-cinema #audio, body.gx-cinema #beacons, body.gx-cinema #lang,
+  body.gx-cinema #lang { visibility: hidden; } /* keeps its slot so the cinema button does not jump */
+  body.gx-cinema #title, body.gx-cinema #audio, body.gx-cinema #beacons,
   body.gx-cinema #skyback, body.gx-cinema #skylabels, body.gx-cinema #solarback, body.gx-cinema #solarlabels { display: none !important; }
 
   /* language selector (native <select>, dark) */
-  #lang { top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); z-index: 6; font: inherit; font-size: 12px; color: #cbd5e1;
+  #topbar { top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); z-index: 6; display: flex; gap: 8px; align-items: flex-start; }
+  #lang { font: inherit; font-size: 12px; color: #cbd5e1;
     background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 5px 8px; cursor: pointer; }
   #lang:hover { border-color: #6366f1; }
+  /* cinema toggle: beside the language select; the one control left (faintly) in cinema mode — the way out on touch screens */
+  #cinemabtn { display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 29px; padding: 0; cursor: pointer; color: #cbd5e1; background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; }
+  body.gx-cinema #cinemabtn { opacity: .25; }
+  body.gx-cinema #cinemabtn:focus-visible { opacity: 1; }
+  @media (hover: hover) { /* touch screens keep :hover after a tap — the faint exit must not stick at full strength */
+    #cinemabtn:hover { border-color: #6366f1; color: #fff; }
+    body.gx-cinema #cinemabtn:hover { opacity: 1; }
+  }
 
   /* sky and solar views: back-to-galaxy buttons */
   #skyback, #solarback { top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(18px + env(safe-area-inset-left, 0px)); z-index: 6; display: none; cursor: pointer; font: inherit; font-size: 13px;
@@ -109,6 +120,7 @@
   /* label declutter: crowded labels hide (dot + rings stay clickable); they return on zoom-in */
   .beacon .b-label { transition: opacity .25s ease; }
   .beacon.ld .b-label { opacity: 0; }
+  .beacon.ld:focus-visible .b-label { opacity: 1; } /* keyboard focus: show whose ring this is */
   /* decluttered beacons don't intercept clicks — the kept "winner" of each crowded
      cluster (the Solar System is always kept) takes the click; zoom in to reach the rest */
   .beacon.ld .b-mark, .beacon.ld .b-label { pointer-events: none; }
@@ -147,7 +159,7 @@
   #bp-credit { font-size: 10px; line-height: 1.35; color: #8a94a8; margin-bottom: 6px; }
   #bp-solar-link, #bp-earth-sky-link, #bp-flyto, #bp-compare, #bp-align, #bp-transit { display: block; width: 100%; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(255,255,255,.07);
     color: #9cc0ff; cursor: pointer; font-size: 13px; }
-  #bp-solar-link, #bp-earth-sky-link { font: inherit; text-align: left; background: transparent; }
+  #bp-solar-link, #bp-earth-sky-link, #bp-flyto, #bp-compare, #bp-align, #bp-transit { font: inherit; font-size: 13px; text-align: left; background: transparent; }
   #bp-solar-link:hover, #bp-earth-sky-link:hover, #bp-flyto:hover, #bp-compare:hover, #bp-align:hover, #bp-transit:hover { color: #cfe2ff; }
   /* true-size comparison overlay */
   #scalecmp { position: fixed; inset: 0; z-index: 40; background: rgba(4,6,12,.95); display: none; }
@@ -156,11 +168,12 @@
   #scalecmp .note { font-size: 12px; color: #8fa3c8; margin: 0 16px; text-align: center; }
   #scalecmp svg { display: block; width: min(96vw, 1500px); height: auto; }
   #scalecmp-scroll { max-width: 100%; overflow-x: auto; }
+  #scalecmp-scroll:focus-visible { outline-offset: -2px; } /* inside the edge-fade mask */
   #scalecmp-close { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); cursor: pointer; font: inherit; font-size: 22px; color: #cbd5e1; background: none; border: 0; padding: 6px 10px; }
   #scalecmp-close:hover { color: #fff; }
   #return-mw { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); z-index: 50; display: none;
     padding: 8px 16px; border-radius: 20px; cursor: pointer; background: rgba(20,26,40,.72);
-    border: 1px solid rgba(255,255,255,.14); color: #cfe0ff; font-size: 13px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+    border: 1px solid rgba(255,255,255,.14); color: #cfe0ff; font-family: inherit; font-size: 13px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   #return-mw:hover { background: rgba(30,40,60,.85); color: #fff; }
   body.gx-cinema #beacon-panel { display: none !important; }
   /* mobile: panel becomes a bottom drawer */
@@ -186,9 +199,10 @@
     body:has(#beacon-panel.open) #galaxystrip, body:has(#beacon-panel.open) #solarstrip,
     body:has(#beacon-panel.open) #solartime, body:has(#beacon-panel.open) #audio { visibility: hidden; }
     #skyback, #solarback { min-height: 44px; }
+    #title small { max-width: calc(100vw - 190px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #lang { height: 44px; } /* WebKit ignores min-height on a native select */
     #return-mw { min-height: 44px; line-height: 26px; }
-    #audiobtn, #scalecmp-close { min-width: 44px; min-height: 44px; }
+    #audiobtn, #cinemabtn, #scalecmp-close { min-width: 44px; min-height: 44px; }
     #bp-close { min-width: 44px; min-height: 44px; top: 2px; right: 2px; }
   }
 
@@ -197,11 +211,14 @@
   #audiobtn { display: inline-block; cursor: pointer; font-size: 18px; line-height: 1; background: transparent;
     border: 1px solid transparent; border-radius: 8px; padding: 7px 9px; user-select: none; opacity: .8; }
   #audiobtn:hover { border-color: #6366f1; background: rgba(8,12,22,.6); opacity: 1; }
+
   #audiolist { display: none; margin-bottom: 6px; background: rgba(10,14,24,.95); border: 1px solid #243049;
     border-radius: 8px; overflow: hidden; }
   #audio:hover #audiolist { display: block; }
-  #audiolist .a-track { padding: 6px 12px; font-size: 12px; color: #cbd5e1; cursor: pointer; white-space: nowrap; text-align: left; }
+  #audio:focus-within #audiolist { display: block; } /* keyboard: Tab/Shift+Tab walk the tracks (pointer clicks blur, see below) */
+  #audiolist .a-track { display: block; width: 100%; border: 0; background: transparent; font: inherit; padding: 6px 12px; font-size: 12px; color: #cbd5e1; cursor: pointer; white-space: nowrap; text-align: left; }
   #audiolist .a-track:hover { background: #161f31; }
+  #audiolist .a-track:focus-visible { outline-offset: -2px; } /* the list clips its overflow */
   #audiolist .a-track.on { color: #34d399; }
 </style>
 </head>
@@ -211,20 +228,21 @@
 <div id="title" class="overlay">Milky Way Galaxy
   <small>drag to orbit · scroll to zoom · F cinema · M music</small></div>
 
-<select id="lang" class="overlay" title="Language">
+<div id="topbar" class="overlay"><button id="cinemabtn" type="button" title="Cinema mode — hide the interface (F)" aria-label="Cinema mode" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+<select id="lang" title="Language">
   <option value="en">English</option>
   <option value="hans">简体中文</option>
   <option value="hant">繁體中文</option>
   <option value="ja">日本語</option>
   <option value="ko">한국어</option>
-</select>
+</select></div>
 
 <button id="skyback" class="overlay" type="button" aria-label="← Back to Galaxy">← Back to Galaxy</button>
 <button id="solarback" class="overlay" type="button" aria-label="← Back to Galaxy">← Back to Galaxy</button>
-<div id="solarlabels" style="display:none"><div id="solarstrip" role="group" aria-label="Bodies"></div><div id="solartime" role="group" aria-label="Time speed"><button type="button" data-scale="0" aria-label="Pause">⏸</button><button type="button" data-scale="1" class="on" aria-label="Normal speed">1×</button><button type="button" data-scale="16" aria-label="16x speed">16×</button><button type="button" data-scale="128" aria-label="128x speed">128×</button><button type="button" id="solarscale" aria-label="True scale">⚖︎</button></div></div>
+<div id="solarlabels" style="display:none"><div id="solarstrip" role="group" aria-label="Bodies"></div><div id="solartime" role="group" aria-label="Time speed"><button type="button" data-scale="0" aria-label="Pause">⏸</button><button type="button" data-scale="1" class="on" aria-pressed="true" aria-label="Normal speed">1×</button><button type="button" data-scale="16" aria-pressed="false" aria-label="16x speed">16×</button><button type="button" data-scale="128" aria-pressed="false" aria-label="128x speed">128×</button><button type="button" id="solarscale" aria-pressed="false" aria-label="True scale">⚖︎</button></div></div>
 
-<div id="msg" class="overlay"></div>
-<div id="scalecmp" role="dialog" aria-modal="true" aria-label="True sizes"><button id="scalecmp-close" type="button" aria-label="Close">×</button><h3></h3><div id="scalecmp-scroll"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1820 560"></svg></div><div class="note"></div></div>
+<div id="msg" class="overlay" role="status"></div>
+<div id="scalecmp" role="dialog" aria-modal="true" aria-label="True sizes"><button id="scalecmp-close" type="button" aria-label="Close">×</button><h3></h3><div id="scalecmp-scroll" tabindex="0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1820 560"></svg></div><div class="note"></div></div>
 <div id="skyveil" aria-hidden="true"></div>
 
 <div id="beacon-panel" class="overlay" aria-live="polite">
@@ -234,7 +252,7 @@
 
 <div id="audio" class="overlay">
   <div id="audiolist"></div>
-  <button id="audiobtn" type="button" title="Background music — click to play / mute (M)" aria-label="Background music">🔇</button>
+  <button id="audiobtn" type="button" title="Background music — click to play / mute (M)" aria-label="Background music" aria-pressed="false">🔇</button>
 </div>
 
 <script src="vendor/three.min.js"></script>
@@ -297,6 +315,26 @@
   var GALAXY_SPIN = 0.013;
 
   function setMsg(t) { var el = document.getElementById('msg'); if (el) el.textContent = t || ''; }
+  function setOn(el, on) { // visible + announced toggle state; the pause button is not a toggle (its label flips Pause/Play)
+    el.classList.toggle('on', on); if (el.dataset.scale !== '0') el.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  function keyActivate(el) { // a clickable div becomes a keyboard button: Tab reaches it, Enter/Space click it
+    el.tabIndex = 0; el.setAttribute('role', 'button');
+    el.addEventListener('mousedown', function (e) { e.preventDefault(); }); // pointer clicks still click, they just don't take focus
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); openedCardFrom(el); } });
+  }
+  var cardOpener = null;
+  function noteCardOpener() { var a = document.activeElement, panel = document.getElementById('beacon-panel'); if (a && panel && !panel.contains(a)) cardOpener = a; }
+  function openedCardFrom(el) { // a keyboard-opened card takes focus (its close button) and remembers who opened it
+    var panel = document.getElementById('beacon-panel'), close = document.getElementById('bp-close');
+    if (panel && panel.classList.contains('open') && close) { cardOpener = el; close.focus({ preventScroll: true }); }
+  }
+  function returnCardFocus() { // closing a card the keyboard was in returns focus to its opener
+    var o = cardOpener, panel = document.getElementById('beacon-panel'); cardOpener = null;
+    if (o && panel && panel.contains(document.activeElement) && o.isConnected && o.offsetParent !== null) o.focus({ preventScroll: true });
+  }
+  function cardFocusId() { var a = document.activeElement, panel = document.getElementById('beacon-panel'); return a && a.id && panel && panel.contains(a) ? a.id : null; }
+  function restoreCardFocus(id) { if (id) { var el = document.getElementById(id); if (el) el.focus({ preventScroll: true }); } } // re-rendered card keeps the focused control
 
   function runSolarSelfTests() {
     var failures = [];
@@ -996,9 +1034,10 @@
       '<img id="bp-img" src="' + info.img + '" alt="' + esc(info.name[L]) + '" loading="lazy"><div id="bp-credit">' + esc(info.credit) + '</div>' +
       '<table id="bp-facts">' + info.facts[L].map(function (row) { return '<tr><th>' + esc(row[0]) + '</th><td>' + esc(row[1]) + '</td></tr>'; }).join('') + '</table>' +
       '<p id="bp-desc">' + esc(info.desc[L]) + '</p>' +
-      '<div id="bp-flyto">' + esc({ en: '\uD83D\uDE80 Chase this comet \u2192', hans: '\uD83D\uDE80 追上这颗彗星 \u2192', hant: '\uD83D\uDE80 追上這顆彗星 \u2192', ja: '\uD83D\uDE80 この彗星を追いかける \u2192', ko: '\uD83D\uDE80 이 혜성을 쫓아가기 \u2192' }[L]) + '</div>';
+      '<button type="button" id="bp-flyto">' + esc({ en: '\uD83D\uDE80 Chase this comet \u2192', hans: '\uD83D\uDE80 追上这颗彗星 \u2192', hant: '\uD83D\uDE80 追上這顆彗星 \u2192', ja: '\uD83D\uDE80 この彗星を追いかける \u2192', ko: '\uD83D\uDE80 이 혜성을 쫓아가기 \u2192' }[L]) + '</button>';
+    var keep = cardFocusId();
     bpBody.innerHTML = html;
-    bpEl.classList.add('open');
+    bpEl.classList.add('open'); restoreCardFocus(keep);
     solarCometSelected = cometIndex; solarCardOpen = true;
     return true;
   }
@@ -1011,10 +1050,11 @@
     if (dir.lengthSq() < 1e-4) dir.set(0.6, 0, 1); dir.normalize();
     solarNav.cameraStack.push(solarSnapshot());
     solarControls.enabled = false;
-    solarFly = { cometIndex: cometIndex, dir: dir, dist: 15, lift: 4, p0: solarCamera.position.clone(), t0: solarControls.target.clone(), start: videoNow(), dur: 2600, wp: wp };
+    solarFly = { cometIndex: cometIndex, dir: dir, dist: 15, lift: 4, p0: solarCamera.position.clone(), t0: solarControls.target.clone(), start: videoNow(), dur: solarReducedMotion() ? 120 : 2600, wp: wp };
     return true;
   }
   function selectSolarComet(cometIndex) {
+    noteCardOpener();
     solarNav.selectedId = null;
     return renderCometPanel(cometIndex, beaconLang);
   }
@@ -1669,7 +1709,7 @@
       if (videoTarget) el.dataset.videoTarget = videoTarget;
       el.style.display = 'none'; // hidden until first positioned — unpositioned beacons otherwise stack clickable at the page's top-left
       el.innerHTML = '<div class="b-mark"><span class="b-ring"></span><span class="b-ring r2"></span><span class="b-dot"></span></div><div class="b-label"></div>';
-      host.appendChild(el);
+      host.appendChild(el); keyActivate(el);
       (function (idx) { el.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(idx); }); })(i);
       BEACONS.push({ p: d.p, el: el, t: d.t, info: d.info, fixed: d.fixed, gal: d.gal, shown: false }); // shown:false MUST match the initial display:none set above — else updateBeacons' vis!==shown guard never un-hides it
     }
@@ -1776,7 +1816,7 @@
       if (c.info.en.catalog === 'Cen A jet') el.dataset.videoTarget = 'child-centaurus-a-jet';
       el.style.display = 'none'; // hidden until first positioned — see the DEFS loop note
       el.innerHTML = '<div class="b-mark"><span class="b-ring"></span><span class="b-ring r2"></span><span class="b-dot"></span></div><div class="b-label"></div>';
-      host.appendChild(el);
+      host.appendChild(el); keyActivate(el);
       var idx = BEACONS.length;
       (function (i) { el.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(i); }); })(idx);
       BEACONS.push({ el: el, t: c.t, info: c.info, child: true, parent: c.parent, lp: c.lp, feat: c.feat, img: c.img, credit: c.credit, parentPts: null, feature: null, shown: false });
@@ -2673,7 +2713,7 @@
     if (solarNav.level !== 'overview') return false; // a statement about the whole system — offered from the overview
     var to = solarScaleBlend > 0.5 ? 0 : 1;
     var scaleButton = document.getElementById('solarscale');
-    if (scaleButton) scaleButton.classList.toggle('on', to === 1);
+    if (scaleButton) setOn(scaleButton, to === 1);
     solarControls.maxDistance = 1600; solarCamera.far = 4200; solarCamera.updateProjectionMatrix(); // roomy during the ride either way
     if (solarReducedMotion()) {
       solarApplyScaleBlend(to);
@@ -2997,6 +3037,7 @@
   }
   var selectedBeacon = null;
   function selectBeacon(i) {
+    noteCardOpener();
     if (i === selectedBeacon) { clearSelection(); return; }
     selectedBeacon = i;
     for (var k = 0; k < BEACONS.length; k++) {
@@ -3004,13 +3045,14 @@
       BEACONS[k].el.classList.toggle('dim', k !== i);
     }
     var gStrip = document.getElementById('galaxystrip'); // mirror the highlight onto the bottom roster
-    if (gStrip) for (var gs = 0; gs < gStrip.children.length; gs++) { var gb = gStrip.children[gs]; gb.classList.toggle('sel', +gb.dataset.beaconIndex === i); if (+gb.dataset.beaconIndex === i && gb.scrollIntoView) gb.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    if (gStrip) for (var gs = 0; gs < gStrip.children.length; gs++) { var gb = gStrip.children[gs]; gb.classList.toggle('sel', +gb.dataset.beaconIndex === i); if (+gb.dataset.beaconIndex === i) gb.setAttribute('aria-current', 'true'); else gb.removeAttribute('aria-current'); if (+gb.dataset.beaconIndex === i && gb.scrollIntoView) gb.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
     if (window.openBeaconExtras) window.openBeaconExtras(i);
   }
   function clearSelection() {
+    returnCardFocus();
     selectedBeacon = null;
     for (var k = 0; k < BEACONS.length; k++) { BEACONS[k].el.classList.remove('sel', 'dim'); }
-    var gStrip = document.getElementById('galaxystrip'); if (gStrip) for (var gs = 0; gs < gStrip.children.length; gs++) gStrip.children[gs].classList.remove('sel');
+    var gStrip = document.getElementById('galaxystrip'); if (gStrip) for (var gs = 0; gs < gStrip.children.length; gs++) { gStrip.children[gs].classList.remove('sel'); gStrip.children[gs].removeAttribute('aria-current'); }
     if (window.closeBeaconExtras) window.closeBeaconExtras();
   }
   var bpEl = document.getElementById('beacon-panel'), bpBody = document.getElementById('bp-body');
@@ -3019,6 +3061,7 @@
   function renderSolarPanel(id, lang) {
     var body = SOLAR_BY_ID[id], L = body && body.info[lang] ? lang : 'en';
     if (!body) return false;
+    var keep = cardFocusId();
     var info = body.info[L], imageURL = body.cardImage, labels = {
       en: ['Distance', 'Diameter', 'Orbit', 'Rotation', 'Temperature', 'Moons'],
       hans: ['距离', '直径', '公转', '自转', '温度', '卫星'],
@@ -3039,17 +3082,18 @@
       rows.join('') +
       '<div id="bp-desc">' + esc(info.desc) + '</div>' +
       (body.id === 'earth' ? '<button id="bp-earth-sky-link" type="button" aria-label="' + esc({ en: 'Explore Earth\'s sky →', hans: '探索地球的天空 →', hant: '探索地球的天空 →', ja: '地球の空を探索する →', ko: '지구의 하늘 탐험하기 →' }[L]) + '">' + esc({ en: 'Explore Earth\'s sky →', hans: '探索地球的天空 →', hant: '探索地球的天空 →', ja: '地球の空を探索する →', ko: '지구의 하늘 탐험하기 →' }[L]) + '</button>' : '') +
-      '<div id="bp-flyto">' + esc({ en: '🚀 Fly to this world →', hans: '🚀 飞跃到此星球 →', hant: '🚀 飛越到此星球 →', ja: '🚀 この天体へ飛ぶ →', ko: '🚀 이 천체로 날아가기 →' }[L]) + '</div>' +
-      '<div id="bp-compare">' + esc({ en: '⚖ Compare real sizes →', hans: '⚖ 对比真实大小 →', hant: '⚖ 對比真實大小 →', ja: '⚖ 実際の大きさを比べる →', ko: '⚖ 실제 크기 비교 →' }[L]) + '</div>' +
-      (body.id === 'sun' && !solarReducedMotion() ? '<div id="bp-align">' + esc({ en: '🪐 Fast-forward to the next alignment →', hans: '🪐 快进到下一次行星连珠 →', hant: '🪐 快進到下一次行星連珠 →', ja: '🪐 次の惑星直列へ早送り →', ko: '🪐 다음 행성 정렬로 빨리 감기 →' }[L]) + '</div>' : '') +
-      ((body.id === 'venus' || body.id === 'mercury') && !solarReducedMotion() ? '<div id="bp-transit">' + esc({ en: '🌓 Fast-forward to the next transit →', hans: '🌓 快进到下一次凌日 →', hant: '🌓 快進到下一次凌日 →', ja: '🌓 次の太陽面通過へ早送り →', ko: '🌓 다음 태양면 통과로 빨리 감기 →' }[L]) + '</div>' : '') +
+      '<button type="button" id="bp-flyto">' + esc({ en: '🚀 Fly to this world →', hans: '🚀 飞跃到此星球 →', hant: '🚀 飛越到此星球 →', ja: '🚀 この天体へ飛ぶ →', ko: '🚀 이 천체로 날아가기 →' }[L]) + '</button>' +
+      '<button type="button" id="bp-compare">' + esc({ en: '⚖ Compare real sizes →', hans: '⚖ 对比真实大小 →', hant: '⚖ 對比真實大小 →', ja: '⚖ 実際の大きさを比べる →', ko: '⚖ 실제 크기 비교 →' }[L]) + '</button>' +
+      (body.id === 'sun' && !solarReducedMotion() ? '<button type="button" id="bp-align">' + esc({ en: '🪐 Fast-forward to the next alignment →', hans: '🪐 快进到下一次行星连珠 →', hant: '🪐 快進到下一次行星連珠 →', ja: '🪐 次の惑星直列へ早送り →', ko: '🪐 다음 행성 정렬로 빨리 감기 →' }[L]) + '</button>' : '') +
+      ((body.id === 'venus' || body.id === 'mercury') && !solarReducedMotion() ? '<button type="button" id="bp-transit">' + esc({ en: '🌓 Fast-forward to the next transit →', hans: '🌓 快进到下一次凌日 →', hant: '🌓 快進到下一次凌日 →', ja: '🌓 次の太陽面通過へ早送り →', ko: '🌓 다음 태양면 통과로 빨리 감기 →' }[L]) + '</button>' : '') +
       '<div id="bp-cat">' + esc(info.catalog) + '</div>';
     solarCometSelected = null; // a body card replaces any comet selection — #bp-flyto must fly to THIS body
     solarCardOpen = true;
-    bpEl.classList.add('open');
+    bpEl.classList.add('open'); restoreCardFocus(keep);
     return true;
   }
   function renderPanel(i, lang) {
+    var keep = cardFocusId();
     var b = BEACONS[i], o = b.info[lang] || b.info.en, name = (b.t[lang] || b.t.en)[0], ac = getComputedStyle(b.el).getPropertyValue('--bc').trim() || '#8fc2ff';
     var RK = { en: ['Distance', 'Constellation'], hans: ['距离', '星座'], hant: ['距離', '星座'], ja: ['距離', '星座'], ko: ['거리', '별자리'] };
     var rk = RK[lang] || RK.en;
@@ -3070,8 +3114,9 @@
     }
     if (b.gal && viewMode !== 'sky') { // galaxy card → fly the camera over (galaxy view only; meaningless in the sky map)
       var fl = { en: '🚀 Fly to this galaxy →', hans: '🚀 飞跃到此星系 →', hant: '🚀 飛越到此星系 →', ja: '🚀 この銀河へ飛ぶ →', ko: '🚀 이 은하로 날아가기 →' };
-      bpBody.innerHTML += '<div id="bp-flyto">' + (fl[lang] || fl.en) + '</div>';
+      bpBody.innerHTML += '<button type="button" id="bp-flyto">' + (fl[lang] || fl.en) + '</button>';
     }
+    restoreCardFocus(keep);
   }
   window.openBeaconExtras = function (i) {
     renderPanel(i, beaconLang); bpEl.classList.add('open');
@@ -3103,12 +3148,13 @@
   var flyState = null, returnBtn = null;
   var RET_TXT = { en: '← Back to the Milky Way', hans: '← 返回银河系', hant: '← 返回銀河系', ja: '← 天の川銀河へ戻る', ko: '← 우리은하로 돌아가기' };
   function showReturnBtn(show) {
-    if (!returnBtn) { returnBtn = document.createElement('div'); returnBtn.id = 'return-mw';
-      returnBtn.addEventListener('click', function (e) { e.stopPropagation(); flyHome(); }); document.body.appendChild(returnBtn); }
+    if (!returnBtn) { returnBtn = document.createElement('button'); returnBtn.type = 'button'; returnBtn.id = 'return-mw';
+      returnBtn.addEventListener('click', function (e) { e.stopPropagation(); flyHome(); }); document.body.insertBefore(returnBtn, document.getElementById('audio')); }
     returnBtn.textContent = RET_TXT[beaconLang] || RET_TXT.en;
     returnBtn.style.display = show ? 'block' : 'none';
   }
   function flyTo(p1, t1, dur, onDone) {
+    if (solarReducedMotion()) dur = Math.min(dur, 120);
     flyState = { p0: camera.position.clone(), p1: p1.clone(), t0: controls.target.clone(), t1: t1.clone(), start: videoNow(), dur: dur, onDone: onDone };
     controls.enabled = false;
   }
@@ -3117,7 +3163,7 @@
     var gp = b.p.clone(), galR = (b.gal.stars && b.gal.stars.radius) || 130;
     var dir = camera.position.clone().sub(gp); if (dir.lengthSq() < 1) dir.set(0, 0.35, 1); dir.normalize();
     flyTo(gp.clone().addScaledVector(dir, galR * 3.0), gp, 2900, function () { showReturnBtn(true); }); // frame the whole galaxy
-    if (selectedBeacon !== null) clearSelection(); // clear the card so the view is unobstructed
+    if (selectedBeacon !== null) { cardOpener = null; clearSelection(); } // clear the card so the view is unobstructed; the return pill is the next Tab stop
   }
   function flyHome() { flyTo(new THREE.Vector3(0, 390, 520), new THREE.Vector3(0, 0, 0), 2700, function () { showReturnBtn(false); }); }
   function stepFly() { // called each frame while flying; returns true while active
@@ -3265,7 +3311,7 @@
       e.stopPropagation();
       if (Math.abs(e.clientX - (+label.dataset.px || e.clientX)) < 8 && Math.abs(e.clientY - (+label.dataset.py || e.clientY)) < 8) selectSolarBody(body.id);
     });
-    label.addEventListener('click', function (e) { e.stopPropagation(); }); // swallow the ghost click
+    label.addEventListener('click', function (e) { e.stopPropagation(); if (e.detail === 0) { selectSolarBody(body.id); openedCardFrom(label); } }); // swallow the ghost click; keyboard activation selects
     solarLabelsEl.appendChild(label); solarLabelButtons[body.id] = label;
     return label;
   }
@@ -3356,7 +3402,7 @@
         e.stopPropagation();
         if (Math.abs(e.clientX - (+label.dataset.px || e.clientX)) < 8 && Math.abs(e.clientY - (+label.dataset.py || e.clientY)) < 8) selectSolarComet(cometIndex);
       });
-      label.addEventListener('click', function (e) { e.stopPropagation(); });
+      label.addEventListener('click', function (e) { e.stopPropagation(); if (e.detail === 0) { selectSolarComet(cometIndex); openedCardFrom(label); } }); // keyboard activation selects
       solarLabelsEl.appendChild(label); solarCometLabels[cometIndex] = label;
     }
     var L = typeof beaconLang === 'string' && COMET_INFO[cometIndex].name[beaconLang] ? beaconLang : 'en';
@@ -3365,7 +3411,7 @@
     return label;
   }
   function frameSolarForViewport() { return false; }
-  function clearSolarCard() { solarCardOpen = false; solarCometSelected = null; bpEl.classList.remove('open'); bpBody.innerHTML = ''; }
+  function clearSolarCard() { returnCardFocus(); solarCardOpen = false; solarCometSelected = null; bpEl.classList.remove('open'); bpBody.innerHTML = ''; }
   function enterSolarSky() {
     return enterSkyFromEarth();
   }
@@ -3390,7 +3436,8 @@
     renderSolarPanel(id, beaconLang);
     return true;
   }
-  function selectSolarBody(id) { // selection = card only. The nav level is untouched, so every other body stays clickable;
+  function selectSolarBody(id) {
+    noteCardOpener(); // selection = card only. The nav level is untouched, so every other body stays clickable;
     var body = SOLAR_BY_ID[id]; if (!body) return false; // flying (and revealing moons) happens via the card's 🚀 link → flySolarTo
     solarNav.selectedId = id;
     renderSolarPanel(id, beaconLang);
@@ -3514,7 +3561,7 @@
     if (dir.lengthSq() < 1e-4) dir.set(0.6, 0, 1); dir.normalize();
     solarNav.cameraStack.push(solarSnapshot());
     solarControls.enabled = false;
-    solarFly = { id: id, dir: dir, dist: r * 5.5, lift: r * 1.4, p0: solarCamera.position.clone(), t0: solarControls.target.clone(), start: videoNow(), dur: 2600, wp: wp };
+    solarFly = { id: id, dir: dir, dist: r * 5.5, lift: r * 1.4, p0: solarCamera.position.clone(), t0: solarControls.target.clone(), start: videoNow(), dur: solarReducedMotion() ? 120 : 2600, wp: wp };
     return true;
   }
   function stepSolarFly() { // called each frame in solar view; tracks the moving body while flying
@@ -3715,7 +3762,7 @@
     solarScaleAnim = null;
     if (solarScaleBlend) { // never leave the scene half-scaled for the next session
       solarApplyScaleBlend(0); solarControls.maxDistance = 333; solarCamera.far = 1800; solarCamera.updateProjectionMatrix();
-      var scaleButton = document.getElementById('solarscale'); if (scaleButton) scaleButton.classList.remove('on');
+      var scaleButton = document.getElementById('solarscale'); if (scaleButton) setOn(scaleButton, false);
     }
     cancelSolarEventRide(); clearSolarBanner(); // an alignment caption still lingering must not follow us to the galaxy
     solarArrivalSpin = null; solarControls.autoRotate = false;
@@ -3794,7 +3841,9 @@
       x += pad;
     });
     scaleCmpEl.querySelector('svg').innerHTML = parts.join('');
+    scaleReturnFocus = document.activeElement; // put focus back where it came from on close
     scaleCmpEl.classList.add('open');
+    if (!videoMode) document.getElementById('scalecmp-close').focus({ preventScroll: true }); // a recorded shot must not show a focus ring
     var scaleScroll = document.getElementById('scalecmp-scroll'), picked = scaleScroll && scaleScroll.querySelector('circle[stroke]');
     if (scaleScroll) { // phones pan the chart: start on the selected body, not on the Sun's edge
       scaleScroll.scrollLeft = 0;
@@ -3802,7 +3851,19 @@
       stripFade(scaleScroll);
     }
   }
-  document.getElementById('scalecmp-close').addEventListener('click', function () { scaleCmpEl.classList.remove('open'); });
+  var scaleReturnFocus = null;
+  function closeScaleOverlay() {
+    scaleCmpEl.classList.remove('open');
+    if (scaleReturnFocus && scaleReturnFocus.focus && document.contains(scaleReturnFocus)) scaleReturnFocus.focus({ preventScroll: true });
+    scaleReturnFocus = null;
+  }
+  document.getElementById('scalecmp-close').addEventListener('click', closeScaleOverlay);
+  scaleCmpEl.addEventListener('keydown', function (e) { // modal: Tab cycles the close button and (when it scrolls) the chart, so arrow keys can pan it
+    if (e.key !== 'Tab') return;
+    e.preventDefault();
+    var close = document.getElementById('scalecmp-close'), sc = document.getElementById('scalecmp-scroll');
+    (document.activeElement === close && sc && sc.scrollWidth > sc.clientWidth ? sc : close).focus();
+  });
   var solarStripEl = document.getElementById('solarstrip');
   var solarStripVideoTargets = {
     earth: 'solar-strip-earth',
@@ -3846,6 +3907,7 @@
       var dot = document.createElement('i'); dot.style.background = b.gal ? '#c9a0ff' : (b.el && b.el.classList.contains('sun') ? '#ffd27a' : '#8fc2ff');
       button.appendChild(dot); button.appendChild(document.createTextNode(name));
       button.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(i); }); // stop the bubble to the window "click-outside clears selection" handler
+      if (i === selectedBeacon) { button.classList.add('sel'); button.setAttribute('aria-current', 'true'); } // a language rebuild keeps the selection
       strip.appendChild(button);
     });
     stripFade(strip);
@@ -3873,24 +3935,24 @@
           if (solarTimeScale === 0) {
             solarTimeScale = solarTimeResume || 1;
             if (pauseButton) { pauseButton.textContent = '⏸'; pauseButton.setAttribute('aria-label', 'Pause'); }
-            Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button[data-scale]'), function (other) { other.classList.toggle('on', +other.dataset.scale === solarTimeScale); });
+            Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button[data-scale]'), function (other) { setOn(other, +other.dataset.scale === solarTimeScale); });
           } else {
             solarTimeResume = solarTimeScale; solarTimeScale = 0;
             if (pauseButton) { pauseButton.textContent = '▶'; pauseButton.setAttribute('aria-label', 'Play'); }
-            Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button[data-scale]'), function (other) { other.classList.toggle('on', other === button); });
+            Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button[data-scale]'), function (other) { setOn(other, other === button); });
           }
           return;
         }
         solarTimeScale = +button.dataset.scale;
         if (pauseButton) { pauseButton.textContent = '⏸'; pauseButton.setAttribute('aria-label', 'Pause'); }
-        Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button[data-scale]'), function (other) { other.classList.toggle('on', other === button); });
+        Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button[data-scale]'), function (other) { setOn(other, other === button); });
       });
     });
   }
   window.addEventListener('keydown', function (e) {
     if ((e.key || '').toLowerCase() !== 'escape' || viewMode !== 'solar') return;
     if (document.body.classList.contains('gx-cinema')) return; // cinema mode owns Escape first
-    if (scaleCmpEl && scaleCmpEl.classList.contains('open')) { scaleCmpEl.classList.remove('open'); e.stopImmediatePropagation(); return; }
+    if (scaleCmpEl && scaleCmpEl.classList.contains('open')) { closeScaleOverlay(); e.stopImmediatePropagation(); return; }
     if (solarCardOpen) { clearSolarCard(); e.stopImmediatePropagation(); return; }
     if (!leaveSolarLevel()) exitSolar();
     e.stopImmediatePropagation();
@@ -4366,7 +4428,7 @@
       skyScene.add(new THREE.LineSegments(lg, lm));
       var el = document.createElement('div'); el.className = 'skylabel';
       if (z.key === 'sagittarius') el.dataset.videoTarget = 'constellation-sagittarius';
-      host.appendChild(el);
+      host.appendChild(el); keyActivate(el);
       (function (idx) { el.addEventListener('click', function (e) { e.stopPropagation(); selectSky(idx); }); })(zi);
       SKY_CONS.push({ z: z, el: el, dir: centroid, lineMat: lm, starMat: sm, shown: true });
     });
@@ -4401,7 +4463,7 @@
       var sz = SKY_R * 0.024; sp.scale.set(sz * 1.7, sz, 1); // oval glow — reads as a galaxy, not a point star
       skyScene.add(sp);
       var el = document.createElement('div'); el.className = 'skylabel skygal'; el.style.display = 'none';
-      host.appendChild(el);
+      host.appendChild(el); keyActivate(el);
       (function (idx) { el.addEventListener('click', function (e) { e.stopPropagation(); selectSkyGal(idx); }); })(gi);
       SKY_GAL.push({ beaconIdx: bi, dir: dir, el: el, sprite: sp, shown: false });
     });
@@ -4411,6 +4473,7 @@
     SKY_GAL.forEach(function (g) { var b = BEACONS[g.beaconIdx]; g.el.innerHTML = esc((b.t[lang] || b.t.en)[0]); });
   }
   function selectSkyGal(gi) {
+    noteCardOpener();
     if (gi === window.skyGalSelected) { clearSkySelection(); return; }
     window.skySelected = null; // drop any constellation highlight
     SKY_CONS.forEach(function (c) { c.el.classList.remove('sel', 'dim'); c.lineMat.opacity = 0.45; c.starMat.uniforms.uMul.value = 1; });
@@ -4446,6 +4509,7 @@
   };
   window.skySelected = null;
   function renderConstellationPanel(i, lang) {
+    var keep = cardFocusId();
     var z = SKY_CONS[i].z, o = z.info[lang] || z.info.en, name = z.t[lang] || z.t.en, isZod = !!z.symbol;
     var K = { en: ['Zodiac constellation', 'Dates', 'Brightest star', 'Main stars'], hans: ['黄道星座', '日期', '最亮星', '主要亮星'], hant: ['黃道星座', '日期', '最亮星', '主要亮星'], ja: ['黄道十二星座', '期間', '最も明るい星', '主要な星'], ko: ['황도 12궁 별자리', '기간', '가장 밝은 별', '주요 별'] };
     var KC = { en: ['Constellation', 'Best seen'], hans: ['星座', '最佳观测'], hant: ['星座', '最佳觀測'], ja: ['星座', '見頃'], ko: ['별자리', '관측 시기'] };
@@ -4459,6 +4523,7 @@
       '<div class="bp-row"><span class="k">' + esc(k[3]) + '</span><span class="v">' + z.stars.length + '</span></div>' +
       '<div id="bp-desc">' + esc(o.desc) + '</div>' +
       '<div id="bp-cat">' + (z.symbol ? z.symbol + ' · ' : '') + esc(z.t.en) + '</div>';
+    restoreCardFocus(keep);
   }
   // Zodiac figure overlays: a glowing constellation figure fades in over the stars when its sign is picked.
   var ZFIG = { aries: 1, taurus: 1, gemini: 1, cancer: 1, leo: 1, virgo: 1, libra: 1, scorpius: 1, sagittarius: 1, capricornus: 1, aquarius: 1, pisces: 1 };
@@ -4515,6 +4580,7 @@
     }
   }
   function selectSky(i) {
+    noteCardOpener();
     if (i === skySelected) { clearSkySelection(); return; }
     window.skyGalSelected = null; SKY_GAL.forEach(function (g) { g.el.classList.remove('sel'); g.sprite.material.opacity = 0.85; }); // drop any galaxy highlight
     window.skySelected = i;
@@ -4531,6 +4597,7 @@
     bpEl.classList.add('open');
   }
   window.clearSkySelection = function () {
+    returnCardFocus();
     window.skySelected = null; window.skyGalSelected = null;
     hideSkyFigures();
     SKY_CONS.forEach(function (c) {
@@ -4591,6 +4658,8 @@
       ko: ['우리은하', '드래그로 회전 · 스크롤로 확대/축소 · F 시네마 · M 음악', '드래그로 회전 · 핀치로 확대/축소']
     }[L] || ['Milky Way Galaxy', 'drag to orbit · scroll to zoom · F cinema · M music', 'drag to orbit · pinch to zoom'];
     if (titleEl && titleEl.firstChild && titleEl.firstChild.nodeType === 3) titleEl.firstChild.nodeValue = titleText[0] + '\n  ';
+    document.title = titleText[0];
+    document.documentElement.lang = { en: 'en', hans: 'zh-Hans', hant: 'zh-Hant', ja: 'ja', ko: 'ko' }[L] || 'en'; // right voice for screen readers, right Han glyphs
     var hintParts = (solarPointerCoarse ? titleText[2] : titleText[1]).split(' · ');
     if (viewMode === 'sky') hintParts.splice(1, 1); // the sky dome does not zoom
     if (titleHint) titleHint.textContent = hintParts.join(' · ');
@@ -5164,7 +5233,12 @@
   function toggleCinema(force) {
     var on = (force != null) ? force : !document.body.classList.contains('gx-cinema');
     document.body.classList.toggle('gx-cinema', on);
+    var cinemaBtn = document.getElementById('cinemabtn'); if (cinemaBtn) cinemaBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
   }
+  document.getElementById('cinemabtn').addEventListener('click', function (e) { e.stopPropagation(); toggleCinema(); });
+  ['audio', 'cinemabtn'].forEach(function (id) { // a pointer click must not leave focus behind (it would pin the track list open, or ring the button on the next key press)
+    document.getElementById(id).addEventListener('click', function (e) { if (e.detail && this.contains(document.activeElement)) document.activeElement.blur(); }, true);
+  });
 
   // ── deep-field background (Hubble-deep-field feel): dozens of TINY distant
   // galaxies of varied morphology, hue, size and orientation, mildly clustered
@@ -5951,13 +6025,13 @@
   var audioBtn = document.getElementById('audiobtn'), audioList = document.getElementById('audiolist');
   if (!MUSIC_TRACKS.length) document.getElementById('audio').style.display = 'none';
   MUSIC_TRACKS.forEach(function (f, i) {
-    var d = document.createElement('div'); d.className = 'a-track'; d.textContent = f.replace(/\.mp3$/i, '');
+    var d = document.createElement('button'); d.type = 'button'; d.className = 'a-track'; d.textContent = f.replace(/\.mp3$/i, '');
     d.addEventListener('click', function (e) { e.stopPropagation(); musicPlay(i); });
     audioList.appendChild(d);
   });
   function musicPaint() {
-    audioBtn.textContent = musicOn ? '🔊' : '🔇';
-    Array.prototype.forEach.call(audioList.children, function (c2, i) { c2.classList.toggle('on', i === musicTrack && musicOn); });
+    audioBtn.textContent = musicOn ? '🔊' : '🔇'; audioBtn.setAttribute('aria-pressed', musicOn ? 'true' : 'false');
+    Array.prototype.forEach.call(audioList.children, function (c2, i) { c2.classList.toggle('on', i === musicTrack && musicOn); if (i === musicTrack && musicOn) c2.setAttribute('aria-current', 'true'); else c2.removeAttribute('aria-current'); });
   }
   function musicPlay(i) {
     if (videoMode) { musicOn = false; musicPaint(); return; }
@@ -6101,11 +6175,11 @@
     videoPresentationStyle = document.createElement('style');
     videoPresentationStyle.dataset.gxVideoPresentation = 'true';
     videoPresentationStyle.textContent =
-      'body.gx-video-opening #title,body.gx-video-opening #audio,body.gx-video-opening #beacons,' +
+      'body.gx-video-opening #title,body.gx-video-opening #audio,body.gx-video-opening #cinemabtn,body.gx-video-opening #beacons,' +
       'body.gx-video-opening #lang,body.gx-video-opening #skyback,body.gx-video-opening #skylabels,' +
       'body.gx-video-opening #solarback,body.gx-video-opening #solarlabels,body.gx-video-opening #beacon-panel,' +
       'body.gx-video-opening .gx-video-cursor{display:none!important}' +
-      'body.gx-video-title-safe #audio,body.gx-video-title-safe #beacons,body.gx-video-title-safe #lang,' +
+      'body.gx-video-title-safe #audio,body.gx-video-title-safe #cinemabtn,body.gx-video-title-safe #beacons,body.gx-video-title-safe #lang,' +
       'body.gx-video-title-safe #skyback,body.gx-video-title-safe #skylabels,body.gx-video-title-safe #solarback,' +
       'body.gx-video-title-safe #solarlabels,body.gx-video-title-safe #beacon-panel,' +
       'body.gx-video-title-safe .gx-video-cursor{display:none!important}' +
@@ -6391,7 +6465,7 @@
     var pauseButton = solarTimeEl && solarTimeEl.querySelector('button[data-scale="0"]');
     if (pauseButton) { pauseButton.textContent = '⏸'; pauseButton.setAttribute('aria-label', 'Pause'); }
     if (solarTimeEl) Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button[data-scale]'), function (button) {
-      button.classList.toggle('on', button.dataset.scale === '1');
+      setOn(button, button.dataset.scale === '1');
     });
     solarForceProminenceUpdate = true;
     try { updateSolarMotion(0); } finally { solarForceProminenceUpdate = false; }
