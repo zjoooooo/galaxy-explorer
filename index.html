@@ -1592,98 +1592,128 @@
     // Positions are REAL: galPos(l, b, distKly) from published galactic coordinates
     // (multi-source cross-checked). The label declutter in updateBeacons handles the
     // resulting solar-neighbourhood crowding — dots stay, crowded labels reappear on zoom.
-    // t: label text per language — [name, optional subtitle]. en / hans (简体) / hant (繁體)
+    // t: label text per language — [name, optional subtitle]. en / hans (简体) / hant (繁體) / ja / ko
     var DEFS = [
       { p: sun, cls: 'sun',
-        t: { en: ['Solar System', 'you are here'], hans: ['太阳系', '你在这里'], hant: ['太陽系', '你在這裡'] },
+        t: { en: ['Solar System', 'you are here'], hans: ['太阳系', '你在这里'], hant: ['太陽系', '你在這裡'], ja: ["太陽系","現在地"], ko: ["태양계","현재 위치"] },
         info: {
           en:   { type:'Star system', distance:'You are here', constellation:'—', facts:[['Star','1 (the Sun)'],['Planets','8']], desc:'Our home system, circling the galactic centre once every ~230 million years.', catalog:'' },
           hans: { type:'恒星系统', distance:'你在这里', constellation:'—', facts:[['恒星','1 颗(太阳)'],['行星','8 颗']], desc:'我们的家园,绕银河系中心公转一圈约需 2.3 亿年。', catalog:'' },
-          hant: { type:'恆星系統', distance:'你在這裡', constellation:'—', facts:[['恆星','1 顆(太陽)'],['行星','8 顆']], desc:'我們的家園,繞銀河系中心公轉一圈約需 2.3 億年。', catalog:'' } } },
+          hant: { type:'恆星系統', distance:'你在這裡', constellation:'—', facts:[['恆星','1 顆(太陽)'],['行星','8 顆']], desc:'我們的家園,繞銀河系中心公轉一圈約需 2.3 億年。', catalog:'' },
+          ja:   {"type":"恒星系","distance":"現在地","constellation":"—","facts":[["恒星","1個（太陽）"],["惑星","8個"]],"desc":"私たちの故郷である惑星系。約2億3000万年かけて、銀河系の中心のまわりを一周しています。","catalog":""},
+          ko:   {"type":"항성계","distance":"현재 위치","constellation":"—","facts":[["항성","1개 (태양)"],["행성","8개"]],"desc":"우리의 고향 항성계로, 약 2억 3천만 년에 한 번씩 은하 중심을 공전합니다.","catalog":""} } },
       { p: new THREE.Vector3(0, 4, 0),
-        t: { en: ['Sagittarius A∗', 'galactic centre'], hans: ['人马座 A*', '银河系中心'], hant: ['人馬座 A*', '銀河系中心'] },
+        t: { en: ['Sagittarius A∗', 'galactic centre'], hans: ['人马座 A*', '银河系中心'], hant: ['人馬座 A*', '銀河系中心'], ja: ["いて座A*","銀河系の中心"], ko: ["궁수자리 A*","은하 중심"] },
         info: {
           en:   { type:'Supermassive black hole', distance:'~26,000 light-years', constellation:'Sagittarius', facts:[['Mass','~4.3 million M☉']], desc:'The supermassive black hole anchoring the centre of the Milky Way.', catalog:'Sgr A*' },
           hans: { type:'超大质量黑洞', distance:'约 26,000 光年', constellation:'人马座', facts:[['质量','约 430 万倍太阳质量']], desc:'坐镇银河系中心的超大质量黑洞。', catalog:'Sgr A*' },
-          hant: { type:'超大質量黑洞', distance:'約 26,000 光年', constellation:'人馬座', facts:[['質量','約 430 萬倍太陽質量']], desc:'坐鎮銀河系中心的超大質量黑洞。', catalog:'Sgr A*' } } },
+          hant: { type:'超大質量黑洞', distance:'約 26,000 光年', constellation:'人馬座', facts:[['質量','約 430 萬倍太陽質量']], desc:'坐鎮銀河系中心的超大質量黑洞。', catalog:'Sgr A*' },
+          ja:   {"type":"超大質量ブラックホール","distance":"約26,000光年","constellation":"いて座","facts":[["質量","太陽の約430万倍"]],"desc":"天の川銀河の中心にどっしりと構える超大質量ブラックホールです。","catalog":"Sgr A*"},
+          ko:   {"type":"초대질량 블랙홀","distance":"약 26,000광년","constellation":"궁수자리","facts":[["질량","태양의 약 430만 배"]],"desc":"우리은하의 중심에 자리 잡고 은하 전체를 붙들고 있는 초대질량 블랙홀입니다.","catalog":"Sgr A*"} } },
       { p: galPos(209, -19.4, 1.34), cls: 'up',
-        t: { en: ['Orion Nebula'], hans: ['猎户座大星云'], hant: ['獵戶座大星雲'] },
+        t: { en: ['Orion Nebula'], hans: ['猎户座大星云'], hant: ['獵戶座大星雲'], ja: ["オリオン大星雲"], ko: ["오리온 대성운"] },
         info: {
           en:   { type:'Emission nebula', distance:'~1,340 light-years', constellation:'Orion', facts:[['Diameter','~24 light-years'],['Apparent mag','4.0']], desc:'The nearest large stellar nursery, faintly visible to the naked eye below Orion’s Belt.', catalog:'M42' },
           hans: { type:'发射星云', distance:'约 1,340 光年', constellation:'猎户座', facts:[['直径','约 24 光年'],['视星等','4.0']], desc:'离我们最近的大型恒星摇篮,肉眼在猎户腰带下方隐约可见。', catalog:'M42' },
-          hant: { type:'發射星雲', distance:'約 1,340 光年', constellation:'獵戶座', facts:[['直徑','約 24 光年'],['視星等','4.0']], desc:'離我們最近的大型恆星搖籃,肉眼在獵戶腰帶下方隱約可見。', catalog:'M42' } } },
+          hant: { type:'發射星雲', distance:'約 1,340 光年', constellation:'獵戶座', facts:[['直徑','約 24 光年'],['視星等','4.0']], desc:'離我們最近的大型恆星搖籃,肉眼在獵戶腰帶下方隱約可見。', catalog:'M42' },
+          ja:   {"type":"散光星雲","distance":"約1,340光年","constellation":"オリオン座","facts":[["直径","約24光年"],["視等級","4.0"]],"desc":"地球に最も近い大規模な星のゆりかご。オリオン座の三つ星の下に、肉眼でもかすかに見えます。","catalog":"M42"},
+          ko:   {"type":"발광 성운","distance":"약 1,340광년","constellation":"오리온자리","facts":[["지름","약 24광년"],["겉보기 등급","4.0"]],"desc":"지구에서 가장 가까운 대형 별 탄생 지역으로, 오리온의 허리띠 아래에서 맨눈으로도 희미하게 볼 수 있습니다.","catalog":"M42"} } },
       { p: galPos(184.6, -5.8, 6.5),
-        t: { en: ['Crab Nebula'], hans: ['蟹状星云'], hant: ['蟹狀星雲'] },
+        t: { en: ['Crab Nebula'], hans: ['蟹状星云'], hant: ['蟹狀星雲'], ja: ["かに星雲"], ko: ["게성운"] },
         info: {
           en:   { type:'Supernova remnant', distance:'~6,500 light-years', constellation:'Taurus', facts:[['Supernova','1054 CE'],['Core','Crab Pulsar']], desc:'The expanding wreck of a star seen exploding in 1054 CE, with a spinning neutron star at its heart.', catalog:'M1' },
           hans: { type:'超新星遗迹', distance:'约 6,500 光年', constellation:'金牛座', facts:[['超新星','公元 1054 年'],['核心','蟹状星云脉冲星']], desc:'公元 1054 年被记录到爆发的恒星残骸,中心是一颗高速自转的中子星。', catalog:'M1' },
-          hant: { type:'超新星遺跡', distance:'約 6,500 光年', constellation:'金牛座', facts:[['超新星','公元 1054 年'],['核心','蟹狀星雲脈衝星']], desc:'公元 1054 年被記錄到爆發的恆星殘骸,中心是一顆高速自轉的中子星。', catalog:'M1' } } },
+          hant: { type:'超新星遺跡', distance:'約 6,500 光年', constellation:'金牛座', facts:[['超新星','公元 1054 年'],['核心','蟹狀星雲脈衝星']], desc:'公元 1054 年被記錄到爆發的恆星殘骸,中心是一顆高速自轉的中子星。', catalog:'M1' },
+          ja:   {"type":"超新星残骸","distance":"約6,500光年","constellation":"おうし座","facts":[["超新星","西暦1054年"],["中心天体","かにパルサー"]],"desc":"西暦1054年に爆発が記録された恒星の残骸。中心では中性子星が高速で自転しています。","catalog":"M1"},
+          ko:   {"type":"초신성 잔해","distance":"약 6,500광년","constellation":"황소자리","facts":[["초신성","서기 1054년"],["중심핵","게성운 펄서"]],"desc":"서기 1054년에 폭발이 관측된 별의 잔해가 지금도 팽창하고 있으며, 그 중심에는 빠르게 자전하는 중성자별이 있습니다.","catalog":"M1"} } },
       { p: galPos(17, 0.8, 7.0), cls: 'up',
-        t: { en: ['Eagle Nebula'], hans: ['鹰状星云'], hant: ['鷹狀星雲'] },
+        t: { en: ['Eagle Nebula'], hans: ['鹰状星云'], hant: ['鷹狀星雲'], ja: ["わし星雲"], ko: ["독수리 성운"] },
         info: {
           en:   { type:'Emission nebula', distance:'~7,000 light-years', constellation:'Serpens', facts:[['Famous for','Pillars of Creation']], desc:'A star-forming region whose towering gas columns became famous as Hubble’s “Pillars of Creation”.', catalog:'M16' },
           hans: { type:'发射星云', distance:'约 7,000 光年', constellation:'巨蛇座', facts:[['著名','创生之柱']], desc:'一处恒星形成区,高耸的气柱因哈勃的“创生之柱”影像而闻名。', catalog:'M16' },
-          hant: { type:'發射星雲', distance:'約 7,000 光年', constellation:'巨蛇座', facts:[['著名','創生之柱']], desc:'一處恆星形成區,高聳的氣柱因哈勃的「創生之柱」影像而聞名。', catalog:'M16' } } },
+          hant: { type:'發射星雲', distance:'約 7,000 光年', constellation:'巨蛇座', facts:[['著名','創生之柱']], desc:'一處恆星形成區,高聳的氣柱因哈勃的「創生之柱」影像而聞名。', catalog:'M16' },
+          ja:   {"type":"散光星雲","distance":"約7,000光年","constellation":"へび座","facts":[["見どころ","創造の柱"]],"desc":"星形成領域のひとつ。そびえ立つガスの柱は、ハッブル宇宙望遠鏡の「創造の柱」の画像で有名になりました。","catalog":"M16"},
+          ko:   {"type":"발광 성운","distance":"약 7,000광년","constellation":"뱀자리","facts":[["명물","창조의 기둥"]],"desc":"높이 솟은 가스 기둥이 허블 우주망원경의 \"창조의 기둥\" 사진으로 유명해진 별 형성 지역입니다.","catalog":"M16"} } },
       { p: galPos(287.6, -0.6, 7.5),
-        t: { en: ['Carina Nebula'], hans: ['船底座大星云'], hant: ['船底座大星雲'] },
+        t: { en: ['Carina Nebula'], hans: ['船底座大星云'], hant: ['船底座大星雲'], ja: ["イータカリーナ星雲"], ko: ["용골자리 성운"] },
         info: {
           en:   { type:'Emission nebula', distance:'~7,500 light-years', constellation:'Carina', facts:[['Hosts','Eta Carinae']], desc:'One of the largest nebulae in the sky, home to the unstable, hugely massive star Eta Carinae.', catalog:'NGC 3372' },
           hans: { type:'发射星云', distance:'约 7,500 光年', constellation:'船底座', facts:[['包含','海山二']], desc:'天空中最大的星云之一,栖身着极不稳定、质量巨大的恒星海山二。', catalog:'NGC 3372' },
-          hant: { type:'發射星雲', distance:'約 7,500 光年', constellation:'船底座', facts:[['包含','海山二']], desc:'天空中最大的星雲之一,棲身著極不穩定、質量巨大的恆星海山二。', catalog:'NGC 3372' } } },
+          hant: { type:'發射星雲', distance:'約 7,500 光年', constellation:'船底座', facts:[['包含','海山二']], desc:'天空中最大的星雲之一,棲身著極不穩定、質量巨大的恆星海山二。', catalog:'NGC 3372' },
+          ja:   {"type":"散光星雲","distance":"約7,500光年","constellation":"りゅうこつ座","facts":[["注目の星","りゅうこつ座イータ星"]],"desc":"全天でも最大級の星雲のひとつ。不安定で非常に重い恒星、りゅうこつ座イータ星が潜んでいます。","catalog":"NGC 3372"},
+          ko:   {"type":"발광 성운","distance":"약 7,500광년","constellation":"용골자리","facts":[["포함 천체","용골자리 에타"]],"desc":"밤하늘에서 가장 큰 성운 중 하나로, 극도로 불안정하고 질량이 어마어마한 별인 용골자리 에타가 자리하고 있습니다.","catalog":"NGC 3372"} } },
       { p: galPos(71.3, 3.1, 7.2),
-        t: { en: ['Cygnus X-1'], hans: ['天鹅座 X-1'], hant: ['天鵝座 X-1'] },
+        t: { en: ['Cygnus X-1'], hans: ['天鹅座 X-1'], hant: ['天鵝座 X-1'], ja: ["はくちょう座X-1"], ko: ["백조자리 X-1"] },
         info: {
           en:   { type:'Stellar black hole', distance:'~7,000 light-years', constellation:'Cygnus', facts:[['Black hole','~21 M☉'],['System','X-ray binary']], desc:'The first object widely accepted as a black hole, pulling gas from a blue supergiant companion.', catalog:'Cyg X-1' },
           hans: { type:'恒星级黑洞', distance:'约 7,000 光年', constellation:'天鹅座', facts:[['黑洞','约 21 倍太阳质量'],['系统','X 射线双星']], desc:'第一个被广泛承认的黑洞,正从一颗蓝超巨星伴星吸积气体。', catalog:'Cyg X-1' },
-          hant: { type:'恆星級黑洞', distance:'約 7,000 光年', constellation:'天鵝座', facts:[['黑洞','約 21 倍太陽質量'],['系統','X 射線雙星']], desc:'第一個被廣泛承認的黑洞,正從一顆藍超巨星伴星吸積氣體。', catalog:'Cyg X-1' } } },
+          hant: { type:'恆星級黑洞', distance:'約 7,000 光年', constellation:'天鵝座', facts:[['黑洞','約 21 倍太陽質量'],['系統','X 射線雙星']], desc:'第一個被廣泛承認的黑洞,正從一顆藍超巨星伴星吸積氣體。', catalog:'Cyg X-1' },
+          ja:   {"type":"恒星質量ブラックホール","distance":"約7,000光年","constellation":"はくちょう座","facts":[["ブラックホール","太陽の約21倍"],["連星系","X線連星"]],"desc":"ブラックホールとして初めて広く認められた天体。青色超巨星の伴星からガスを吸い込み続けています。","catalog":"Cyg X-1"},
+          ko:   {"type":"항성 질량 블랙홀","distance":"약 7,000광년","constellation":"백조자리","facts":[["블랙홀","태양 질량의 약 21배"],["형태","X선 쌍성"]],"desc":"블랙홀로 널리 인정받은 최초의 천체로, 동반성인 청색 초거성에서 가스를 끌어당기고 있습니다.","catalog":"Cyg X-1"} } },
       { p: galPos(166.6, -23.5, 0.444),
-        t: { en: ['Pleiades'], hans: ['昴星团'], hant: ['昴星團'] },
+        t: { en: ['Pleiades'], hans: ['昴星团'], hant: ['昴星團'], ja: ["プレアデス星団"], ko: ["플레이아데스 성단"] },
         info: {
           en:   { type:'Open cluster', distance:'~440 light-years', constellation:'Taurus', facts:[['Stars','1,000+'],['Age','~100 million yr']], desc:'The naked-eye “Seven Sisters” — hot blue stars still wrapped in wisps of reflection nebulosity.', catalog:'M45' },
           hans: { type:'疏散星团', distance:'约 440 光年', constellation:'金牛座', facts:[['恒星','1000+ 颗'],['年龄','约 1 亿年']], desc:'肉眼可见的“七姐妹”,炽热的蓝色恒星仍笼罩在反射星云的薄纱中。', catalog:'M45' },
-          hant: { type:'疏散星團', distance:'約 440 光年', constellation:'金牛座', facts:[['恆星','1000+ 顆'],['年齡','約 1 億年']], desc:'肉眼可見的「七姐妹」,熾熱的藍色恆星仍籠罩在反射星雲的薄紗中。', catalog:'M45' } } },
+          hant: { type:'疏散星團', distance:'約 440 光年', constellation:'金牛座', facts:[['恆星','1000+ 顆'],['年齡','約 1 億年']], desc:'肉眼可見的「七姐妹」,熾熱的藍色恆星仍籠罩在反射星雲的薄紗中。', catalog:'M45' },
+          ja:   {"type":"散開星団","distance":"約440光年","constellation":"おうし座","facts":[["恒星","1,000個以上"],["年齢","約1億年"]],"desc":"肉眼でも見える「セブン・シスターズ」。日本では「すばる」の名で親しまれ、高温の青い星々が今も反射星雲の薄いベールに包まれています。","catalog":"M45"},
+          ko:   {"type":"산개 성단","distance":"약 440광년","constellation":"황소자리","facts":[["별","1,000개 이상"],["나이","약 1억 년"]],"desc":"맨눈으로도 보이는 \"일곱 자매\" 별들로, 뜨거운 푸른 별들이 아직 반사 성운의 엷은 베일에 싸여 있습니다.","catalog":"M45"} } },
       { p: galPos(309.1, 15, 17.0),
-        t: { en: ['Omega Centauri'], hans: ['半人马 ω'], hant: ['半人馬 ω'] },
+        t: { en: ['Omega Centauri'], hans: ['半人马 ω'], hant: ['半人馬 ω'], ja: ["ケンタウルス座ω星団"], ko: ["오메가 센타우리"] },
         info: {
           en:   { type:'Globular cluster', distance:'~17,000 light-years', constellation:'Centaurus', facts:[['Stars','~10 million'],['Note','Largest MW globular']], desc:'The Milky Way’s largest globular cluster, possibly the stripped core of a swallowed dwarf galaxy.', catalog:'NGC 5139' },
           hans: { type:'球状星团', distance:'约 17,000 光年', constellation:'半人马座', facts:[['恒星','约 1000 万颗'],['特点','银河系最大球状星团']], desc:'银河系中最大的球状星团,可能是一个被吞并的矮星系残核。', catalog:'NGC 5139' },
-          hant: { type:'球狀星團', distance:'約 17,000 光年', constellation:'半人馬座', facts:[['恆星','約 1000 萬顆'],['特點','銀河系最大球狀星團']], desc:'銀河系中最大的球狀星團,可能是一個被吞併的矮星系殘核。', catalog:'NGC 5139' } } },
+          hant: { type:'球狀星團', distance:'約 17,000 光年', constellation:'半人馬座', facts:[['恆星','約 1000 萬顆'],['特點','銀河系最大球狀星團']], desc:'銀河系中最大的球狀星團,可能是一個被吞併的矮星系殘核。', catalog:'NGC 5139' },
+          ja:   {"type":"球状星団","distance":"約17,000光年","constellation":"ケンタウルス座","facts":[["恒星","約1,000万個"],["特徴","銀河系最大の球状星団"]],"desc":"天の川銀河で最大の球状星団。かつて飲み込まれた矮小銀河の中心核の名残かもしれません。","catalog":"NGC 5139"},
+          ko:   {"type":"구상 성단","distance":"약 17,000광년","constellation":"센타우루스자리","facts":[["별","약 1,000만 개"],["특징","우리은하 최대의 구상 성단"]],"desc":"우리은하에서 가장 큰 구상 성단으로, 은하에 삼켜진 왜소은하의 중심핵만 남은 것일 가능성도 있습니다.","catalog":"NGC 5139"} } },
       { p: galPos(199.8, -9, 0.55), cls: 'up',
-        t: { en: ['Betelgeuse'], hans: ['参宿四'], hant: ['參宿四'] },
+        t: { en: ['Betelgeuse'], hans: ['参宿四'], hant: ['參宿四'], ja: ["ベテルギウス"], ko: ["베텔게우스"] },
         info: {
           en:   { type:'Red supergiant', distance:'~550 light-years', constellation:'Orion', facts:[['Diameter','~700× Sun'],['Fate','Future supernova']], desc:'The red star on Orion’s shoulder — so vast it would swallow the inner planets, and destined to explode.', catalog:'α Ori' },
           hans: { type:'红超巨星', distance:'约 550 光年', constellation:'猎户座', facts:[['直径','约太阳的 700 倍'],['归宿','未来的超新星']], desc:'猎户座“肩头”的红色恒星,大到能吞下内太阳系行星,终将爆发为超新星。', catalog:'α Ori' },
-          hant: { type:'紅超巨星', distance:'約 550 光年', constellation:'獵戶座', facts:[['直徑','約太陽的 700 倍'],['歸宿','未來的超新星']], desc:'獵戶座「肩頭」的紅色恆星,大到能吞下內太陽系行星,終將爆發為超新星。', catalog:'α Ori' } } },
+          hant: { type:'紅超巨星', distance:'約 550 光年', constellation:'獵戶座', facts:[['直徑','約太陽的 700 倍'],['歸宿','未來的超新星']], desc:'獵戶座「肩頭」的紅色恆星,大到能吞下內太陽系行星,終將爆發為超新星。', catalog:'α Ori' },
+          ja:   {"type":"赤色超巨星","distance":"約550光年","constellation":"オリオン座","facts":[["直径","太陽の約700倍"],["運命","将来の超新星"]],"desc":"オリオンの肩に輝く赤い星。太陽系の内側の惑星を飲み込むほど巨大で、やがて超新星爆発を起こす運命にあります。","catalog":"α Ori"},
+          ko:   {"type":"적색 초거성","distance":"약 550광년","constellation":"오리온자리","facts":[["지름","태양의 약 700배"],["운명","미래의 초신성"]],"desc":"오리온의 어깨에서 빛나는 붉은 별로, 태양계 안쪽 행성들을 통째로 삼킬 만큼 거대하며 언젠가 초신성으로 폭발할 운명입니다.","catalog":"α Ori"} } },
       { p: galPos(74, -8.5, 2.4),
-        t: { en: ['Veil Nebula'], hans: ['面纱星云'], hant: ['面紗星雲'] },
+        t: { en: ['Veil Nebula'], hans: ['面纱星云'], hant: ['面紗星雲'], ja: ["網状星雲"], ko: ["면사포 성운"] },
         info: {
           en:   { type:'Supernova remnant', distance:'~2,400 light-years', constellation:'Cygnus', facts:[['Age','~10,000 yr'],['Form','Filamentary shell']], desc:'The delicate, lacework filaments of a supernova that detonated about 10,000 years ago.', catalog:'NGC 6960' },
           hans: { type:'超新星遗迹', distance:'约 2,400 光年', constellation:'天鹅座', facts:[['年龄','约 1 万年'],['形态','丝缕状壳层']], desc:'约 1 万年前爆发的超新星,留下如蕾丝般纤细的气体丝缕。', catalog:'NGC 6960' },
-          hant: { type:'超新星遺跡', distance:'約 2,400 光年', constellation:'天鵝座', facts:[['年齡','約 1 萬年'],['形態','絲縷狀殼層']], desc:'約 1 萬年前爆發的超新星,留下如蕾絲般纖細的氣體絲縷。', catalog:'NGC 6960' } } },
+          hant: { type:'超新星遺跡', distance:'約 2,400 光年', constellation:'天鵝座', facts:[['年齡','約 1 萬年'],['形態','絲縷狀殼層']], desc:'約 1 萬年前爆發的超新星,留下如蕾絲般纖細的氣體絲縷。', catalog:'NGC 6960' },
+          ja:   {"type":"超新星残骸","distance":"約2,400光年","constellation":"はくちょう座","facts":[["年齢","約1万年"],["形状","フィラメント状の殻"]],"desc":"約1万年前に爆発した超新星が残した、レース細工のように繊細なガスのフィラメントです。","catalog":"NGC 6960"},
+          ko:   {"type":"초신성 잔해","distance":"약 2,400광년","constellation":"백조자리","facts":[["나이","약 1만 년"],["형태","필라멘트 모양의 껍질"]],"desc":"약 1만 년 전에 폭발한 초신성이 남긴, 레이스처럼 섬세한 가스 필라멘트입니다.","catalog":"NGC 6960"} } },
       { p: galPos(6, -1.2, 4.1),
-        t: { en: ['Lagoon Nebula'], hans: ['礁湖星云'], hant: ['礁湖星雲'] },
+        t: { en: ['Lagoon Nebula'], hans: ['礁湖星云'], hant: ['礁湖星雲'], ja: ["干潟星雲"], ko: ["석호 성운"] },
         info: {
           en:   { type:'Emission nebula', distance:'~4,100 light-years', constellation:'Sagittarius', facts:[['Type','Star-forming region'],['Catalog','M8']], desc:'A vast, bright stellar nursery toward the galactic centre.', catalog:'M8' },
           hans: { type:'发射星云', distance:'约 4,100 光年', constellation:'人马座', facts:[['类型','恒星形成区'],['星表','M8']], desc:'朝银心方向的一片巨大明亮的恒星摇篮。', catalog:'M8' },
-          hant: { type:'發射星雲', distance:'約 4,100 光年', constellation:'人馬座', facts:[['類型','恆星形成區'],['星表','M8']], desc:'朝銀心方向的一片巨大明亮的恆星搖籃。', catalog:'M8' } } },
+          hant: { type:'發射星雲', distance:'約 4,100 光年', constellation:'人馬座', facts:[['類型','恆星形成區'],['星表','M8']], desc:'朝銀心方向的一片巨大明亮的恆星搖籃。', catalog:'M8' },
+          ja:   {"type":"散光星雲","distance":"約4,100光年","constellation":"いて座","facts":[["種類","星形成領域"],["カタログ","M8"]],"desc":"銀河系の中心方向に広がる、巨大で明るい星のゆりかごです。","catalog":"M8"},
+          ko:   {"type":"발광 성운","distance":"약 4,100광년","constellation":"궁수자리","facts":[["유형","별 형성 지역"],["목록","M8"]],"desc":"은하 중심 방향에 펼쳐진 광대하고 밝은 별들의 요람입니다.","catalog":"M8"} } },
       { p: galPos(59, 40.9, 22.2), // halo globular — genuinely ~100u above the disc plane
-        t: { en: ['Hercules Cluster'], hans: ['武仙座大星团'], hant: ['武仙座大星團'] },
+        t: { en: ['Hercules Cluster'], hans: ['武仙座大星团'], hant: ['武仙座大星團'], ja: ["ヘルクレス座球状星団"], ko: ["헤르쿨레스 대성단"] },
         info: {
           en:   { type:'Globular cluster', distance:'~22,000 light-years', constellation:'Hercules', facts:[['Stars','~300,000'],['Age','~11.6 billion yr']], desc:'A brilliant northern globular of several hundred thousand ancient stars.', catalog:'M13' },
           hans: { type:'球状星团', distance:'约 22,000 光年', constellation:'武仙座', facts:[['恒星','约 30 万颗'],['年龄','约 116 亿年']], desc:'北天一个由数十万颗古老恒星组成的明亮球状星团。', catalog:'M13' },
-          hant: { type:'球狀星團', distance:'約 22,000 光年', constellation:'武仙座', facts:[['恆星','約 30 萬顆'],['年齡','約 116 億年']], desc:'北天一個由數十萬顆古老恆星組成的明亮球狀星團。', catalog:'M13' } } },
+          hant: { type:'球狀星團', distance:'約 22,000 光年', constellation:'武仙座', facts:[['恆星','約 30 萬顆'],['年齡','約 116 億年']], desc:'北天一個由數十萬顆古老恆星組成的明亮球狀星團。', catalog:'M13' },
+          ja:   {"type":"球状星団","distance":"約22,000光年","constellation":"ヘルクレス座","facts":[["恒星","約30万個"],["年齢","約116億年"]],"desc":"数十万個の年老いた星々からなる、北天に輝く見事な球状星団です。","catalog":"M13"},
+          ko:   {"type":"구상 성단","distance":"약 22,000광년","constellation":"헤르쿨레스자리","facts":[["별","약 30만 개"],["나이","약 116억 년"]],"desc":"수십만 개의 늙은 별들이 모여 빛나는 북쪽 하늘의 찬란한 구상 성단입니다.","catalog":"M13"} } },
       { p: galPos(227.2, -8.9, 0.0086), // 8.6 ly — rendered at the display floor beside the Sun
-        t: { en: ['Sirius'], hans: ['天狼星'], hant: ['天狼星'] },
+        t: { en: ['Sirius'], hans: ['天狼星'], hant: ['天狼星'], ja: ["シリウス"], ko: ["시리우스"] },
         info: {
           en:   { type:'Binary star', distance:'~8.6 light-years', constellation:'Canis Major', facts:[['Brightness','Brightest in the sky'],['System','Sirius A + B']], desc:"The brightest star in Earth's night sky, a close stellar neighbour.", catalog:'α CMa' },
           hans: { type:'双星', distance:'约 8.6 光年', constellation:'大犬座', facts:[['亮度','全天最亮'],['系统','天狼 A + B']], desc:'地球夜空中最亮的恒星,是离我们很近的邻居。', catalog:'α CMa' },
-          hant: { type:'雙星', distance:'約 8.6 光年', constellation:'大犬座', facts:[['亮度','全天最亮'],['系統','天狼 A + B']], desc:'地球夜空中最亮的恆星,是離我們很近的鄰居。', catalog:'α CMa' } } },
+          hant: { type:'雙星', distance:'約 8.6 光年', constellation:'大犬座', facts:[['亮度','全天最亮'],['系統','天狼 A + B']], desc:'地球夜空中最亮的恆星,是離我們很近的鄰居。', catalog:'α CMa' },
+          ja:   {"type":"連星","distance":"約8.6光年","constellation":"おおいぬ座","facts":[["明るさ","全天で最も明るい恒星"],["連星系","シリウスA + B"]],"desc":"地球の夜空で最も明るく輝く恒星で、太陽系のすぐ近くにあるお隣さんです。","catalog":"α CMa"},
+          ko:   {"type":"쌍성","distance":"약 8.6광년","constellation":"큰개자리","facts":[["밝기","밤하늘에서 가장 밝음"],["구성","시리우스 A + B"]],"desc":"지구의 밤하늘에서 가장 밝은 별이자, 우리와 아주 가까운 이웃 별입니다.","catalog":"α CMa"} } },
       { p: galPos(351.9, 15.1, 0.55),
-        t: { en: ['Antares'], hans: ['心宿二'], hant: ['心宿二'] },
+        t: { en: ['Antares'], hans: ['心宿二'], hant: ['心宿二'], ja: ["アンタレス"], ko: ["안타레스"] },
         info: {
           en:   { type:'Red supergiant', distance:'~550 light-years', constellation:'Scorpius', facts:[['Diameter','~700× Sun'],['Note','Heart of the Scorpion']], desc:'A blazing red supergiant marking the heart of Scorpius.', catalog:'α Sco' },
           hans: { type:'红超巨星', distance:'约 550 光年', constellation:'天蝎座', facts:[['直径','约太阳的 700 倍'],['别称','天蝎之心']], desc:'标记天蝎座心脏的炽红超巨星。', catalog:'α Sco' },
-          hant: { type:'紅超巨星', distance:'約 550 光年', constellation:'天蠍座', facts:[['直徑','約太陽的 700 倍'],['別稱','天蠍之心']], desc:'標記天蠍座心臟的熾紅超巨星。', catalog:'α Sco' } } },
+          hant: { type:'紅超巨星', distance:'約 550 光年', constellation:'天蠍座', facts:[['直徑','約太陽的 700 倍'],['別稱','天蠍之心']], desc:'標記天蠍座心臟的熾紅超巨星。', catalog:'α Sco' },
+          ja:   {"type":"赤色超巨星","distance":"約550光年","constellation":"さそり座","facts":[["直径","太陽の約700倍"],["別名","さそりの心臓"]],"desc":"さそり座の心臓部で燃えるように赤く輝く超巨星です。","catalog":"α Sco"},
+          ko:   {"type":"적색 초거성","distance":"약 550광년","constellation":"전갈자리","facts":[["지름","태양의 약 700배"],["별칭","전갈의 심장"]],"desc":"전갈자리의 심장 자리에서 타오르는 붉은 초거성입니다.","catalog":"α Sco"} } },
       { p: galPos(63.2, 13.7, 2.6),
         t: {"en":["Ring Nebula (M57)"],"hans":["环状星云（M57）"],"hant":["環狀星雲（M57）"],"ja":["環状星雲（M57）"],"ko":["고리 성운 (M57)"]},
         info: { en:{"type":"Planetary nebula","distance":"~2,600 light-years","constellation":"Lyra","facts":[["Shell age","~7,000 years"],["Central white dwarf","~125,000 K"]],"desc":"This glowing smoke ring is the outer shell of gas gently puffed off by a dying Sun-like star as it ran out of fuel — not the violent blast of a supernova, which only much heavier stars produce. The ring lights up because the star's exposed core, now a tiny, blistering-hot white dwarf near the center, floods it with ultraviolet radiation. It is the classic textbook planetary nebula, a preview of the fate awaiting our own Sun.","catalog":"M57"}, hans:{"type":"行星状星云","distance":"约 2,600 光年","constellation":"天琴座","facts":[["外壳年龄","约 7,000 年"],["中心白矮星","约 125,000 K"]],"desc":"这个发光的“烟圈”是一颗类太阳恒星在燃料耗尽、走向死亡时轻柔抛出的外层气壳，而不是超新星那样的猛烈爆发——后者只有质量大得多的恒星才会经历。星云之所以发光，是因为恒星裸露的内核如今变成中心一颗极其炽热的小白矮星，用紫外辐射照亮了它。这是教科书上经典的行星状星云，也预示着我们太阳未来的归宿。","catalog":"M57"}, hant:{"type":"行星狀星雲","distance":"約 2,600 光年","constellation":"天琴座","facts":[["外殼年齡","約 7,000 年"],["中心白矮星","約 125,000 K"]],"desc":"這個發光的「煙圈」是一顆類太陽恆星在燃料耗盡、邁向死亡時輕柔拋出的外層氣殼，而非超新星那樣的猛烈爆發——後者只有質量大得多的恆星才會經歷。星雲之所以發光，是因為恆星裸露的核心如今變成中心一顆極其熾熱的小白矮星，以紫外輻射照亮了它。這是教科書上經典的行星狀星雲，也預示著我們太陽未來的歸宿。","catalog":"M57"}, ja:{"type":"惑星状星雲","distance":"約2,600光年","constellation":"こと座","facts":[["外殻の年齢","約7,000年"],["中心の白色矮星","約125,000 K"]],"desc":"この輝く煙の輪は、太陽に似た星が燃料を使い果たして死を迎える際に静かに吹き出した外層のガス殻で、超新星のような激しい爆発ではありません——爆発ははるかに重い星だけが起こすものです。星雲が光るのは、むき出しになった星の芯が今や中心にある極めて高温の小さな白色矮星となり、紫外線でガスを照らしているからです。教科書に載る典型的な惑星状星雲であり、私たちの太陽が将来たどる運命の姿でもあります。","catalog":"M57"}, ko:{"type":"행성상성운","distance":"약 2,600광년","constellation":"거문고자리","facts":[["껍질 나이","약 7,000년"],["중심 백색왜성","약 125,000 K"]],"desc":"이 빛나는 연기 고리는 태양과 비슷한 별이 연료를 다 쓰고 죽어가며 부드럽게 벗어던진 바깥쪽 가스 껍질로, 훨씬 무거운 별만 겪는 초신성 폭발과는 다릅니다. 성운이 빛나는 까닭은 별의 드러난 중심핵이 이제 한가운데의 아주 뜨거운 작은 백색왜성이 되어 자외선으로 가스를 밝히기 때문입니다. 교과서에 나오는 전형적인 행성상성운이자, 우리 태양이 맞이할 미래의 모습이기도 합니다.","catalog":"M57"} } },
@@ -4156,113 +4186,137 @@
   // (authored + adversarially cross-checked; raHours decimal, decDeg, visual mag)
   var ZODIAC = [
     { key:"aries", symbol:"♈",
-      t:{"en":"Aries","hans":"白羊座","hant":"白羊座"},
+      t:{"en":"Aries","hans":"白羊座","hant":"白羊座","ja":"おひつじ座","ko":"양자리"},
       stars:[[2.12,23.46,2],[1.91,20.81,2.64],[1.89,19.29,3.86],[2.83,27.26,3.63],[3.19,19.73,4.35]],
       starNames:["Hamal","Sheratan","Mesarthim","Bharani (41 Ari)","Botein"],
       lines:[[2,1],[1,0],[0,3],[3,4]],
       info:{
         en:{"dates":"Mar 21 – Apr 19","brightest":"Hamal","desc":"Aries represents the golden-fleeced ram of Greek myth that rescued Phrixus and carried him across the sea; its fleece became the Golden Fleece sought by Jason and the Argonauts. Around 2,000 years ago the Sun crossed the vernal equinox here, which is why that point is still called the First Point of Aries. Its brightest star, Hamal, is an orange giant about 66 light-years away."},
         hans:{"dates":"3月21日 – 4月19日","brightest":"娄宿三","desc":"白羊座源自希腊神话中背负王子佛里克索斯渡海逃生的金毛公羊，它的羊毛就是伊阿宋与阿尔戈英雄们苦苦追寻的金羊毛。约两千年前春分点位于此座，因此春分点至今仍被称为“白羊宫第一点”。座内最亮星娄宿三是一颗距离地球约66光年的橙色巨星。"},
-        hant:{"dates":"3月21日 – 4月19日","brightest":"婁宿三","desc":"白羊座源自希臘神話中背負王子佛里克索斯渡海脫險的金毛公羊，其羊毛正是伊阿宋與阿爾戈英雄們追尋的金羊毛。約兩千年前春分點位於此座，故春分點至今仍稱為「白羊宮第一點」。座內最亮星婁宿三是一顆距離地球約66光年的橙色巨星。"} } },
+        hant:{"dates":"3月21日 – 4月19日","brightest":"婁宿三","desc":"白羊座源自希臘神話中背負王子佛里克索斯渡海脫險的金毛公羊，其羊毛正是伊阿宋與阿爾戈英雄們追尋的金羊毛。約兩千年前春分點位於此座，故春分點至今仍稱為「白羊宮第一點」。座內最亮星婁宿三是一顆距離地球約66光年的橙色巨星。"},
+        ja:{"dates":"3月21日 – 4月19日","brightest":"ハマル","desc":"おひつじ座は、ギリシャ神話で王子プリクソスを背に乗せて海を渡り救った金毛の牡羊の姿です。その毛皮こそ、イアソンとアルゴ船の英雄たちが探し求めた「金羊毛」でした。約2000年前には春分点がこの星座にあったため、春分点は今も「白羊宮の第一点」と呼ばれています。最も明るい星ハマルは、地球から約66光年離れたオレンジ色の巨星です。"},
+        ko:{"dates":"3월 21일 – 4월 19일","brightest":"하말","desc":"양자리는 그리스 신화에서 프릭소스 왕자를 태우고 바다를 건너 구해 준 황금 양털의 숫양을 상징하며, 그 양털이 바로 이아손과 아르고호 원정대가 찾아 나선 황금 양털이다. 약 2,000년 전에는 춘분점이 이 별자리 안에 있어 태양이 이곳에서 천구 적도를 지났기에, 그 지점은 지금도 '양자리의 첫 점'이라 불린다. 가장 밝은 별 하말은 지구에서 약 66광년 떨어진 주황색 거성이다."} } },
     { key:"taurus", symbol:"♉",
-      t:{"en":"Taurus","hans":"金牛座","hant":"金牛座"},
+      t:{"en":"Taurus","hans":"金牛座","hant":"金牛座","ja":"おうし座","ko":"황소자리"},
       stars:[[4.599,16.51,0.85],[5.438,28.61,1.65],[5.627,21.14,2.97],[4.477,19.18,3.53],[4.382,17.54,3.77],[4.33,15.63,3.65],[4.478,15.87,3.4],[4.011,12.49,3.47],[3.453,9.73,3.74]],
       starNames:["Aldebaran","Elnath","Tianguan (ζ Tau)","Ain (ε Tau)","δ Tauri","γ Tauri","Chamukuy (θ² Tau)","λ Tauri","ξ Tauri"],
       lines:[[0,2],[3,1],[3,4],[4,5],[5,6],[6,0],[5,7],[7,8]],
       info:{
         en:{"dates":"Apr 20 – May 20","brightest":"Aldebaran","desc":"Taurus represents the bull whose form Zeus took to carry the princess Europa across the sea. Its fiery orange eye is Aldebaran, a red giant star, set within the V-shaped Hyades cluster that outlines the bull's face, while the horns stretch to Elnath and Zeta Tauri. The constellation also hosts the famous Pleiades cluster and the Crab Nebula, remnant of a supernova seen in 1054 AD."},
         hans:{"dates":"4月20日 – 5月20日","brightest":"毕宿五","desc":"金牛座源自希腊神话:宙斯化身为一头雪白的公牛,驮着腓尼基公主欧罗巴渡海而去。橙红色的红巨星毕宿五是\"公牛之眼\",镶嵌在勾勒牛脸的V字形毕星团中,双角则伸向五车五和天关。座内还有著名的昴星团(七姐妹星团)以及公元1054年超新星遗迹——蟹状星云。"},
-        hant:{"dates":"4月20日 – 5月20日","brightest":"畢宿五","desc":"金牛座源自希臘神話:宙斯化身為一頭雪白的公牛,馱著腓尼基公主歐羅巴渡海而去。橙紅色的紅巨星畢宿五是「公牛之眼」,鑲嵌在勾勒牛臉的V字形畢星團中,雙角則伸向五車五與天關。座內還有著名的昴星團(七姊妹星團)以及公元1054年超新星遺跡——蟹狀星雲。"} } },
+        hant:{"dates":"4月20日 – 5月20日","brightest":"畢宿五","desc":"金牛座源自希臘神話:宙斯化身為一頭雪白的公牛,馱著腓尼基公主歐羅巴渡海而去。橙紅色的紅巨星畢宿五是「公牛之眼」,鑲嵌在勾勒牛臉的V字形畢星團中,雙角則伸向五車五與天關。座內還有著名的昴星團(七姊妹星團)以及公元1054年超新星遺跡——蟹狀星雲。"},
+        ja:{"dates":"4月20日 – 5月20日","brightest":"アルデバラン","desc":"おうし座は、ゼウスが王女エウロペを背に乗せて海を渡るために変身した牡牛の姿です。燃えるようなオレンジ色に輝く「牡牛の目」は赤色巨星アルデバランで、牛の顔を描くV字形のヒアデス星団の中に位置し、角はエルナトとおうし座ζ星へと伸びています。この星座には有名なプレアデス星団や、1054年に観測された超新星の残骸であるかに星雲もあります。"},
+        ko:{"dates":"4월 20일 – 5월 20일","brightest":"알데바란","desc":"황소자리는 제우스가 에우로페 공주를 태우고 바다를 건너기 위해 변신한 황소의 모습이다. 불타는 듯한 주황색 눈에 해당하는 알데바란은 적색 거성으로, 황소의 얼굴을 그리는 V자형 히아데스 성단 속에 자리하며 두 뿔은 엘나스와 황소자리 제타별까지 뻗어 있다. 이 별자리에는 유명한 플레이아데스 성단과 1054년에 관측된 초신성의 잔해인 게 성운도 있다."} } },
     { key:"gemini", symbol:"♊",
-      t:{"en":"Gemini","hans":"双子座","hant":"雙子座"},
+      t:{"en":"Gemini","hans":"双子座","hant":"雙子座","ja":"ふたご座","ko":"쌍둥이자리"},
       stars:[[7.577,31.89,1.58],[7.755,28.03,1.14],[6.629,16.4,1.92],[7.335,21.98,3.53],[6.732,25.13,3.06],[6.383,22.51,2.87],[6.248,22.51,3.31],[7.068,20.57,3.93],[6.755,12.9,3.35],[7.741,24.4,3.57]],
       starNames:["Castor","Pollux","Alhena","Wasat","Mebsuta","Tejat","Propus","Mekbuda","Alzirr","Kappa Gem"],
       lines:[[0,1],[0,4],[4,5],[5,6],[1,9],[1,3],[3,7],[7,2],[3,8]],
       info:{
         en:{"dates":"May 21 – Jun 20","brightest":"Pollux","desc":"Gemini represents the twin brothers Castor and Pollux of Greek myth, inseparable heroes whom Zeus placed together in the sky. Its brightest star, Pollux, is an orange giant only 34 light-years away that hosts a confirmed exoplanet, while Castor is actually a remarkable system of six stars bound together."},
         hans:{"dates":"5月21日 – 6月20日","brightest":"北河三","desc":"双子座代表希腊神话中的孪生兄弟卡斯托耳与波吕丢刻斯，宙斯将这对形影不离的英雄一同升上夜空。最亮星北河三是一颗距离地球约34光年的橙色巨星，拥有一颗已确认的系外行星；而北河二实际上是由六颗恒星组成的罕见聚星系统。"},
-        hant:{"dates":"5月21日 – 6月20日","brightest":"北河三","desc":"雙子座代表希臘神話中的孿生兄弟卡斯托耳與波呂丟刻斯，宙斯將這對形影不離的英雄一同升上夜空。最亮星北河三是一顆距離地球約34光年的橙色巨星，擁有一顆已確認的系外行星；而北河二實際上是由六顆恆星組成的罕見聚星系統。"} } },
+        hant:{"dates":"5月21日 – 6月20日","brightest":"北河三","desc":"雙子座代表希臘神話中的孿生兄弟卡斯托耳與波呂丟刻斯，宙斯將這對形影不離的英雄一同升上夜空。最亮星北河三是一顆距離地球約34光年的橙色巨星，擁有一顆已確認的系外行星；而北河二實際上是由六顆恆星組成的罕見聚星系統。"},
+        ja:{"dates":"5月21日 – 6月20日","brightest":"ポルックス","desc":"ふたご座は、ギリシャ神話の双子の兄弟カストルとポルックスの姿で、片時も離れることのなかったこの英雄たちを、ゼウスが共に天に上げたと伝えられます。最も明るい星ポルックスはわずか34光年先にあるオレンジ色の巨星で、確認済みの系外惑星を持ち、一方のカストルは実は6つの恒星が結びついた珍しい六重連星系です。"},
+        ko:{"dates":"5월 21일 – 6월 20일","brightest":"폴룩스","desc":"쌍둥이자리는 그리스 신화 속 쌍둥이 형제 카스토르와 폴룩스를 나타내며, 제우스는 늘 붙어 다니던 이 두 영웅을 나란히 하늘에 올렸다. 가장 밝은 별 폴룩스는 불과 34광년 떨어진 주황색 거성으로 확인된 외계 행성을 거느리고 있으며, 카스토르는 실제로 여섯 개의 별이 서로 묶여 있는 놀라운 다중성계다."} } },
     { key:"cancer", symbol:"♋",
-      t:{"en":"Cancer","hans":"巨蟹座","hant":"巨蟹座"},
+      t:{"en":"Cancer","hans":"巨蟹座","hant":"巨蟹座","ja":"かに座","ko":"게자리"},
       stars:[[8.28,9.19,3.52],[8.74,18.15,3.94],[8.72,21.47,4.66],[8.97,11.86,4.25],[8.78,28.76,4.02]],
       starNames:["Tarf","Asellus Australis","Asellus Borealis","Acubens","Iota Cnc"],
       lines:[[4,2],[2,1],[1,3],[1,0]],
       info:{
         en:{"dates":"Jun 21 – Jul 22","brightest":"Tarf (β Cancri)","desc":"In Greek myth, Cancer is the crab sent by Hera to hinder Heracles during his battle with the Hydra; crushed underfoot, it was honored with a place among the stars. Though its stars are faint, the constellation contains the famous Beehive Cluster (M44, Praesepe), a naked-eye swarm of hundreds of stars lying between the two \"donkey\" stars, Asellus Borealis and Asellus Australis."},
         hans:{"dates":"6月21日 – 7月22日","brightest":"柳宿增十（Tarf）","desc":"在希腊神话中，巨蟹是天后赫拉派去妨碍赫拉克勒斯斩杀九头蛇许德拉的螃蟹，被英雄踩碎后获赫拉升上天空，化为星座。巨蟹座的恒星虽然黯淡，却拥有著名的鬼星团（蜂巢星团，M44），它位于“南北二驴”鬼宿三与鬼宿四之间，晴夜肉眼即可望见。"},
-        hant:{"dates":"6月21日 – 7月22日","brightest":"柳宿增十（Tarf）","desc":"希臘神話中，巨蟹是天后赫拉派去妨礙海克力士斬殺九頭蛇的螃蟹，遭英雄踩碎後被赫拉升上天空，化作星座。巨蟹座的恆星雖然黯淡，卻擁有著名的鬼宿星團（蜂巢星團，M44），位於「南北二驢」鬼宿三與鬼宿四之間，晴朗夜晚肉眼即可見。"} } },
+        hant:{"dates":"6月21日 – 7月22日","brightest":"柳宿增十（Tarf）","desc":"希臘神話中，巨蟹是天后赫拉派去妨礙海克力士斬殺九頭蛇的螃蟹，遭英雄踩碎後被赫拉升上天空，化作星座。巨蟹座的恆星雖然黯淡，卻擁有著名的鬼宿星團（蜂巢星團，M44），位於「南北二驢」鬼宿三與鬼宿四之間，晴朗夜晚肉眼即可見。"},
+        ja:{"dates":"6月21日 – 7月22日","brightest":"タルフ（かに座β星）","desc":"ギリシャ神話では、かに座はヘラクレスがヒュドラと戦う際、その邪魔をするために女神ヘラが送り込んだ蟹の姿です。踏みつぶされた蟹は、その働きをたたえられて星座になりました。星々は暗いものの、この星座には有名なプレセペ星団（M44）があり、「ロバ」を意味する2つの星、アセルス・ボレアリスとアセルス・アウストラリスの間で、肉眼でも見える数百個の星の群れとして輝いています。"},
+        ko:{"dates":"6월 21일 – 7월 22일","brightest":"타르프(게자리 베타)","desc":"그리스 신화에서 게자리는 헤라클레스가 히드라와 싸울 때 헤라가 방해하라고 보낸 게로, 영웅의 발에 밟혀 부서진 뒤 하늘의 별자리가 되었다. 별들은 어둡지만 이 별자리에는 유명한 프레세페 성단(벌집 성단, M44)이 있는데, '당나귀'라 불리는 두 별 아셀루스 보레알리스와 아셀루스 아우스트랄리스 사이에서 맨눈으로도 보이는 수백 개 별의 무리다."} } },
     { key:"leo", symbol:"♌",
-      t:{"en":"Leo","hans":"狮子座","hant":"獅子座"},
+      t:{"en":"Leo","hans":"狮子座","hant":"獅子座","ja":"しし座","ko":"사자자리"},
       stars:[[10.139,11.97,1.36],[11.818,14.57,2.14],[10.333,19.84,2.01],[11.235,20.52,2.56],[11.237,15.43,3.34],[10.278,23.42,3.43],[9.764,23.77,2.98],[9.879,26.01,3.88],[10.122,16.76,3.49]],
       starNames:["Regulus","Denebola","Algieba","Zosma","Chertan","Adhafera","Ras Elased Australis","Rasalas","Eta Leonis"],
       lines:[[0,8],[8,2],[2,5],[5,7],[7,6],[2,3],[3,1],[1,4],[4,3],[4,0]],
       info:{
         en:{"dates":"Jul 23 – Aug 22","brightest":"Regulus","desc":"Leo depicts the Nemean Lion, the invulnerable beast Heracles strangled as the first of his twelve labors. Its brightest star, Regulus — \"the little king\" — sits almost exactly on the ecliptic and is regularly occulted by the Moon. The famous Sickle asterism, a backwards question mark of six stars, traces the lion's head and mane."},
         hans:{"dates":"7月23日 – 8月22日","brightest":"轩辕十四","desc":"狮子座代表希腊神话中的涅墨亚猛狮，赫拉克勒斯在十二项功绩的第一项中将其扼杀。其最亮星轩辕十四（Regulus）意为\"小王\"，几乎正好位于黄道上，因此常被月球掩食。由六颗星组成的\"镰刀\"星群形似反写的问号，勾勒出狮子的头部和鬃毛。"},
-        hant:{"dates":"7月23日 – 8月22日","brightest":"軒轅十四","desc":"獅子座代表希臘神話中的涅墨亞巨獅，海克力斯在十二項偉業的第一項中將牠扼殺。其最亮星軒轅十四（Regulus）意為「小王」，幾乎恰好位於黃道上，因此經常被月球掩蔽。由六顆星組成的「鐮刀」星群形似反寫的問號，描繪出獅子的頭部與鬃毛。"} } },
+        hant:{"dates":"7月23日 – 8月22日","brightest":"軒轅十四","desc":"獅子座代表希臘神話中的涅墨亞巨獅，海克力斯在十二項偉業的第一項中將牠扼殺。其最亮星軒轅十四（Regulus）意為「小王」，幾乎恰好位於黃道上，因此經常被月球掩蔽。由六顆星組成的「鐮刀」星群形似反寫的問號，描繪出獅子的頭部與鬃毛。"},
+        ja:{"dates":"7月23日 – 8月22日","brightest":"レグルス","desc":"しし座は、ヘラクレスが十二の功業の最初に絞め殺した不死身の怪物「ネメアの獅子」の姿です。最も明るい星レグルスは「小さな王」を意味し、ほぼ黄道上に位置するため、たびたび月に隠されます。6つの星が裏返しにした「？」の形に並ぶ有名な「ししの大鎌」が、獅子の頭とたてがみを描き出しています。"},
+        ko:{"dates":"7월 23일 – 8월 22일","brightest":"레굴루스","desc":"사자자리는 헤라클레스가 열두 과업 중 첫 번째로 목 졸라 쓰러뜨린 불사신 네메아의 사자를 그린 별자리다. 가장 밝은 별 레굴루스는 '작은 왕'이라는 뜻으로, 거의 정확히 황도 위에 자리해 달에 자주 가려진다. 여섯 개의 별이 좌우가 뒤집힌 물음표 모양을 이루는 유명한 '낫' 성군은 사자의 머리와 갈기를 나타낸다."} } },
     { key:"virgo", symbol:"♍",
-      t:{"en":"Virgo","hans":"室女座","hant":"室女座"},
+      t:{"en":"Virgo","hans":"室女座","hant":"室女座","ja":"おとめ座","ko":"처녀자리"},
       stars:[[13.42,-11.16,0.98],[11.84,1.76,3.61],[12.69,-1.45,2.74],[12.93,3.4,3.38],[13.04,10.96,2.83],[13.58,-0.6,3.37],[12.33,-0.67,3.89],[13.17,-5.54,4.38],[14.27,-6,4.08],[14.72,-5.66,3.88]],
       starNames:["Spica","Zavijava","Porrima","Auva","Vindemiatrix","Heze","Zaniah","Theta Virginis","Syrma","Rijl al Awwa"],
       lines:[[1,6],[6,2],[2,3],[3,4],[2,7],[7,0],[3,5],[0,5],[5,8],[8,9]],
       info:{
         en:{"dates":"Aug 23 – Sep 22","brightest":"Spica","desc":"Virgo depicts a maiden holding an ear of wheat, identified in Greek myth with the harvest goddess Demeter or with Astraea, goddess of justice. Its brightest star Spica is a hot blue-white binary about 250 light-years away, and the constellation also hosts the Virgo Cluster, a swarm of some 2,000 galaxies at the heart of our local supercluster."},
         hans:{"dates":"8月23日 – 9月22日","brightest":"角宿一","desc":"室女座常被描绘为手持麦穗的少女，在希腊神话中与丰收女神得墨忒耳或正义女神阿斯特赖亚相联系。其最亮星角宿一是一对距离约250光年的蓝白色双星；座内还坐落着拥有约两千个成员星系的室女座星系团，是本超星系团的中心所在。"},
-        hant:{"dates":"8月23日 – 9月22日","brightest":"角宿一","desc":"室女座常被描繪為手持麥穗的少女，在希臘神話中與豐收女神狄蜜特或正義女神阿斯特莉亞相聯繫。其最亮星角宿一是一對距離約250光年的藍白色雙星；座內還坐落著擁有約兩千個成員星系的室女座星系團，是本超星系團的中心所在。"} } },
+        hant:{"dates":"8月23日 – 9月22日","brightest":"角宿一","desc":"室女座常被描繪為手持麥穗的少女，在希臘神話中與豐收女神狄蜜特或正義女神阿斯特莉亞相聯繫。其最亮星角宿一是一對距離約250光年的藍白色雙星；座內還坐落著擁有約兩千個成員星系的室女座星系團，是本超星系團的中心所在。"},
+        ja:{"dates":"8月23日 – 9月22日","brightest":"スピカ","desc":"おとめ座は麦の穂を手にした乙女の姿で、ギリシャ神話では豊穣の女神デメテル、あるいは正義の女神アストライアと同一視されます。最も明るい星スピカは約250光年先にある高温の青白い連星です。さらにこの星座には、約2000個の銀河がひしめくおとめ座銀河団があり、私たちの属する局部超銀河団の中心をなしています。"},
+        ko:{"dates":"8월 23일 – 9월 22일","brightest":"스피카","desc":"처녀자리는 밀 이삭을 든 처녀의 모습으로, 그리스 신화에서는 수확의 여신 데메테르나 정의의 여신 아스트라이아와 동일시된다. 가장 밝은 별 스피카는 약 250광년 떨어진 뜨거운 청백색 쌍성이며, 이 별자리에는 우리 은하가 속한 국부 초은하단의 중심을 이루는 약 2,000개 은하의 무리인 처녀자리 은하단도 자리하고 있다."} } },
     { key:"libra", symbol:"♎",
-      t:{"en":"Libra","hans":"天秤座","hant":"天秤座"},
+      t:{"en":"Libra","hans":"天秤座","hant":"天秤座","ja":"てんびん座","ko":"천칭자리"},
       stars:[[15.283,-9.38,2.61],[14.848,-16.04,2.75],[15.592,-14.79,3.91],[15.068,-25.28,3.29],[15.617,-28.13,3.58],[15.644,-29.78,3.66]],
       starNames:["Zubeneschamali","Zubenelgenubi","Zubenelhakrabi","Brachium","Upsilon Librae","Tau Librae"],
       lines:[[0,1],[0,2],[1,2],[1,3],[2,4],[4,5]],
       info:{
         en:{"dates":"Sep 23 – Oct 22","brightest":"Zubeneschamali","desc":"Libra depicts the scales of justice held by the goddess Astraea, making it the only zodiac constellation representing an inanimate object. Its two brightest stars, Zubenelgenubi and Zubeneschamali, bear Arabic names meaning the southern and northern claws, recalling an era when they marked the claws of neighboring Scorpius. Zubeneschamali is famously reported by some observers to glint faintly green, a rarity among naked-eye stars."},
         hans:{"dates":"9月23日 – 10月22日","brightest":"氐宿四","desc":"天秤座象征正义女神阿斯特赖亚手中衡量善恶的天平，是黄道十二星座中唯一以非生命物体为形象的星座。座内两颗主星氐宿一与氐宿四的阿拉伯名分别意为“南爪”和“北爪”，源于古代它们曾被视为天蝎座的巨螯。最亮星氐宿四常被观测者形容为带有罕见的淡绿色光芒。"},
-        hant:{"dates":"9月23日 – 10月22日","brightest":"氐宿四","desc":"天秤座象徵正義女神阿斯特賴亞手中衡量善惡的天平，是黃道十二星座中唯一以無生命物體為形象的星座。座內兩顆主星氐宿一與氐宿四的阿拉伯名分別意為「南爪」和「北爪」，源自古代它們曾被視為天蠍座的巨螯。最亮星氐宿四常被觀測者形容為帶有罕見的淡綠色光芒。"} } },
+        hant:{"dates":"9月23日 – 10月22日","brightest":"氐宿四","desc":"天秤座象徵正義女神阿斯特賴亞手中衡量善惡的天平，是黃道十二星座中唯一以無生命物體為形象的星座。座內兩顆主星氐宿一與氐宿四的阿拉伯名分別意為「南爪」和「北爪」，源自古代它們曾被視為天蠍座的巨螯。最亮星氐宿四常被觀測者形容為帶有罕見的淡綠色光芒。"},
+        ja:{"dates":"9月23日 – 10月22日","brightest":"ズベンエスカマリ","desc":"てんびん座は正義の女神アストライアが手にする天秤の姿で、黄道十二星座の中で唯一、生き物ではないものを表す星座です。2つの明るい星ズベンエルゲヌビとズベンエスカマリの名はアラビア語で「南の爪」「北の爪」を意味し、かつて隣のさそり座の爪とされていた時代の名残です。ズベンエスカマリは、肉眼で見える星としては珍しく、かすかに緑がかって見えると報告されることで知られています。"},
+        ko:{"dates":"9월 23일 – 10월 22일","brightest":"주벤에스카말리","desc":"천칭자리는 정의의 여신 아스트라이아가 든 저울을 나타내며, 황도 12궁 가운데 유일하게 무생물을 상징하는 별자리다. 가장 밝은 두 별 주벤엘게누비와 주벤에스카말리는 각각 '남쪽 집게발'과 '북쪽 집게발'을 뜻하는 아랍어 이름으로, 이 별들이 이웃한 전갈자리의 집게발로 여겨지던 시절을 떠올리게 한다. 주벤에스카말리는 일부 관측자들에게 희미한 초록빛으로 보인다고 전해지는데, 이는 맨눈으로 볼 수 있는 별 가운데 매우 드문 경우로 유명하다."} } },
     { key:"scorpius", symbol:"♏",
-      t:{"en":"Scorpius","hans":"天蝎座","hant":"天蠍座"},
+      t:{"en":"Scorpius","hans":"天蝎座","hant":"天蠍座","ja":"さそり座","ko":"전갈자리"},
       stars:[[16.09,-19.8,2.62],[16.01,-22.6,2.29],[15.98,-26.1,2.89],[16.35,-25.6,2.88],[16.49,-26.4,0.96],[16.6,-28.2,2.82],[16.84,-34.3,2.29],[16.91,-42.4,3.59],[17.2,-43.2,3.33],[17.62,-43,1.86],[17.71,-39,2.39],[17.56,-37.1,1.62]],
       starNames:["Acrab","Dschubba","Fang","Alniyat","Antares","Paikauhale","Larawag","ζ Sco","η Sco","Sargas","κ Sco","Shaula"],
       lines:[[0,1],[2,1],[1,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11]],
       info:{
         en:{"dates":"Oct 23 – Nov 21","brightest":"Antares","desc":"In Greek myth, Scorpius is the scorpion sent by Gaia to slay the boastful hunter Orion; the gods placed the two on opposite sides of the sky so they are never seen together. Its heart is marked by Antares, a red supergiant roughly 700 times the Sun's diameter, whose ruddy glow earned it the name 'rival of Mars.' The long curved tail, tipped by the bright sting star Shaula, makes it one of the most recognizable figures of the summer sky."},
         hans:{"dates":"10月23日 – 11月21日","brightest":"心宿二","desc":"天蝎座源自希腊神话:大地女神盖亚派出毒蝎蜇死了狂妄的猎人俄里翁,众神将两者置于天空两端,使它们永不相见。其最亮星心宿二是一颗红超巨星,直径约为太阳的700倍,火红的色泽令古人称它为“火星的对手”。蝎尾末端的亮星尾宿八勾勒出经典的蝎钩,是夏夜星空中最易辨认的形象之一。"},
-        hant:{"dates":"10月23日 – 11月21日","brightest":"心宿二","desc":"天蠍座源自希臘神話:大地女神蓋亞派出毒蠍螫死了狂妄的獵人俄里翁,眾神將兩者置於天空兩端,使它們永不相見。其最亮星心宿二是一顆紅超巨星,直徑約為太陽的700倍,火紅的色澤令古人稱它為「火星的對手」。蠍尾末端的亮星尾宿八勾勒出經典的蠍鉤,是夏夜星空中最易辨認的形象之一。"} } },
+        hant:{"dates":"10月23日 – 11月21日","brightest":"心宿二","desc":"天蠍座源自希臘神話:大地女神蓋亞派出毒蠍螫死了狂妄的獵人俄里翁,眾神將兩者置於天空兩端,使它們永不相見。其最亮星心宿二是一顆紅超巨星,直徑約為太陽的700倍,火紅的色澤令古人稱它為「火星的對手」。蠍尾末端的亮星尾宿八勾勒出經典的蠍鉤,是夏夜星空中最易辨認的形象之一。"},
+        ja:{"dates":"10月23日 – 11月21日","brightest":"アンタレス","desc":"ギリシャ神話では、さそり座は大地の女神ガイアが傲慢な狩人オリオンを倒すために差し向けたサソリの姿です。神々は2人を天球の正反対に置いたため、両者が同時に空に昇ることはありません。その心臓に輝くアンタレスは直径が太陽の約700倍もある赤色超巨星で、赤い輝きから「火星に対抗するもの」と名付けられました。明るい毒針の星シャウラを先端とする長く曲がった尾は、夏の星空で最もよく知られた姿のひとつです。"},
+        ko:{"dates":"10월 23일 – 11월 21일","brightest":"안타레스","desc":"그리스 신화에서 전갈자리는 오만한 사냥꾼 오리온을 쓰러뜨리기 위해 가이아가 보낸 전갈로, 신들은 둘을 하늘의 반대편에 두어 결코 함께 보이지 않게 했다. 심장 자리에는 태양 지름의 약 700배에 이르는 적색 초거성 안타레스가 빛나는데, 그 붉은빛 때문에 '화성의 라이벌'이라는 이름을 얻었다. 밝은 독침별 샤울라로 끝나는 길게 굽은 꼬리는 여름 밤하늘에서 가장 알아보기 쉬운 모습 중 하나다."} } },
     { key:"sagittarius", symbol:"♐",
-      t:{"en":"Sagittarius","hans":"人马座","hant":"人馬座"},
+      t:{"en":"Sagittarius","hans":"人马座","hant":"人馬座","ja":"いて座","ko":"궁수자리"},
       stars:[[18.4,-34.38,1.85],[18.35,-29.83,2.7],[18.1,-30.42,2.98],[18.47,-25.42,2.81],[18.76,-27,3.17],[18.92,-26.3,2.05],[19.12,-27.67,3.32],[19.04,-29.88,2.6]],
       starNames:["Kaus Australis","Kaus Media","Alnasl","Kaus Borealis","Phi Sgr","Nunki","Tau Sgr","Ascella"],
       lines:[[2,1],[2,0],[1,0],[1,3],[3,4],[1,4],[4,7],[0,7],[7,6],[6,5],[5,4]],
       info:{
         en:{"dates":"Nov 22 – Dec 21","brightest":"Kaus Australis","desc":"Sagittarius is the Archer, a centaur drawing his bow toward the heart of neighboring Scorpius, often identified with Crotus or the wise Chiron. The constellation lies toward the center of the Milky Way, home of the supermassive black hole Sagittarius A*, and eight of its bright stars form the famous Teapot asterism."},
         hans:{"dates":"11月22日 – 12月21日","brightest":"箕宿三","desc":"人马座是希腊神话中弯弓搭箭的半人马射手,常被认为是克罗托斯或智者喀戎,箭尖直指邻近天蝎座的心脏。银河系中心的超大质量黑洞人马座A*就位于这一方向,其中八颗亮星组成著名的\"茶壶\"星群,是夏季南天最易辨认的标志之一。"},
-        hant:{"dates":"11月22日 – 12月21日","brightest":"箕宿三","desc":"人馬座是希臘神話中彎弓搭箭的半人馬射手,常被認為是克羅托斯或智者凱隆,箭尖直指鄰近天蠍座的心臟。銀河系中心的超大質量黑洞人馬座A*就位於這一方向,其中八顆亮星組成著名的「茶壺」星群,是夏季南天最易辨認的標誌之一。"} } },
+        hant:{"dates":"11月22日 – 12月21日","brightest":"箕宿三","desc":"人馬座是希臘神話中彎弓搭箭的半人馬射手,常被認為是克羅托斯或智者凱隆,箭尖直指鄰近天蠍座的心臟。銀河系中心的超大質量黑洞人馬座A*就位於這一方向,其中八顆亮星組成著名的「茶壺」星群,是夏季南天最易辨認的標誌之一。"},
+        ja:{"dates":"11月22日 – 12月21日","brightest":"カウス・アウストラリス","desc":"いて座は、隣のさそり座の心臓に向かって弓を引き絞る半人半馬の射手の姿で、クロトス、あるいは賢者ケイロンと同一視されることもあります。この星座は天の川銀河の中心方向にあり、そこには超大質量ブラックホール「いて座A*」が潜んでいます。この星座の8つの明るい星は、有名な「ティーポット」と呼ばれる星の並びを形づくっています。"},
+        ko:{"dates":"11월 22일 – 12월 21일","brightest":"카우스 아우스트랄리스","desc":"궁수자리는 이웃한 전갈자리의 심장을 향해 활을 겨눈 반인반마 켄타우로스 궁수로, 흔히 크로토스나 현자 케이론으로 여겨진다. 이 별자리는 초대질량 블랙홀 궁수자리 A*가 자리한 우리은하 중심 방향에 있으며, 밝은 별 여덟 개가 유명한 '찻주전자' 성군을 이룬다."} } },
     { key:"capricornus", symbol:"♑",
-      t:{"en":"Capricornus","hans":"摩羯座","hant":"摩羯座"},
+      t:{"en":"Capricornus","hans":"摩羯座","hant":"摩羯座","ja":"やぎ座","ko":"염소자리"},
       stars:[[20.3,-12.54,3.57],[20.35,-14.78,3.08],[20.77,-25.27,4.14],[20.86,-26.92,4.11],[21.44,-22.41,3.74],[21.62,-19.47,4.51],[21.78,-16.13,2.85],[21.67,-16.66,3.67],[21.37,-16.83,4.28],[21.1,-17.23,4.07]],
       starNames:["Algedi (α²)","Dabih (β)","Psi Cap (ψ)","Omega Cap (ω)","Zeta Cap (ζ)","Castra (ε)","Deneb Algedi (δ)","Nashira (γ)","Iota Cap (ι)","Dorsum (θ)"],
       lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,0]],
       info:{
         en:{"dates":"Dec 22 – Jan 19","brightest":"Deneb Algedi","desc":"Capricornus, the Sea Goat, depicts the god Pan, who grew a fish's tail to escape the monster Typhon by diving into the Nile. Its brightest star, Deneb Algedi, marks the goat's tail, and the constellation's arrowhead outline is drawn from two horn stars, Algedi and Dabih, down to the tail. Neptune was discovered within Capricornus in 1846."},
         hans:{"dates":"12月22日 – 1月19日","brightest":"垒壁阵四","desc":"摩羯座又称海山羊，源自希腊神话：牧神潘为躲避怪物提丰跃入尼罗河，下半身化作鱼尾。其最亮星垒壁阵四位于羊尾处，整个星座呈倒三角形，从羊角的牛宿二（Algedi）与牛宿一（Dabih）延伸至鱼尾。1846年，海王星正是在摩羯座天区被发现的。"},
-        hant:{"dates":"12月22日 – 1月19日","brightest":"壘壁陣四","desc":"摩羯座又稱海山羊，源自希臘神話：牧神潘為躲避怪物提豐躍入尼羅河，下半身化作魚尾。其最亮星壘壁陣四位於羊尾處，整個星座呈倒三角形，從羊角的牛宿二（Algedi）與牛宿一（Dabih）延伸至魚尾。1846年，海王星正是在摩羯座天區被發現的。"} } },
+        hant:{"dates":"12月22日 – 1月19日","brightest":"壘壁陣四","desc":"摩羯座又稱海山羊，源自希臘神話：牧神潘為躲避怪物提豐躍入尼羅河，下半身化作魚尾。其最亮星壘壁陣四位於羊尾處，整個星座呈倒三角形，從羊角的牛宿二（Algedi）與牛宿一（Dabih）延伸至魚尾。1846年，海王星正是在摩羯座天區被發現的。"},
+        ja:{"dates":"12月22日 – 1月19日","brightest":"デネブ・アルゲディ","desc":"やぎ座は「海山羊」とも呼ばれ、牧神パンが怪物テュポンから逃れるためナイル川に飛び込み、下半身が魚の尾に変わった姿とされます。最も明るい星デネブ・アルゲディは山羊の尾の位置にあり、星座は角の星アルゲディとダビーから尾へと続く、矢じりのような輪郭を描きます。1846年に海王星が発見されたのも、このやぎ座の領域でした。"},
+        ko:{"dates":"12월 22일 – 1월 19일","brightest":"데네브 알게디","desc":"염소자리는 '바다 염소'로, 괴물 티폰을 피해 나일강에 뛰어들다 하반신이 물고기 꼬리로 변한 목신 판의 모습을 그린 별자리다. 가장 밝은 별 데네브 알게디는 염소의 꼬리를 표시하며, 뿔에 해당하는 알게디와 다비흐에서 꼬리까지 화살촉 모양의 윤곽이 이어진다. 1846년 해왕성이 바로 이 염소자리 영역에서 발견되었다."} } },
     { key:"aquarius", symbol:"♒",
-      t:{"en":"Aquarius","hans":"宝瓶座","hant":"寶瓶座"},
+      t:{"en":"Aquarius","hans":"宝瓶座","hant":"寶瓶座","ja":"みずがめ座","ko":"물병자리"},
       stars:[[21.526,-5.57,2.87],[22.096,-0.32,2.94],[22.911,-15.82,3.27],[20.795,-9.5,3.77],[22.361,-1.39,3.85],[22.481,-0.02,3.65],[22.589,-0.12,4.04],[22.421,1.38,4.66],[22.281,-7.78,4.16],[22.877,-7.58,3.73]],
       starNames:["Sadalsuud","Sadalmelik","Skat","Albali","Sadachbia","Zeta Aquarii","Eta Aquarii","Pi Aquarii","Ancha","Hydor"],
       lines:[[3,0],[0,1],[1,4],[4,5],[5,6],[5,7],[1,8],[8,9],[9,2]],
       info:{
         en:{"dates":"Jan 20 – Feb 18","brightest":"Sadalsuud","desc":"Aquarius, the Water Bearer, represents Ganymede, the beautiful youth whom Zeus carried to Olympus to serve as cupbearer to the gods, forever pouring water from his jar. Its brightest star, Sadalsuud, is a rare yellow supergiant, and the constellation also hosts the Helix Nebula, one of the closest planetary nebulae to Earth."},
         hans:{"dates":"1月20日 – 2月18日","brightest":"虚宿一","desc":"宝瓶座又称水瓶座，象征希腊神话中被宙斯带上奥林匹斯山、为众神斟酒的美少年伽倪墨得斯，他手中的水瓶不断倾泻清泉。座内最亮星虚宿一是一颗罕见的黄超巨星；著名的螺旋星云也位于此，是距离地球最近的行星状星云之一。"},
-        hant:{"dates":"1月20日 – 2月18日","brightest":"虛宿一","desc":"寶瓶座又稱水瓶座，象徵希臘神話中被宙斯帶上奧林帕斯山、為眾神斟酒的美少年伽倪墨得斯，他手中的水瓶不斷傾瀉清泉。座內最亮星虛宿一是一顆罕見的黃超巨星；著名的螺旋星雲也位於此，是距離地球最近的行星狀星雲之一。"} } },
+        hant:{"dates":"1月20日 – 2月18日","brightest":"虛宿一","desc":"寶瓶座又稱水瓶座，象徵希臘神話中被宙斯帶上奧林帕斯山、為眾神斟酒的美少年伽倪墨得斯，他手中的水瓶不斷傾瀉清泉。座內最亮星虛宿一是一顆罕見的黃超巨星；著名的螺旋星雲也位於此，是距離地球最近的行星狀星雲之一。"},
+        ja:{"dates":"1月20日 – 2月18日","brightest":"サダルスウド","desc":"みずがめ座は水瓶を運ぶ者の姿で、ゼウスにオリュンポスへ連れて行かれ、神々に酒を注ぐ給仕となった美少年ガニュメデスを表します。彼の瓶からは絶えず水が注がれ続けています。最も明るい星サダルスウドは珍しい黄色超巨星で、この星座には地球に最も近い惑星状星雲のひとつである「らせん星雲」もあります。"},
+        ko:{"dates":"1월 20일 – 2월 18일","brightest":"사달수드","desc":"물병자리는 제우스가 올림포스로 데려가 신들에게 술을 따르게 한 아름다운 소년 가니메데스를 상징하며, 그는 물병에서 영원히 물을 쏟아붓고 있다. 가장 밝은 별 사달수드는 보기 드문 황색 초거성이고, 이 별자리에는 지구에서 가장 가까운 행성상 성운 중 하나인 나선 성운도 자리하고 있다."} } },
     { key:"pisces", symbol:"♓",
-      t:{"en":"Pisces","hans":"双鱼座","hant":"雙魚座"},
+      t:{"en":"Pisces","hans":"双鱼座","hant":"雙魚座","ja":"うお座","ko":"물고기자리"},
       stars:[[23.286,3.28,3.7],[23.466,6.38,4.28],[23.666,5.63,4.13],[23.701,1.78,4.5],[23.449,1.26,4.94],[23.989,6.86,4.01],[0.811,7.59,4.43],[1.049,7.89,4.27],[1.69,5.49,4.44],[2.034,2.76,3.82],[1.757,9.16,4.26],[1.525,15.35,3.62]],
       starNames:["Gamma Psc","Theta Psc","Iota Psc","Lambda Psc","Kappa Psc","Omega Psc","Delta Psc","Epsilon Psc","Nu Psc","Alrescha","Omicron Psc","Alpherg"],
       lines:[[0,1],[1,2],[2,3],[3,4],[4,0],[2,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11]],
       info:{
         en:{"dates":"Feb 19 – Mar 20","brightest":"Alpherg (Eta Piscium)","desc":"In Greek myth, Pisces depicts Aphrodite and her son Eros, who turned into two fish tied together by a cord to escape the monster Typhon. The western fish is marked by the Circlet asterism, and the cords meet at the star Alrescha, \"the knot\". The constellation also contains the vernal equinox point, where the Sun crosses the celestial equator each March."},
         hans:{"dates":"2月19日 – 3月20日","brightest":"右更二（双鱼座η）","desc":"双鱼座源自希腊神话：爱与美之神阿佛洛狄忒与其子厄洛斯为躲避怪物提丰而化身为鱼，并用丝带系住彼此的尾巴。两条丝带在“天绳之结”外屏七（Alrescha）处相连。如今的春分点正位于双鱼座内，是太阳每年三月穿越天赤道的地方。"},
-        hant:{"dates":"2月19日 – 3月20日","brightest":"右更二（雙魚座η）","desc":"雙魚座源自希臘神話：愛與美之神阿芙蘿黛蒂與其子厄洛斯為躲避怪物提豐而化身為魚，並以絲帶繫住彼此的尾巴。兩條絲帶在「天繩之結」外屏七（Alrescha）處相連。如今的春分點正位於雙魚座內，是太陽每年三月穿越天赤道之處。"} } }
+        hant:{"dates":"2月19日 – 3月20日","brightest":"右更二（雙魚座η）","desc":"雙魚座源自希臘神話：愛與美之神阿芙蘿黛蒂與其子厄洛斯為躲避怪物提豐而化身為魚，並以絲帶繫住彼此的尾巴。兩條絲帶在「天繩之結」外屏七（Alrescha）處相連。如今的春分點正位於雙魚座內，是太陽每年三月穿越天赤道之處。"},
+        ja:{"dates":"2月19日 – 3月20日","brightest":"アルフェルグ（うお座η星）","desc":"ギリシャ神話では、うお座は怪物テュポンから逃れるため、女神アフロディテとその子エロスが2匹の魚に変身し、ひもで互いの体を結んだ姿とされます。西側の魚は「サーキュレット」と呼ばれる小さな星の輪で描かれ、2本のひもは「結び目」を意味する星アルレシャで結ばれています。この星座には春分点もあり、毎年3月に太陽が天の赤道を横切る場所となっています。"},
+        ko:{"dates":"2월 19일 – 3월 20일","brightest":"알페르그(물고기자리 에타)","desc":"그리스 신화에서 물고기자리는 괴물 티폰을 피해 두 마리 물고기로 변신한 뒤 끈으로 서로를 묶은 아프로디테와 아들 에로스의 모습이다. 서쪽 물고기는 '서클릿'이라 불리는 작은 고리 모양의 성군으로 표시되며, 두 끈은 '매듭'을 뜻하는 별 알레샤에서 만난다. 이 별자리에는 태양이 해마다 3월에 천구 적도를 지나는 춘분점도 자리하고 있다."} } }
   ];
   function assertZodiacData() {
     if (ZODIAC.length !== 12) throw new Error('need 12 zodiac entries, got ' + ZODIAC.length);
@@ -4296,27 +4350,7 @@
     });
     return true;
   }
-  // ── Japanese + Korean localisation, merged into the beacon + zodiac data ──
-  var L10N = {
-    beacons: { ja: [{"name":"太陽系","sub":"現在地","type":"恒星系","distance":"現在地","constellation":"—","facts":[["恒星","1個（太陽）"],["惑星","8個"]],"desc":"私たちの故郷である惑星系。約2億3000万年かけて、銀河系の中心のまわりを一周しています。","catalog":""},{"name":"いて座A*","sub":"銀河系の中心","type":"超大質量ブラックホール","distance":"約26,000光年","constellation":"いて座","facts":[["質量","太陽の約430万倍"]],"desc":"天の川銀河の中心にどっしりと構える超大質量ブラックホールです。","catalog":"Sgr A*"},{"name":"オリオン大星雲","sub":"","type":"散光星雲","distance":"約1,340光年","constellation":"オリオン座","facts":[["直径","約24光年"],["視等級","4.0"]],"desc":"地球に最も近い大規模な星のゆりかご。オリオン座の三つ星の下に、肉眼でもかすかに見えます。","catalog":"M42"},{"name":"かに星雲","sub":"","type":"超新星残骸","distance":"約6,500光年","constellation":"おうし座","facts":[["超新星","西暦1054年"],["中心天体","かにパルサー"]],"desc":"西暦1054年に爆発が記録された恒星の残骸。中心では中性子星が高速で自転しています。","catalog":"M1"},{"name":"わし星雲","sub":"","type":"散光星雲","distance":"約7,000光年","constellation":"へび座","facts":[["見どころ","創造の柱"]],"desc":"星形成領域のひとつ。そびえ立つガスの柱は、ハッブル宇宙望遠鏡の「創造の柱」の画像で有名になりました。","catalog":"M16"},{"name":"イータカリーナ星雲","sub":"","type":"散光星雲","distance":"約7,500光年","constellation":"りゅうこつ座","facts":[["注目の星","りゅうこつ座イータ星"]],"desc":"全天でも最大級の星雲のひとつ。不安定で非常に重い恒星、りゅうこつ座イータ星が潜んでいます。","catalog":"NGC 3372"},{"name":"はくちょう座X-1","sub":"","type":"恒星質量ブラックホール","distance":"約7,000光年","constellation":"はくちょう座","facts":[["ブラックホール","太陽の約21倍"],["連星系","X線連星"]],"desc":"ブラックホールとして初めて広く認められた天体。青色超巨星の伴星からガスを吸い込み続けています。","catalog":"Cyg X-1"},{"name":"プレアデス星団","sub":"","type":"散開星団","distance":"約440光年","constellation":"おうし座","facts":[["恒星","1,000個以上"],["年齢","約1億年"]],"desc":"肉眼でも見える「セブン・シスターズ」。日本では「すばる」の名で親しまれ、高温の青い星々が今も反射星雲の薄いベールに包まれています。","catalog":"M45"},{"name":"ケンタウルス座ω星団","sub":"","type":"球状星団","distance":"約17,000光年","constellation":"ケンタウルス座","facts":[["恒星","約1,000万個"],["特徴","銀河系最大の球状星団"]],"desc":"天の川銀河で最大の球状星団。かつて飲み込まれた矮小銀河の中心核の名残かもしれません。","catalog":"NGC 5139"},{"name":"ベテルギウス","sub":"","type":"赤色超巨星","distance":"約550光年","constellation":"オリオン座","facts":[["直径","太陽の約700倍"],["運命","将来の超新星"]],"desc":"オリオンの肩に輝く赤い星。太陽系の内側の惑星を飲み込むほど巨大で、やがて超新星爆発を起こす運命にあります。","catalog":"α Ori"},{"name":"網状星雲","sub":"","type":"超新星残骸","distance":"約2,400光年","constellation":"はくちょう座","facts":[["年齢","約1万年"],["形状","フィラメント状の殻"]],"desc":"約1万年前に爆発した超新星が残した、レース細工のように繊細なガスのフィラメントです。","catalog":"NGC 6960"},{"name":"干潟星雲","sub":"","type":"散光星雲","distance":"約4,100光年","constellation":"いて座","facts":[["種類","星形成領域"],["カタログ","M8"]],"desc":"銀河系の中心方向に広がる、巨大で明るい星のゆりかごです。","catalog":"M8"},{"name":"ヘルクレス座球状星団","sub":"","type":"球状星団","distance":"約22,000光年","constellation":"ヘルクレス座","facts":[["恒星","約30万個"],["年齢","約116億年"]],"desc":"数十万個の年老いた星々からなる、北天に輝く見事な球状星団です。","catalog":"M13"},{"name":"シリウス","sub":"","type":"連星","distance":"約8.6光年","constellation":"おおいぬ座","facts":[["明るさ","全天で最も明るい恒星"],["連星系","シリウスA + B"]],"desc":"地球の夜空で最も明るく輝く恒星で、太陽系のすぐ近くにあるお隣さんです。","catalog":"α CMa"},{"name":"アンタレス","sub":"","type":"赤色超巨星","distance":"約550光年","constellation":"さそり座","facts":[["直径","太陽の約700倍"],["別名","さそりの心臓"]],"desc":"さそり座の心臓部で燃えるように赤く輝く超巨星です。","catalog":"α Sco"}],
-               ko: [{"name":"태양계","sub":"현재 위치","type":"항성계","distance":"현재 위치","constellation":"—","facts":[["항성","1개 (태양)"],["행성","8개"]],"desc":"우리의 고향 항성계로, 약 2억 3천만 년에 한 번씩 은하 중심을 공전합니다.","catalog":""},{"name":"궁수자리 A*","sub":"은하 중심","type":"초대질량 블랙홀","distance":"약 26,000광년","constellation":"궁수자리","facts":[["질량","태양의 약 430만 배"]],"desc":"우리은하의 중심에 자리 잡고 은하 전체를 붙들고 있는 초대질량 블랙홀입니다.","catalog":"Sgr A*"},{"name":"오리온 대성운","sub":"","type":"발광 성운","distance":"약 1,340광년","constellation":"오리온자리","facts":[["지름","약 24광년"],["겉보기 등급","4.0"]],"desc":"지구에서 가장 가까운 대형 별 탄생 지역으로, 오리온의 허리띠 아래에서 맨눈으로도 희미하게 볼 수 있습니다.","catalog":"M42"},{"name":"게성운","sub":"","type":"초신성 잔해","distance":"약 6,500광년","constellation":"황소자리","facts":[["초신성","서기 1054년"],["중심핵","게성운 펄서"]],"desc":"서기 1054년에 폭발이 관측된 별의 잔해가 지금도 팽창하고 있으며, 그 중심에는 빠르게 자전하는 중성자별이 있습니다.","catalog":"M1"},{"name":"독수리 성운","sub":"","type":"발광 성운","distance":"약 7,000광년","constellation":"뱀자리","facts":[["명물","창조의 기둥"]],"desc":"높이 솟은 가스 기둥이 허블 우주망원경의 \"창조의 기둥\" 사진으로 유명해진 별 형성 지역입니다.","catalog":"M16"},{"name":"용골자리 성운","sub":"","type":"발광 성운","distance":"약 7,500광년","constellation":"용골자리","facts":[["포함 천체","용골자리 에타"]],"desc":"밤하늘에서 가장 큰 성운 중 하나로, 극도로 불안정하고 질량이 어마어마한 별인 용골자리 에타가 자리하고 있습니다.","catalog":"NGC 3372"},{"name":"백조자리 X-1","sub":"","type":"항성 질량 블랙홀","distance":"약 7,000광년","constellation":"백조자리","facts":[["블랙홀","태양 질량의 약 21배"],["형태","X선 쌍성"]],"desc":"블랙홀로 널리 인정받은 최초의 천체로, 동반성인 청색 초거성에서 가스를 끌어당기고 있습니다.","catalog":"Cyg X-1"},{"name":"플레이아데스 성단","sub":"","type":"산개 성단","distance":"약 440광년","constellation":"황소자리","facts":[["별","1,000개 이상"],["나이","약 1억 년"]],"desc":"맨눈으로도 보이는 \"일곱 자매\" 별들로, 뜨거운 푸른 별들이 아직 반사 성운의 엷은 베일에 싸여 있습니다.","catalog":"M45"},{"name":"오메가 센타우리","sub":"","type":"구상 성단","distance":"약 17,000광년","constellation":"센타우루스자리","facts":[["별","약 1,000만 개"],["특징","우리은하 최대의 구상 성단"]],"desc":"우리은하에서 가장 큰 구상 성단으로, 은하에 삼켜진 왜소은하의 중심핵만 남은 것일 가능성도 있습니다.","catalog":"NGC 5139"},{"name":"베텔게우스","sub":"","type":"적색 초거성","distance":"약 550광년","constellation":"오리온자리","facts":[["지름","태양의 약 700배"],["운명","미래의 초신성"]],"desc":"오리온의 어깨에서 빛나는 붉은 별로, 태양계 안쪽 행성들을 통째로 삼킬 만큼 거대하며 언젠가 초신성으로 폭발할 운명입니다.","catalog":"α Ori"},{"name":"면사포 성운","sub":"","type":"초신성 잔해","distance":"약 2,400광년","constellation":"백조자리","facts":[["나이","약 1만 년"],["형태","필라멘트 모양의 껍질"]],"desc":"약 1만 년 전에 폭발한 초신성이 남긴, 레이스처럼 섬세한 가스 필라멘트입니다.","catalog":"NGC 6960"},{"name":"석호 성운","sub":"","type":"발광 성운","distance":"약 4,100광년","constellation":"궁수자리","facts":[["유형","별 형성 지역"],["목록","M8"]],"desc":"은하 중심 방향에 펼쳐진 광대하고 밝은 별들의 요람입니다.","catalog":"M8"},{"name":"헤르쿨레스 대성단","sub":"","type":"구상 성단","distance":"약 22,000광년","constellation":"헤르쿨레스자리","facts":[["별","약 30만 개"],["나이","약 116억 년"]],"desc":"수십만 개의 늙은 별들이 모여 빛나는 북쪽 하늘의 찬란한 구상 성단입니다.","catalog":"M13"},{"name":"시리우스","sub":"","type":"쌍성","distance":"약 8.6광년","constellation":"큰개자리","facts":[["밝기","밤하늘에서 가장 밝음"],["구성","시리우스 A + B"]],"desc":"지구의 밤하늘에서 가장 밝은 별이자, 우리와 아주 가까운 이웃 별입니다.","catalog":"α CMa"},{"name":"안타레스","sub":"","type":"적색 초거성","distance":"약 550광년","constellation":"전갈자리","facts":[["지름","태양의 약 700배"],["별칭","전갈의 심장"]],"desc":"전갈자리의 심장 자리에서 타오르는 붉은 초거성입니다.","catalog":"α Sco"}] },
-    zodiac:  { ja: [{"name":"おひつじ座","dates":"3月21日 – 4月19日","brightest":"ハマル","desc":"おひつじ座は、ギリシャ神話で王子プリクソスを背に乗せて海を渡り救った金毛の牡羊の姿です。その毛皮こそ、イアソンとアルゴ船の英雄たちが探し求めた「金羊毛」でした。約2000年前には春分点がこの星座にあったため、春分点は今も「白羊宮の第一点」と呼ばれています。最も明るい星ハマルは、地球から約66光年離れたオレンジ色の巨星です。"},{"name":"おうし座","dates":"4月20日 – 5月20日","brightest":"アルデバラン","desc":"おうし座は、ゼウスが王女エウロペを背に乗せて海を渡るために変身した牡牛の姿です。燃えるようなオレンジ色に輝く「牡牛の目」は赤色巨星アルデバランで、牛の顔を描くV字形のヒアデス星団の中に位置し、角はエルナトとおうし座ζ星へと伸びています。この星座には有名なプレアデス星団や、1054年に観測された超新星の残骸であるかに星雲もあります。"},{"name":"ふたご座","dates":"5月21日 – 6月20日","brightest":"ポルックス","desc":"ふたご座は、ギリシャ神話の双子の兄弟カストルとポルックスの姿で、片時も離れることのなかったこの英雄たちを、ゼウスが共に天に上げたと伝えられます。最も明るい星ポルックスはわずか34光年先にあるオレンジ色の巨星で、確認済みの系外惑星を持ち、一方のカストルは実は6つの恒星が結びついた珍しい六重連星系です。"},{"name":"かに座","dates":"6月21日 – 7月22日","brightest":"タルフ（かに座β星）","desc":"ギリシャ神話では、かに座はヘラクレスがヒュドラと戦う際、その邪魔をするために女神ヘラが送り込んだ蟹の姿です。踏みつぶされた蟹は、その働きをたたえられて星座になりました。星々は暗いものの、この星座には有名なプレセペ星団（M44）があり、「ロバ」を意味する2つの星、アセルス・ボレアリスとアセルス・アウストラリスの間で、肉眼でも見える数百個の星の群れとして輝いています。"},{"name":"しし座","dates":"7月23日 – 8月22日","brightest":"レグルス","desc":"しし座は、ヘラクレスが十二の功業の最初に絞め殺した不死身の怪物「ネメアの獅子」の姿です。最も明るい星レグルスは「小さな王」を意味し、ほぼ黄道上に位置するため、たびたび月に隠されます。6つの星が裏返しにした「？」の形に並ぶ有名な「ししの大鎌」が、獅子の頭とたてがみを描き出しています。"},{"name":"おとめ座","dates":"8月23日 – 9月22日","brightest":"スピカ","desc":"おとめ座は麦の穂を手にした乙女の姿で、ギリシャ神話では豊穣の女神デメテル、あるいは正義の女神アストライアと同一視されます。最も明るい星スピカは約250光年先にある高温の青白い連星です。さらにこの星座には、約2000個の銀河がひしめくおとめ座銀河団があり、私たちの属する局部超銀河団の中心をなしています。"},{"name":"てんびん座","dates":"9月23日 – 10月22日","brightest":"ズベンエスカマリ","desc":"てんびん座は正義の女神アストライアが手にする天秤の姿で、黄道十二星座の中で唯一、生き物ではないものを表す星座です。2つの明るい星ズベンエルゲヌビとズベンエスカマリの名はアラビア語で「南の爪」「北の爪」を意味し、かつて隣のさそり座の爪とされていた時代の名残です。ズベンエスカマリは、肉眼で見える星としては珍しく、かすかに緑がかって見えると報告されることで知られています。"},{"name":"さそり座","dates":"10月23日 – 11月21日","brightest":"アンタレス","desc":"ギリシャ神話では、さそり座は大地の女神ガイアが傲慢な狩人オリオンを倒すために差し向けたサソリの姿です。神々は2人を天球の正反対に置いたため、両者が同時に空に昇ることはありません。その心臓に輝くアンタレスは直径が太陽の約700倍もある赤色超巨星で、赤い輝きから「火星に対抗するもの」と名付けられました。明るい毒針の星シャウラを先端とする長く曲がった尾は、夏の星空で最もよく知られた姿のひとつです。"},{"name":"いて座","dates":"11月22日 – 12月21日","brightest":"カウス・アウストラリス","desc":"いて座は、隣のさそり座の心臓に向かって弓を引き絞る半人半馬の射手の姿で、クロトス、あるいは賢者ケイロンと同一視されることもあります。この星座は天の川銀河の中心方向にあり、そこには超大質量ブラックホール「いて座A*」が潜んでいます。この星座の8つの明るい星は、有名な「ティーポット」と呼ばれる星の並びを形づくっています。"},{"name":"やぎ座","dates":"12月22日 – 1月19日","brightest":"デネブ・アルゲディ","desc":"やぎ座は「海山羊」とも呼ばれ、牧神パンが怪物テュポンから逃れるためナイル川に飛び込み、下半身が魚の尾に変わった姿とされます。最も明るい星デネブ・アルゲディは山羊の尾の位置にあり、星座は角の星アルゲディとダビーから尾へと続く、矢じりのような輪郭を描きます。1846年に海王星が発見されたのも、このやぎ座の領域でした。"},{"name":"みずがめ座","dates":"1月20日 – 2月18日","brightest":"サダルスウド","desc":"みずがめ座は水瓶を運ぶ者の姿で、ゼウスにオリュンポスへ連れて行かれ、神々に酒を注ぐ給仕となった美少年ガニュメデスを表します。彼の瓶からは絶えず水が注がれ続けています。最も明るい星サダルスウドは珍しい黄色超巨星で、この星座には地球に最も近い惑星状星雲のひとつである「らせん星雲」もあります。"},{"name":"うお座","dates":"2月19日 – 3月20日","brightest":"アルフェルグ（うお座η星）","desc":"ギリシャ神話では、うお座は怪物テュポンから逃れるため、女神アフロディテとその子エロスが2匹の魚に変身し、ひもで互いの体を結んだ姿とされます。西側の魚は「サーキュレット」と呼ばれる小さな星の輪で描かれ、2本のひもは「結び目」を意味する星アルレシャで結ばれています。この星座には春分点もあり、毎年3月に太陽が天の赤道を横切る場所となっています。"}],
-               ko: [{"name":"양자리","dates":"3월 21일 – 4월 19일","brightest":"하말","desc":"양자리는 그리스 신화에서 프릭소스 왕자를 태우고 바다를 건너 구해 준 황금 양털의 숫양을 상징하며, 그 양털이 바로 이아손과 아르고호 원정대가 찾아 나선 황금 양털이다. 약 2,000년 전에는 춘분점이 이 별자리 안에 있어 태양이 이곳에서 천구 적도를 지났기에, 그 지점은 지금도 '양자리의 첫 점'이라 불린다. 가장 밝은 별 하말은 지구에서 약 66광년 떨어진 주황색 거성이다."},{"name":"황소자리","dates":"4월 20일 – 5월 20일","brightest":"알데바란","desc":"황소자리는 제우스가 에우로페 공주를 태우고 바다를 건너기 위해 변신한 황소의 모습이다. 불타는 듯한 주황색 눈에 해당하는 알데바란은 적색 거성으로, 황소의 얼굴을 그리는 V자형 히아데스 성단 속에 자리하며 두 뿔은 엘나스와 황소자리 제타별까지 뻗어 있다. 이 별자리에는 유명한 플레이아데스 성단과 1054년에 관측된 초신성의 잔해인 게 성운도 있다."},{"name":"쌍둥이자리","dates":"5월 21일 – 6월 20일","brightest":"폴룩스","desc":"쌍둥이자리는 그리스 신화 속 쌍둥이 형제 카스토르와 폴룩스를 나타내며, 제우스는 늘 붙어 다니던 이 두 영웅을 나란히 하늘에 올렸다. 가장 밝은 별 폴룩스는 불과 34광년 떨어진 주황색 거성으로 확인된 외계 행성을 거느리고 있으며, 카스토르는 실제로 여섯 개의 별이 서로 묶여 있는 놀라운 다중성계다."},{"name":"게자리","dates":"6월 21일 – 7월 22일","brightest":"타르프(게자리 베타)","desc":"그리스 신화에서 게자리는 헤라클레스가 히드라와 싸울 때 헤라가 방해하라고 보낸 게로, 영웅의 발에 밟혀 부서진 뒤 하늘의 별자리가 되었다. 별들은 어둡지만 이 별자리에는 유명한 프레세페 성단(벌집 성단, M44)이 있는데, '당나귀'라 불리는 두 별 아셀루스 보레알리스와 아셀루스 아우스트랄리스 사이에서 맨눈으로도 보이는 수백 개 별의 무리다."},{"name":"사자자리","dates":"7월 23일 – 8월 22일","brightest":"레굴루스","desc":"사자자리는 헤라클레스가 열두 과업 중 첫 번째로 목 졸라 쓰러뜨린 불사신 네메아의 사자를 그린 별자리다. 가장 밝은 별 레굴루스는 '작은 왕'이라는 뜻으로, 거의 정확히 황도 위에 자리해 달에 자주 가려진다. 여섯 개의 별이 좌우가 뒤집힌 물음표 모양을 이루는 유명한 '낫' 성군은 사자의 머리와 갈기를 나타낸다."},{"name":"처녀자리","dates":"8월 23일 – 9월 22일","brightest":"스피카","desc":"처녀자리는 밀 이삭을 든 처녀의 모습으로, 그리스 신화에서는 수확의 여신 데메테르나 정의의 여신 아스트라이아와 동일시된다. 가장 밝은 별 스피카는 약 250광년 떨어진 뜨거운 청백색 쌍성이며, 이 별자리에는 우리 은하가 속한 국부 초은하단의 중심을 이루는 약 2,000개 은하의 무리인 처녀자리 은하단도 자리하고 있다."},{"name":"천칭자리","dates":"9월 23일 – 10월 22일","brightest":"주벤에스카말리","desc":"천칭자리는 정의의 여신 아스트라이아가 든 저울을 나타내며, 황도 12궁 가운데 유일하게 무생물을 상징하는 별자리다. 가장 밝은 두 별 주벤엘게누비와 주벤에스카말리는 각각 '남쪽 집게발'과 '북쪽 집게발'을 뜻하는 아랍어 이름으로, 이 별들이 이웃한 전갈자리의 집게발로 여겨지던 시절을 떠올리게 한다. 주벤에스카말리는 일부 관측자들에게 희미한 초록빛으로 보인다고 전해지는데, 이는 맨눈으로 볼 수 있는 별 가운데 매우 드문 경우로 유명하다."},{"name":"전갈자리","dates":"10월 23일 – 11월 21일","brightest":"안타레스","desc":"그리스 신화에서 전갈자리는 오만한 사냥꾼 오리온을 쓰러뜨리기 위해 가이아가 보낸 전갈로, 신들은 둘을 하늘의 반대편에 두어 결코 함께 보이지 않게 했다. 심장 자리에는 태양 지름의 약 700배에 이르는 적색 초거성 안타레스가 빛나는데, 그 붉은빛 때문에 '화성의 라이벌'이라는 이름을 얻었다. 밝은 독침별 샤울라로 끝나는 길게 굽은 꼬리는 여름 밤하늘에서 가장 알아보기 쉬운 모습 중 하나다."},{"name":"궁수자리","dates":"11월 22일 – 12월 21일","brightest":"카우스 아우스트랄리스","desc":"궁수자리는 이웃한 전갈자리의 심장을 향해 활을 겨눈 반인반마 켄타우로스 궁수로, 흔히 크로토스나 현자 케이론으로 여겨진다. 이 별자리는 초대질량 블랙홀 궁수자리 A*가 자리한 우리은하 중심 방향에 있으며, 밝은 별 여덟 개가 유명한 '찻주전자' 성군을 이룬다."},{"name":"염소자리","dates":"12월 22일 – 1월 19일","brightest":"데네브 알게디","desc":"염소자리는 '바다 염소'로, 괴물 티폰을 피해 나일강에 뛰어들다 하반신이 물고기 꼬리로 변한 목신 판의 모습을 그린 별자리다. 가장 밝은 별 데네브 알게디는 염소의 꼬리를 표시하며, 뿔에 해당하는 알게디와 다비흐에서 꼬리까지 화살촉 모양의 윤곽이 이어진다. 1846년 해왕성이 바로 이 염소자리 영역에서 발견되었다."},{"name":"물병자리","dates":"1월 20일 – 2월 18일","brightest":"사달수드","desc":"물병자리는 제우스가 올림포스로 데려가 신들에게 술을 따르게 한 아름다운 소년 가니메데스를 상징하며, 그는 물병에서 영원히 물을 쏟아붓고 있다. 가장 밝은 별 사달수드는 보기 드문 황색 초거성이고, 이 별자리에는 지구에서 가장 가까운 행성상 성운 중 하나인 나선 성운도 자리하고 있다."},{"name":"물고기자리","dates":"2월 19일 – 3월 20일","brightest":"알페르그(물고기자리 에타)","desc":"그리스 신화에서 물고기자리는 괴물 티폰을 피해 두 마리 물고기로 변신한 뒤 끈으로 서로를 묶은 아프로디테와 아들 에로스의 모습이다. 서쪽 물고기는 '서클릿'이라 불리는 작은 고리 모양의 성군으로 표시되며, 두 끈은 '매듭'을 뜻하는 별 알레샤에서 만난다. 이 별자리에는 태양이 해마다 3월에 천구 적도를 지나는 춘분점도 자리하고 있다."}] }
-  };
-  ['ja', 'ko'].forEach(function (L) {
-    L10N.beacons[L].forEach(function (x, i) {
-      var b = BEACONS[i];
-      if (!b || x.catalog !== b.info.en.catalog) console.error('L10N.' + L + ' beacon ' + i + ' (' + x.catalog + ') is out of step with BEACONS (' + (b && b.info.en.catalog) + ') — keep both lists in the same order'); // merged by position
-      b.t[L] = x.sub ? [x.name, x.sub] : [x.name];
-      b.info[L] = { type: x.type, distance: x.distance, constellation: x.constellation, facts: x.facts, desc: x.desc, catalog: x.catalog };
-    });
-    if (L10N.zodiac[L].length !== ZODIAC.length) console.error('L10N.' + L + ' zodiac has ' + L10N.zodiac[L].length + ' entries, ZODIAC has ' + ZODIAC.length); // same positional merge
-    L10N.zodiac[L].forEach(function (x, i) {
-      ZODIAC[i].t[L] = x.name;
-      ZODIAC[i].info[L] = { dates: x.dates, brightest: x.brightest, desc: x.desc };
-    });
-  });
-  setBeaconLang(beaconLang); // repaint labels in case the saved language is ja/ko
+  setBeaconLang(beaconLang); // keep: 2nd pass after solarPointerCoarse exists — paints the touch title hint (the call in buildBeacons runs too early)
 
   // ── real telescope photos for the beacon cards (see THIRD-PARTY-NOTICES.md) ──
   var BEACON_IMGS = [
