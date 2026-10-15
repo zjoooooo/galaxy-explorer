@@ -5,7 +5,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E">
 <title>Milky Way Galaxy</title>
 <style>
@@ -17,8 +17,8 @@
   #cv { display: block; width: 100vw; height: 100vh; }
 
   .overlay { position: fixed; z-index: 5; }
-  #title { top: 14px; left: 18px; font-size: 15px; font-weight: 600; pointer-events: none; }
-  #title small { display: block; font-size: 11px; color: #6b7280; font-weight: 400; margin-top: 2px; }
+  #title { top: calc(14px + env(safe-area-inset-top, 0px)); left: calc(18px + env(safe-area-inset-left, 0px)); font-size: 15px; font-weight: 600; pointer-events: none; }
+  #title small { display: block; font-size: 11px; color: #8b93a7; font-weight: 400; margin-top: 2px; }
   #msg { top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 13px; color: #9ca3af; pointer-events: none; }
   #skyveil { position: fixed; inset: 0; background: #e8f1ff; opacity: 0; pointer-events: none; z-index: 999; }
 
@@ -27,23 +27,23 @@
   body.gx-cinema #skyback, body.gx-cinema #skylabels, body.gx-cinema #solarback, body.gx-cinema #solarlabels { display: none !important; }
 
   /* language selector (native <select>, dark) */
-  #lang { top: 12px; right: 14px; z-index: 6; font: inherit; font-size: 12px; color: #cbd5e1;
+  #lang { top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); z-index: 6; font: inherit; font-size: 12px; color: #cbd5e1;
     background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 5px 8px; cursor: pointer; }
   #lang:hover { border-color: #6366f1; }
 
   /* sky and solar views: back-to-galaxy buttons */
-  #skyback, #solarback { top: 64px; left: 18px; z-index: 6; display: none; cursor: pointer; font: inherit; font-size: 13px;
+  #skyback, #solarback { top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(18px + env(safe-area-inset-left, 0px)); z-index: 6; display: none; cursor: pointer; font: inherit; font-size: 13px;
     color: #cbd5e1; background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 6px 12px; }
   #skyback:hover, #solarback:hover { border-color: #6366f1; color: #fff; }
   /* solar time-speed pill (pause / 1x / 16x / 128x) */
-  #solartime { position: absolute; left: 18px; bottom: 18px; display: flex; gap: 6px; pointer-events: auto; z-index: 6; }
+  #solartime { position: absolute; left: calc(18px + env(safe-area-inset-left, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 6px; pointer-events: auto; z-index: 6; }
   #solartime button { cursor: pointer; font: inherit; font-size: 12px; color: #cbd5e1;
     background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 5px 10px; }
   #solartime button:hover { border-color: #6366f1; color: #fff; }
   #solartime button.on { border-color: #6366f1; color: #fff; background: rgba(50,58,96,.72); }
   #solarscale { margin-left: 8px; }
   /* quick-jump roster: every top-level body plus the two comets, one tap to fly there */
-  #solarstrip, #galaxystrip { position: absolute; left: 50%; transform: translateX(-50%); bottom: 18px; display: flex; gap: 4px;
+  #solarstrip, #galaxystrip { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 4px;
     max-width: min(72vw, 920px); overflow-x: auto; pointer-events: auto; z-index: 6; padding: 2px; scrollbar-width: none; }
   #solarstrip::-webkit-scrollbar, #galaxystrip::-webkit-scrollbar { display: none; }
   #solarstrip button, #galaxystrip button { display: flex; align-items: center; gap: 5px; white-space: nowrap; cursor: pointer; font: inherit; font-size: 11px;
@@ -51,6 +51,10 @@
   #solarstrip button:hover, #galaxystrip button:hover { border-color: #6366f1; color: #fff; }
   #solarstrip i, #galaxystrip i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
   #galaxystrip button.sel { border-color: #9cc0ff; color: #fff; background: rgba(30,42,68,.9); }
+  /* scroll hint: the roster fades out at whichever edge has more buttons beyond it */
+  #solarstrip.more-r, #galaxystrip.more-r, #scalecmp-scroll.more-r { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
+  #solarstrip.more-l, #galaxystrip.more-l, #scalecmp-scroll.more-l { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent); }
+  #solarstrip.more-l.more-r, #galaxystrip.more-l.more-r, #scalecmp-scroll.more-l.more-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent); }
   button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid #9cc0ff; outline-offset: 3px; }
   /* clip — a label straddling the screen edge must not widen the mobile layout viewport: labels are placed from
      innerWidth/innerHeight, so any overflow fed back into ever-wider placement (375 → 1500 px). 'clip' rather than
@@ -120,10 +124,12 @@
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
   }
   /* beacon info panel — desktop: fixed right side */
-  #beacon-panel { top: 74px; right: 14px; width: 300px; max-height: calc(100vh - 130px); overflow-y: auto;
+  #beacon-panel { top: calc(74px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); width: 300px; max-height: calc(100vh - 130px); overflow-y: auto;
     z-index: 7; background: rgba(10,14,24,.92); border-radius: 12px; padding: 16px 18px 18px;
     color: #e5e7eb; box-shadow: 0 8px 30px rgba(0,0,0,.5); display: none; }
   #beacon-panel.open { display: block; animation: bpIn .18s ease; }
+  #beacon-panel, #scalecmp { user-select: text; -webkit-user-select: text; } /* facts can be copied */
+  #beacon-panel button, #scalecmp button { user-select: none; -webkit-user-select: none; }
   @keyframes bpIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
   #bp-close { position: absolute; top: 8px; right: 10px; background: transparent; border: 0; color: #9ca3af;
     font-size: 20px; line-height: 1; cursor: pointer; padding: 2px 6px; }
@@ -135,10 +141,10 @@
     border-top: 1px solid rgba(255,255,255,.07); }
   .bp-row .k { color: #93a5c4; } .bp-row .v { color: #e5e7eb; text-align: right; }
   #bp-desc { font-size: 13px; line-height: 1.55; color: #cbd5e1; margin-top: 10px; }
-  #bp-cat { font-size: 10.5px; color: #6b7280; margin-top: 10px; }
+  #bp-cat { font-size: 10.5px; color: #8b93a7; margin-top: 10px; }
   #bp-img { display: block; width: 100%; height: 150px; object-fit: cover; border-radius: 8px;
     margin: 10px 0 3px; background: rgba(255,255,255,.04); }
-  #bp-credit { font-size: 9px; line-height: 1.35; color: #5b6578; margin-bottom: 6px; }
+  #bp-credit { font-size: 10px; line-height: 1.35; color: #8a94a8; margin-bottom: 6px; }
   #bp-solar-link, #bp-earth-sky-link, #bp-flyto, #bp-compare, #bp-align, #bp-transit { display: block; width: 100%; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(255,255,255,.07);
     color: #9cc0ff; cursor: pointer; font-size: 13px; }
   #bp-solar-link, #bp-earth-sky-link { font: inherit; text-align: left; background: transparent; }
@@ -148,10 +154,11 @@
   #scalecmp.open { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
   #scalecmp h3 { font-size: 16px; color: #e5ecff; font-weight: 600; margin: 0 16px; text-align: center; }
   #scalecmp .note { font-size: 12px; color: #8fa3c8; margin: 0 16px; text-align: center; }
-  #scalecmp svg { width: min(96vw, 1500px); height: auto; }
-  #scalecmp-close { position: absolute; top: 10px; right: 14px; cursor: pointer; font: inherit; font-size: 22px; color: #cbd5e1; background: none; border: 0; padding: 6px 10px; }
+  #scalecmp svg { display: block; width: min(96vw, 1500px); height: auto; }
+  #scalecmp-scroll { max-width: 100%; overflow-x: auto; }
+  #scalecmp-close { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); cursor: pointer; font: inherit; font-size: 22px; color: #cbd5e1; background: none; border: 0; padding: 6px 10px; }
   #scalecmp-close:hover { color: #fff; }
-  #return-mw { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 50; display: none;
+  #return-mw { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); z-index: 50; display: none;
     padding: 8px 16px; border-radius: 20px; cursor: pointer; background: rgba(20,26,40,.72);
     border: 1px solid rgba(255,255,255,.14); color: #cfe0ff; font-size: 13px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   #return-mw:hover { background: rgba(30,40,60,.85); color: #fff; }
@@ -163,15 +170,30 @@
     #beacon-panel.open { animation: bpUp .2s ease; }
     @keyframes bpUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
     #skyback, #solarback { left: max(12px, env(safe-area-inset-left)); top: max(64px, calc(env(safe-area-inset-top) + 52px)); }
-    .solar-label { font-size: 11px; letter-spacing: .04em; min-width: 44px; min-height: 44px; padding: 8px 12px; }
+    #return-mw { top: max(64px, calc(env(safe-area-inset-top) + 52px)); } /* below the title, not on it */
+    .solar-label { font-size: 11px; letter-spacing: .04em; }
     .solar-label small { font-size: 9px; }
+    #scalecmp svg { width: auto; height: min(431px, calc(100vh - 130px)); } /* readable labels (~1400 px wide); #scalecmp-scroll pans it */
+  }
+  /* touch targets: 44 px on any touch screen, and on narrow windows as before */
+  @media (max-width: 640px), (pointer: coarse) {
+    .solar-label { min-width: 44px; min-height: 44px; padding: 8px 12px; }
     #solartime button { min-width: 44px; min-height: 44px; }
-    #solarstrip, #galaxystrip { left: 12px; right: 12px; transform: none; max-width: none; bottom: 70px; }
     #solarstrip button, #galaxystrip button { min-height: 40px; }
+    /* the taller roster rides above the time pill / music row instead of under it */
+    #solarstrip, #galaxystrip { left: calc(12px + env(safe-area-inset-left, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); transform: none; max-width: none; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+    /* an open card (drawer on phones, side panel on tablets) would sit on these and they show through its glass */
+    body:has(#beacon-panel.open) #galaxystrip, body:has(#beacon-panel.open) #solarstrip,
+    body:has(#beacon-panel.open) #solartime, body:has(#beacon-panel.open) #audio { visibility: hidden; }
+    #skyback, #solarback { min-height: 44px; }
+    #lang { height: 44px; } /* WebKit ignores min-height on a native select */
+    #return-mw { min-height: 44px; line-height: 26px; }
+    #audiobtn, #scalecmp-close { min-width: 44px; min-height: 44px; }
+    #bp-close { min-width: 44px; min-height: 44px; top: 2px; right: 2px; }
   }
 
   /* background-music control: speaker button + a hover popup listing tracks by name */
-  #audio { right: 16px; bottom: 14px; z-index: 6; text-align: right; }
+  #audio { right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 6; text-align: right; }
   #audiobtn { display: inline-block; cursor: pointer; font-size: 18px; line-height: 1; background: transparent;
     border: 1px solid transparent; border-radius: 8px; padding: 7px 9px; user-select: none; opacity: .8; }
   #audiobtn:hover { border-color: #6366f1; background: rgba(8,12,22,.6); opacity: 1; }
@@ -202,7 +224,7 @@
 <div id="solarlabels" style="display:none"><div id="solarstrip" role="group" aria-label="Bodies"></div><div id="solartime" role="group" aria-label="Time speed"><button type="button" data-scale="0" aria-label="Pause">⏸</button><button type="button" data-scale="1" class="on" aria-label="Normal speed">1×</button><button type="button" data-scale="16" aria-label="16x speed">16×</button><button type="button" data-scale="128" aria-label="128x speed">128×</button><button type="button" id="solarscale" aria-label="True scale">⚖︎</button></div></div>
 
 <div id="msg" class="overlay"></div>
-<div id="scalecmp" role="dialog" aria-modal="true" aria-label="True sizes"><button id="scalecmp-close" type="button" aria-label="Close">×</button><h3></h3><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1820 560"></svg><div class="note"></div></div>
+<div id="scalecmp" role="dialog" aria-modal="true" aria-label="True sizes"><button id="scalecmp-close" type="button" aria-label="Close">×</button><h3></h3><div id="scalecmp-scroll"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1820 560"></svg></div><div class="note"></div></div>
 <div id="skyveil" aria-hidden="true"></div>
 
 <div id="beacon-panel" class="overlay" aria-live="polite">
@@ -3060,7 +3082,7 @@
     beaconRing.visible = true; beaconRing.material.opacity = 0.9;
   };
   window.closeBeaconExtras = function () { bpEl.classList.remove('open'); beaconRing.visible = false; beaconRing.material.opacity = 0; };
-  document.getElementById('bp-close').addEventListener('click', function (e) { e.stopPropagation(); if (viewMode === 'sky') clearSkySelection(); else if (viewMode === 'solar') clearSolarCard(); else clearSelection(); });
+  document.getElementById('bp-close').addEventListener('click', function (e) { e.stopPropagation(); if (viewMode === 'sky') clearSkySelection(); else if (viewMode === 'solar') { clearSolarCard(); if (solarFly) solarFly.noCard = true; } else clearSelection(); });
   var clickDragGuard = { x: 0, y: 0 };
   window.addEventListener('pointerdown', function (e) { clickDragGuard.x = e.clientX; clickDragGuard.y = e.clientY; }, true);
   function clickWasDrag(e) { return Math.abs(e.clientX - clickDragGuard.x) > 6 || Math.abs(e.clientY - clickDragGuard.y) > 6; }
@@ -3508,7 +3530,7 @@
     solarControls.target.lerpVectors(solarFly.t0, solarFly.wp, e2);
     if (e2 >= 1) {
       if (solarFly.cometIndex != null) { // arrived at a comet: ride along with it
-        var cometIndex = solarFly.cometIndex;
+        var cometIndex = solarFly.cometIndex, cometNoCard = solarFly.noCard;
         solarFly = null;
         solarControls.enabled = true;
         solarControls.minDistance = 3;
@@ -3517,10 +3539,10 @@
         solarArrivalSpin = videoNow() + 3200; // orbit-insertion settle
         updateSolarVisibility();
         updateSolarNavigationText();
-        renderCometPanel(cometIndex, beaconLang);
+        if (!cometNoCard) renderCometPanel(cometIndex, beaconLang); // unless the card was closed mid-flight
         return true;
       }
-      var id = solarFly.id, body = SOLAR_BY_ID[id], r = Math.max(SOLAR_OBJECTS[id].radius, 0.5);
+      var id = solarFly.id, body = SOLAR_BY_ID[id], r = Math.max(SOLAR_OBJECTS[id].radius, 0.5), bodyNoCard = solarFly.noCard;
       solarFly = null;
       solarControls.enabled = true;
       solarControls.minDistance = r * 1.8;
@@ -3530,7 +3552,7 @@
       solarArrivalSpin = videoNow() + 3200; // orbit-insertion settle
       updateSolarVisibility(); // the body's moons become visible + selectable here
       updateSolarNavigationText();
-      renderSolarPanel(id, beaconLang);
+      if (!bodyNoCard) renderSolarPanel(id, beaconLang); // unless the card was closed mid-flight
     }
     return true;
   }
@@ -3607,7 +3629,7 @@
       });
       if (bestComet != null) selectSolarComet(bestComet);
       else if (best) selectSolarBody(best);
-    }
+    } else if (solarCardOpen && e.button === 0) { clearSolarCard(); if (solarFly) solarFly.noCard = true; } // empty space: close the card, as the galaxy and sky views do
   });
   var solarMapsPreloaded = false, solarPreloadPromise = null, solarPreloadSettled = false, solarPreloadCount = 0;
   var solarUploadQueue = [], solarMoonMapsLoaded = {}, solarMapsDetached = false, solarResourceDetachCount = 0;
@@ -3773,6 +3795,12 @@
     });
     scaleCmpEl.querySelector('svg').innerHTML = parts.join('');
     scaleCmpEl.classList.add('open');
+    var scaleScroll = document.getElementById('scalecmp-scroll'), picked = scaleScroll && scaleScroll.querySelector('circle[stroke]');
+    if (scaleScroll) { // phones pan the chart: start on the selected body, not on the Sun's edge
+      scaleScroll.scrollLeft = 0;
+      if (picked) { var pr = picked.getBoundingClientRect(), sr = scaleScroll.getBoundingClientRect(); scaleScroll.scrollLeft = pr.left + pr.width / 2 - sr.left - scaleScroll.clientWidth / 2; }
+      stripFade(scaleScroll);
+    }
   }
   document.getElementById('scalecmp-close').addEventListener('click', function () { scaleCmpEl.classList.remove('open'); });
   var solarStripEl = document.getElementById('solarstrip');
@@ -3802,6 +3830,7 @@
       button.addEventListener('click', function () { selectSolarComet(cometIndex); flySolarToComet(cometIndex); });
       solarStripEl.appendChild(button);
     });
+    if (typeof stripFade === 'function') stripFade(solarStripEl);
   }
   buildSolarStrip();
   function buildGalaxyStrip() { // bottom-of-screen roster of the galaxy guide beacons — mirror of #solarstrip so all ~30 are easy to pick by name instead of hunting tiny dots
@@ -3819,8 +3848,20 @@
       button.addEventListener('click', function (e) { e.stopPropagation(); selectBeacon(i); }); // stop the bubble to the window "click-outside clears selection" handler
       strip.appendChild(button);
     });
+    stripFade(strip);
   }
+  function stripFade(el) { // fade the edge(s) with more buttons beyond them
+    if (!el) return;
+    el.classList.toggle('more-l', el.scrollLeft > 2);
+    el.classList.toggle('more-r', el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  }
+  var stripResize = window.ResizeObserver ? new ResizeObserver(function (entries) { entries.forEach(function (en) { stripFade(en.target); }); }) : null; // also fires when a hidden strip appears
   buildGalaxyStrip();
+  ['solarstrip', 'galaxystrip', 'scalecmp-scroll'].forEach(function (id) {
+    var el = document.getElementById(id); if (!el) return;
+    el.addEventListener('scroll', function () { stripFade(el); }, { passive: true });
+    if (stripResize) stripResize.observe(el);
+  });
   var solarTimeEl = document.getElementById('solartime');
   if (solarTimeEl) {
     if (solarReducedMotion()) solarTimeEl.style.display = 'none'; // orbital motion is disabled entirely under reduced motion
@@ -4541,6 +4582,18 @@
       }
       solarBack.textContent = backText; solarBack.setAttribute('aria-label', backText);
     }
+    var titleEl = document.getElementById('title'), titleHint = titleEl && titleEl.querySelector('small');
+    var titleText = {
+      en: ['Milky Way Galaxy', 'drag to orbit · scroll to zoom · F cinema · M music', 'drag to orbit · pinch to zoom'],
+      hans: ['银河系', '拖动旋转 · 滚轮缩放 · F 影院模式 · M 音乐', '拖动旋转 · 双指缩放'],
+      hant: ['銀河系', '拖曳旋轉 · 滾輪縮放 · F 劇院模式 · M 音樂', '拖曳旋轉 · 雙指縮放'],
+      ja: ['天の川銀河', 'ドラッグで回転 · スクロールでズーム · F シネマ · M 音楽', 'ドラッグで回転 · ピンチでズーム'],
+      ko: ['우리은하', '드래그로 회전 · 스크롤로 확대/축소 · F 시네마 · M 음악', '드래그로 회전 · 핀치로 확대/축소']
+    }[L] || ['Milky Way Galaxy', 'drag to orbit · scroll to zoom · F cinema · M music', 'drag to orbit · pinch to zoom'];
+    if (titleEl && titleEl.firstChild && titleEl.firstChild.nodeType === 3) titleEl.firstChild.nodeValue = titleText[0] + '\n  ';
+    var hintParts = (solarPointerCoarse ? titleText[2] : titleText[1]).split(' · ');
+    if (viewMode === 'sky') hintParts.splice(1, 1); // the sky dome does not zoom
+    if (titleHint) titleHint.textContent = hintParts.join(' · ');
     var closeText = { en: 'Close', hans: '关闭', hant: '關閉', ja: '閉じる', ko: '닫기' }[L] || 'Close';
     var closeButton = document.getElementById('bp-close');
     if (closeButton) { closeButton.setAttribute('aria-label', closeText); closeButton.setAttribute('title', closeText); }
