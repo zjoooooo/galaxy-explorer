@@ -931,8 +931,21 @@
     return new THREE.CanvasTexture(c);
   }
   var BULGE_TEX = bulgeTexture();
+  // The 256² fBm fill below costs ~25 ms per texture and five are made at load (M87's lobe, Cen A's cap), so it runs
+  // lazily: an idle queue paints them one per idle slot, and a sprite that reaches the screen first paints its own map
+  // just before three uploads it (onBeforeRender runs after culling, before the draw). Same pixels, just later.
+  var wispQueue = [];
   function wispTexture(seed) { // turbulent filament cloud — domain-warped fBm under a radial mask; the "science-documentary nebula" look
     var S = 256, c = document.createElement('canvas'); c.width = c.height = S;
+    var tex = new THREE.CanvasTexture(c);
+    tex.wispPaint = function () { tex.wispPaint = null; wispPixels(c, S, seed); tex.needsUpdate = true; };
+    if (wispQueue.push(tex) === 1) wispIdle(paintQueuedWisp);
+    return tex;
+  }
+  function wispIdle(f) { if (window.requestIdleCallback) requestIdleCallback(f, { timeout: 4000 }); else setTimeout(f, 300); }
+  function paintQueuedWisp() { var t = wispQueue.shift(); if (t && t.wispPaint) t.wispPaint(); if (wispQueue.length) wispIdle(paintQueuedWisp); }
+  function paintWispOnDraw(renderer, scene, camera, geometry, material) { if (material.map && material.map.wispPaint) material.map.wispPaint(); }
+  function wispPixels(c, S, seed) {
     var x = c.getContext('2d'), img = x.createImageData(S, S), d = img.data;
     function h2(ix, iy) { var n = Math.sin(ix * 127.1 + iy * 311.7 + seed * 74.7) * 43758.5453; return n - Math.floor(n); }
     function vn(vx, vy) { var xi = Math.floor(vx), yi = Math.floor(vy), xf = vx - xi, yf = vy - yi;
@@ -950,7 +963,6 @@
       var o4 = (py * S + px) * 4; d[o4] = 255; d[o4 + 1] = 255; d[o4 + 2] = 255; d[o4 + 3] = Math.min(255, Math.round(a * 255));
     }
     x.putImageData(img, 0, 0);
-    return new THREE.CanvasTexture(c);
   }
 
   // soft glow at the galactic CORE only — a faint tinted halo around the bright
@@ -5203,7 +5215,7 @@
         var V = o.veils[vi];
         var vmap = V.img != null ? VEIL_TEX_LOADER.load(V.img) : (V.wisp != null ? wispTexture(V.wisp) : BULGE_TEX); // real-photo plate > procedural strands > smooth glow
         var vsp = new THREE.Sprite(new THREE.SpriteMaterial({ map: vmap, color: new THREE.Color(V.hex), transparent: true, opacity: V.op, rotation: V.rot || 0, depthWrite: false, blending: THREE.AdditiveBlending }));
-        vsp.position.set(V.x || 0, V.y || 0, V.z || 0); vsp.scale.set(V.sz, V.sz * (V.flat || 1), 1); // flat<1 squashes the blob into a lens — reads as a disc, not a ball
+        vsp.onBeforeRender = paintWispOnDraw; vsp.position.set(V.x || 0, V.y || 0, V.z || 0); vsp.scale.set(V.sz, V.sz * (V.flat || 1), 1); // flat<1 squashes the blob into a lens — reads as a disc, not a ball
         pts.add(vsp); // child of the particle cloud — co-rotates, stays glued to the bar and the in-galaxy LOD features (same frame as kid-beacon lp)
         galaxyVeils.push({ mat: vsp.material, o: V.op, T: V.T || 18, ph: vi * 2.6, r0: V.rot || 0, dr: V.drift || 0, amp: V.amp != null ? V.amp : 0.3, lod: lodRef, hn: V.hideNear ? [R * 1.4, R * 2.4] : null }); // drift: filaments crawl imperceptibly; amp: photo plates breathe gently
       }
@@ -5395,7 +5407,7 @@
         var girth = o.size * (0.28 + 0.5 * Math.min(1, Math.max(0.15, reach))); // narrow neck → fat balloon
         var m = new THREE.SpriteMaterial({ map: texs[(lrnd() * texs.length) | 0], color: base,
           rotation: lrnd() * 6.283, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
-        var sp = new THREE.Sprite(m);
+        var sp = new THREE.Sprite(m); sp.onBeforeRender = paintWispOnDraw; // no-op for smoke maps
         sp.position.copy(dirV).multiplyScalar(axial)
           .addScaledVector(e1, (lrnd() - 0.5) * girth)
           .addScaledVector(e2, (lrnd() - 0.5) * girth);
@@ -5446,7 +5458,7 @@
           var cf = cq / 8, beta = (cf - 0.5) * (fh * 2.6);
           var cm = new THREE.SpriteMaterial({ map: capTex[cq % 2], color: new THREE.Color(0xe09a4e).lerp(new THREE.Color(0xb46a2c), Math.abs(cf - 0.5) * 2),
             rotation: beta * 1.4, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
-          var cs = new THREE.Sprite(cm);
+          var cs = new THREE.Sprite(cm); cs.onBeforeRender = paintWispOnDraw;
           cs.position.copy(dir).multiplyScalar(Math.cos(beta)).addScaledVector(e1, Math.sin(beta)).multiplyScalar(len * (1.0 + 0.06 * Math.cos(beta * 2.2)));
           var cw = len * (0.30 - 0.13 * Math.abs(cf - 0.5) * 2);
           cs.scale.set(cw * 1.5, cw * 0.62, 1); grp.add(cs);
