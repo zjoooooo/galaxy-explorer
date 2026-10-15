@@ -15,7 +15,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate:
+    name: Validate site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate (JS syntax, assets, HTML)
+        run: node .github/scripts/validate.mjs
+
   deploy:
+    needs: validate # a broken build never reaches the live site
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -6,8 +6,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E">
 <title>Milky Way Galaxy</title>
+<meta name="description" content="An interactive Milky Way in your browser — neighbouring galaxies, a full 3D Solar System and the zodiac sky, in five languages. 在浏览器里遨游银河系、太阳系与星空。">
+<meta name="theme-color" content="#03040a">
+<link rel="canonical" href="https://zjoooooo.github.io/galaxy-explorer/">
+<link rel="icon" href="images/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<!-- link previews (WeChat, Douyin, X, Slack…) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Galaxy Explorer">
+<meta property="og:title" content="Galaxy Explorer — an interactive Milky Way">
+<meta property="og:description" content="Fly through the Milky Way, its neighbouring galaxies, a full 3D Solar System and the zodiac sky — in your browser, in five languages. 在浏览器里遨游银河系、太阳系与星空。">
+<meta property="og:url" content="https://zjoooooo.github.io/galaxy-explorer/">
+<meta property="og:image" content="https://zjoooooo.github.io/galaxy-explorer/images/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Milky Way seen from above, with the Triangulum Galaxy and the Large Magellanic Cloud beside it">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -19,6 +34,8 @@
   .overlay { position: fixed; z-index: 5; }
   #title { top: calc(14px + env(safe-area-inset-top, 0px)); left: calc(18px + env(safe-area-inset-left, 0px)); font-size: 15px; font-weight: 600; pointer-events: none; }
   #title small { display: block; font-size: 11px; color: #8b93a7; font-weight: 400; margin-top: 2px; }
+  #credits { display: inline-block; margin-top: 2px; font-size: 10px; font-weight: 400; color: #8b93a7; text-decoration: none; pointer-events: auto; } /* image credits (CC BY) + the code */
+  #credits:hover, #credits:focus-visible { color: #cfe0ff; text-decoration: underline; }
   #msg { top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 13px; color: #9ca3af; pointer-events: none; }
   #skyveil { position: fixed; inset: 0; background: #e8f1ff; opacity: 0; pointer-events: none; z-index: 999; }
 
@@ -43,7 +60,7 @@
   }
 
   /* sky and solar views: back-to-galaxy buttons */
-  #skyback, #solarback { top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(18px + env(safe-area-inset-left, 0px)); z-index: 6; display: none; cursor: pointer; font: inherit; font-size: 13px;
+  #skyback, #solarback { top: calc(72px + env(safe-area-inset-top, 0px)); /* below the title block (name, hint, credits) */ left: calc(18px + env(safe-area-inset-left, 0px)); z-index: 6; display: none; cursor: pointer; font: inherit; font-size: 13px;
     color: #cbd5e1; background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 6px 12px; }
   #skyback:hover, #solarback:hover { border-color: #6366f1; color: #fff; }
   /* solar time-speed pill (pause / 1x / 16x / 128x) */
@@ -182,8 +199,8 @@
       border-radius: 14px 14px 0 0; padding: 14px max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
     #beacon-panel.open { animation: bpUp .2s ease; }
     @keyframes bpUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-    #skyback, #solarback { left: max(12px, env(safe-area-inset-left)); top: max(64px, calc(env(safe-area-inset-top) + 52px)); }
-    #return-mw { top: max(64px, calc(env(safe-area-inset-top) + 52px)); } /* below the title, not on it */
+    #skyback, #solarback { left: max(12px, env(safe-area-inset-left)); top: max(72px, calc(env(safe-area-inset-top) + 60px)); }
+    #return-mw { top: max(72px, calc(env(safe-area-inset-top) + 60px)); } /* below the title, not on it */
     .solar-label { font-size: 11px; letter-spacing: .04em; }
     .solar-label small { font-size: 9px; }
     #scalecmp svg { width: auto; height: min(431px, calc(100vh - 130px)); } /* readable labels (~1400 px wide); #scalecmp-scroll pans it */
@@ -226,7 +243,7 @@
 <canvas id="cv"></canvas>
 
 <div id="title" class="overlay">Milky Way Galaxy
-  <small>drag to orbit · scroll to zoom · F cinema · M music</small></div>
+  <small>drag to orbit · scroll to zoom · F cinema · M music</small><a id="credits" href="https://github.com/zjoooooo/galaxy-explorer/blob/main/THIRD-PARTY-NOTICES.md" target="_blank" rel="noopener">Credits &amp; source</a></div>
 
 <div id="topbar" class="overlay"><button id="cinemabtn" type="button" title="Cinema mode — hide the interface (F)" aria-label="Cinema mode" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
 <select id="lang" title="Language">
@@ -351,6 +368,8 @@
     function check(name, fn) { try { fn(); } catch (e) { failures.push(name + ': ' + e.message); } }
     function ok(v, msg) { if (!v) throw new Error(msg); }
     check('data', function () { ok(assertSolarData(), 'assertSolarData did not return true'); });
+    check('beacon-data', function () { ok(assertBeaconInfo(), 'assertBeaconInfo did not return true'); }); // every card, every language
+    check('zodiac-data', function () { ok(assertZodiacData(), 'assertZodiacData did not return true'); });
     check('body-count', function () { ok(SOLAR_BODIES.length === 18, 'expected 18 selectable bodies'); });
     check('parents', function () {
       ['moon','io','europa','ganymede','callisto','titan','triton'].forEach(function (id) {
@@ -4287,9 +4306,11 @@
   ['ja', 'ko'].forEach(function (L) {
     L10N.beacons[L].forEach(function (x, i) {
       var b = BEACONS[i];
+      if (!b || x.catalog !== b.info.en.catalog) console.error('L10N.' + L + ' beacon ' + i + ' (' + x.catalog + ') is out of step with BEACONS (' + (b && b.info.en.catalog) + ') — keep both lists in the same order'); // merged by position
       b.t[L] = x.sub ? [x.name, x.sub] : [x.name];
       b.info[L] = { type: x.type, distance: x.distance, constellation: x.constellation, facts: x.facts, desc: x.desc, catalog: x.catalog };
     });
+    if (L10N.zodiac[L].length !== ZODIAC.length) console.error('L10N.' + L + ' zodiac has ' + L10N.zodiac[L].length + ' entries, ZODIAC has ' + ZODIAC.length); // same positional merge
     L10N.zodiac[L].forEach(function (x, i) {
       ZODIAC[i].t[L] = x.name;
       ZODIAC[i].info[L] = { dates: x.dates, brightest: x.brightest, desc: x.desc };
@@ -4711,6 +4732,8 @@
     var hintParts = (solarPointerCoarse ? titleText[2] : titleText[1]).split(' · ');
     if (viewMode === 'sky') hintParts.splice(1, 1); // the sky dome does not zoom
     if (titleHint) titleHint.textContent = hintParts.join(' · ');
+    var creditsLink = document.getElementById('credits');
+    if (creditsLink) creditsLink.textContent = { en: 'Credits & source', hans: '鸣谢与源代码', hant: '鳴謝與原始碼', ja: 'クレジットとソース', ko: '출처와 소스 코드' }[L] || 'Credits & source';
     var closeText = { en: 'Close', hans: '关闭', hant: '關閉', ja: '閉じる', ko: '닫기' }[L] || 'Close';
     var closeButton = document.getElementById('bp-close');
     if (closeButton) { closeButton.setAttribute('aria-label', closeText); closeButton.setAttribute('title', closeText); }
@@ -6227,7 +6250,7 @@
     videoPresentationStyle = document.createElement('style');
     videoPresentationStyle.dataset.gxVideoPresentation = 'true';
     videoPresentationStyle.textContent =
-      'body.gx-video-opening #title,body.gx-video-opening #audio,body.gx-video-opening #cinemabtn,body.gx-video-opening #beacons,' +
+      'body.gx-video-opening #title,body.gx-video-opening #audio,body.gx-video-opening #cinemabtn,body.gx-video-opening #beacons,body.gx-video-title-safe #credits,' +
       'body.gx-video-opening #lang,body.gx-video-opening #skyback,body.gx-video-opening #skylabels,' +
       'body.gx-video-opening #solarback,body.gx-video-opening #solarlabels,body.gx-video-opening #beacon-panel,' +
       'body.gx-video-opening .gx-video-cursor{display:none!important}' +

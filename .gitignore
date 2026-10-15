@@ -16,3 +16,8 @@ Thumbs.db
 
 # Isolated feature worktrees
 .worktrees/
+
+# Local agent/editor state and the extracted video pipeline (lives in its own repo)
+.claude/
+.superpowers/
+tools/

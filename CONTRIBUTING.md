@@ -26,8 +26,12 @@ There is no build step and no dependencies to install.
 - **Keep it dependency-free and single-file** where practical. The value of this
   project is that it's easy to read, learn from, and drop into anything.
 - **Comment non-obvious math/shaders** — people use this to learn.
-- **Test in a browser** before opening a PR (check the console for errors). There
-  is no automated test suite.
+- **Test in a browser** before opening a PR (check the console for errors), and
+  open `index.html?solarTest=1` — it runs the built-in self-tests and shows the
+  result in the middle of the screen.
+- **Run the site check** CI runs on every pull request (Node 20+, no install):
+  `node .github/scripts/validate.mjs` — JavaScript syntax, every referenced
+  image/audio/vendor file exists, and basic HTML sanity.
 - Keep changes focused; describe what and why in the PR.
 
 ## Ideas up for grabs
