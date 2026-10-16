@@ -2540,8 +2540,9 @@
         }
       }
     }
-    if (solarPaused || solarReducedMotion()) return;
-    dt *= solarTimeScale; // fast-forward affects orbits/spins/comets only, never the Sun's shader clock above
+    // paused or reduced motion freezes the clock but still places everything: an early return here left every body inside
+    // the Sun under reduced motion (no frame ever placed them) and off its orbit after a true-scale toggle while paused
+    dt = (solarPaused || solarReducedMotion()) ? 0 : dt * solarTimeScale; // fast-forward affects orbits/spins/comets only, never the Sun's shader clock above
     updateSolarComets(dt);
     if (!solarEventRide) solarElapsed += dt; // an event ride owns the clock while active
     SOLAR_BODIES.forEach(function (body) {
@@ -3535,7 +3536,7 @@
   function refreshReducedMotion() {
     var reduced = solarReducedMotion();
     skyControls.autoRotate = !reduced;
-    if (reduced) shortenActiveFlights();
+    if (reduced) { shortenActiveFlights(); cancelSolarEventRide(); } // an alignment/transit ride drives the clock itself; stop it rather than sweep the planets
   }
   onMediaChange(solarMotionMedia, refreshReducedMotion);
   var skyTwinkleMat = null;

@@ -428,6 +428,12 @@
       setSolarPaused(false); updateSolarMotion(0.15);
       var expected = new THREE.Vector3(); solarOrbitPoint(earth.body, solarFutureAngle(earth.body, earth, solarElapsed), expected);
       ok(earth.positionNode.position.x === expected.x && earth.positionNode.position.z === expected.z, 'resume transformed Earth with a clock jump');
+      var oldMotion = solarMotionOverride;
+      try { // reduced motion freezes the clock but must still place the bodies
+        solarMotionOverride = true; elapsed = solarElapsed; earth.positionNode.position.set(0, 0, 0); updateSolarMotion(0.15);
+        solarOrbitPoint(earth.body, solarFutureAngle(earth.body, earth, solarElapsed), expected);
+        ok(solarElapsed === elapsed && earth.positionNode.position.equals(expected), 'reduced motion left Earth unplaced or advanced the clock');
+      } finally { solarMotionOverride = oldMotion; }
       setSolarPaused(paused);
     });
     check('solar-navigation', function () {
