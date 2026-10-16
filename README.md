@@ -220,5 +220,6 @@ License.
 Attribution is appreciated but not required.
 
 three.js and its example modules (bundled under `vendor/`) are © the three.js
-authors, also under the MIT License. The bundled astronomy photography carries its
-own licences — see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+authors, also under the MIT License. The bundled astronomy photography and the
+background music (from Pixabay) carry their own licences — see
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

@@ -131,4 +131,4 @@ Vanilla JavaScript + three.js r128（`vendor/` 以下に同梱）。自己完結
 [MIT](LICENSE) — 商用・教育を含むあらゆる用途で自由に利用できます。
 クレジット表記は歓迎しますが、必須ではありません。
 
-three.js とそのサンプルモジュール（`vendor/` 以下に同梱）は three.js の作者らに著作権があり、同じく MIT ライセンスで提供されています。同梱の天体写真にはそれぞれ独自のライセンスがあります（[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) を参照）。
+three.js とそのサンプルモジュール（`vendor/` 以下に同梱）は three.js の作者らに著作権があり、同じく MIT ライセンスで提供されています。同梱の天体写真と背景音楽（Pixabay 提供）にはそれぞれ独自のライセンスがあります（[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) を参照）。

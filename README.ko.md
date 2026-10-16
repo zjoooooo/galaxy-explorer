@@ -129,4 +129,4 @@ var MUSIC_TRACKS = ['ambient 1.mp3', 'ambient 2.mp3'];
 
 [MIT](LICENSE) — 상업적·교육적 용도를 포함해 어떤 용도로든 무료입니다. 출처 표기는 해 주시면 감사하지만 필수는 아닙니다.
 
-three.js와 그 예제 모듈(`vendor/` 아래에 번들)의 저작권은 three.js 저자들에게 있으며, 마찬가지로 MIT License를 따릅니다. 함께 포함된 천체 사진은 각각 고유한 라이선스를 따릅니다 — [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) 참조.
+three.js와 그 예제 모듈(`vendor/` 아래에 번들)의 저작권은 three.js 저자들에게 있으며, 마찬가지로 MIT License를 따릅니다. 함께 포함된 천체 사진과 배경 음악(Pixabay 제공)은 각각 고유한 라이선스를 따릅니다 — [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) 참조.

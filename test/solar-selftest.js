@@ -13,6 +13,7 @@
     }
     function check(name, fn) { try { fn(); } catch (e) { failures.push(name + ': ' + e.message); } }
     function ok(v, msg) { if (!v) throw new Error(msg); }
+    var runMotionOverride = solarMotionOverride; solarMotionOverride = false; // clock checks must not depend on the tester's OS reduce-motion setting; checks that need it set it themselves
     check('data', function () { ok(assertSolarData(), 'assertSolarData did not return true'); });
     check('beacon-data', function () { ok(assertBeaconInfo(), 'assertBeaconInfo did not return true'); }); // every card, every language
     check('zodiac-data', function () { ok(assertZodiacData(), 'assertZodiacData did not return true'); });
@@ -428,6 +429,12 @@
       setSolarPaused(false); updateSolarMotion(0.15);
       var expected = new THREE.Vector3(); solarOrbitPoint(earth.body, solarFutureAngle(earth.body, earth, solarElapsed), expected);
       ok(earth.positionNode.position.x === expected.x && earth.positionNode.position.z === expected.z, 'resume transformed Earth with a clock jump');
+      var oldMotion = solarMotionOverride;
+      try { // reduced motion freezes the clock but must still place the bodies
+        solarMotionOverride = true; elapsed = solarElapsed; earth.positionNode.position.set(0, 0, 0); updateSolarMotion(0.15);
+        solarOrbitPoint(earth.body, solarFutureAngle(earth.body, earth, solarElapsed), expected);
+        ok(solarElapsed === elapsed && earth.positionNode.position.equals(expected), 'reduced motion left Earth unplaced or advanced the clock');
+      } finally { solarMotionOverride = oldMotion; }
       setSolarPaused(paused);
     });
     check('solar-navigation', function () {
@@ -560,6 +567,7 @@
         updateSolarVisibility();
       }
     });
+    solarMotionOverride = runMotionOverride;
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
     if (/[?&]solarTest=1/.test(location.search)) setMsg(failures.length ? failures.join(' | ') : statusText());
     return window.__solarTestResult;
