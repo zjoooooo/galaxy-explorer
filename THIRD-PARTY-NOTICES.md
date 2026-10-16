@@ -1,7 +1,7 @@
 # Third-Party Notices
 
-This project bundles third-party software under `vendor/` and third-party
-imagery under `images/`. Their copyright and license notices are reproduced
+This project bundles third-party software under `vendor/`, third-party imagery
+under `images/` and third-party background music under `audio/`. Their copyright and license notices are reproduced
 below. The project itself is under the [MIT License](LICENSE); release `v2.4.0`
 alone was published under the PolyForm Noncommercial License 1.0.0.
 
@@ -193,3 +193,17 @@ All 18 card photos come from one source family: NASA mission photography, via Wi
 - `images/lmc-plate.png` — Zdeněk Bardon/ESO (Large Magellanic Cloud) · CC BY 4.0 · cropped, pastel-graded, edge-feathered, downsampled to 256 px · [source](https://commons.wikimedia.org/wiki/File:Large_Magellanic_Cloud_(magellan-ch17-bardon-cc).jpg)
 - `images/smc-plate.png` — NOIRLab/NSF/AURA/P. Horálek (Institute of Physics in Opava) (Small Magellanic Cloud) · CC BY 4.0 · cropped, pastel-graded, edge-feathered, downsampled to 256 px · [source](https://commons.wikimedia.org/wiki/File:The_Small_Magellanic_Cloud_from_Cerro_Pach%C3%B3n_(iotw2615a).jpg)
 - `images/cena-plate.png` — ESO (Centaurus A, NGC 5128) · CC BY 4.0 · cropped, rotated, graded, edge-feathered, downsampled to 256 px · [source](https://commons.wikimedia.org/wiki/File:Centaurus_A.jpg)
+
+## Background music (`audio/`)
+
+The three looping background tracks come from [Pixabay Music](https://pixabay.com/music/)
+and are used under the [Pixabay Content License](https://pixabay.com/service/license-summary/):
+
+- `audio/ambient-space 1.mp3`
+- `audio/ambient-space 2.mp3`
+- `audio/the_mountain.mp3`
+
+That license does not require attribution, but it does not allow the tracks to be
+sold or distributed on a standalone basis. They ship only as the app's soundtrack and
+are **not** covered by this project's MIT License. To reuse the project with other
+music, replace the files and `MUSIC_TRACKS` as described in `audio/README.md`.

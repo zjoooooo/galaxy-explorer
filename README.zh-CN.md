@@ -186,5 +186,5 @@ var MUSIC_TRACKS = ['ambient 1.mp3', 'ambient 2.mp3'];
 [MIT](LICENSE) — 可自由用于任何用途，包括商业和教育。欢迎署名但不强制。
 
 three.js 及其示例模块（打包在 `vendor/` 下）版权归 three.js 作者所有，同样遵循
-MIT 许可证；随附的天文摄影作品各有其许可条款，详见
+MIT 许可证；随附的天文摄影作品和背景音乐（来自 Pixabay）各有其许可条款，详见
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。

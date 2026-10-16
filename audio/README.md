@@ -10,4 +10,7 @@ var MUSIC_TRACKS = ['ambient 1.mp3', 'ambient 2.mp3'];
 The speaker button (bottom-right of the page) stays hidden while this list is
 empty. Tracks loop and are shown by file name in a hover popup.
 
+The three bundled tracks come from Pixabay Music under the Pixabay Content License,
+not this project's MIT License — see `../THIRD-PARTY-NOTICES.md`.
+
 Do NOT commit copyrighted audio you don't have the rights to redistribute.
