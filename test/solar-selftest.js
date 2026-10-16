@@ -13,6 +13,7 @@
     }
     function check(name, fn) { try { fn(); } catch (e) { failures.push(name + ': ' + e.message); } }
     function ok(v, msg) { if (!v) throw new Error(msg); }
+    var runMotionOverride = solarMotionOverride; solarMotionOverride = false; // clock checks must not depend on the tester's OS reduce-motion setting; checks that need it set it themselves
     check('data', function () { ok(assertSolarData(), 'assertSolarData did not return true'); });
     check('beacon-data', function () { ok(assertBeaconInfo(), 'assertBeaconInfo did not return true'); }); // every card, every language
     check('zodiac-data', function () { ok(assertZodiacData(), 'assertZodiacData did not return true'); });
@@ -566,6 +567,7 @@
         updateSolarVisibility();
       }
     });
+    solarMotionOverride = runMotionOverride;
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
     if (/[?&]solarTest=1/.test(location.search)) setMsg(failures.length ? failures.join(' | ') : statusText());
     return window.__solarTestResult;

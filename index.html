@@ -69,6 +69,7 @@
     background: rgba(10,14,24,.72); border: 1px solid #243049; border-radius: 8px; padding: 5px 10px; }
   #solartime button:hover { border-color: #6366f1; color: #fff; }
   #solartime button.on { border-color: #6366f1; color: #fff; background: rgba(50,58,96,.72); }
+  #solartime.motion-off button[data-scale] { display: none; }
   #solarscale { margin-left: 8px; }
   /* quick-jump roster: every top-level body plus the two comets, one tap to fly there */
   #solarstrip, #galaxystrip { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 4px;
@@ -3483,8 +3484,11 @@
     if (stripResize) stripResize.observe(el);
   });
   var solarTimeEl = document.getElementById('solartime');
+  function refreshSolarTimeControls() { // orbits stand still under reduced motion: hide pause/speed, keep the true-scale toggle
+    if (solarTimeEl) solarTimeEl.classList.toggle('motion-off', solarReducedMotion());
+  }
   if (solarTimeEl) {
-    if (solarReducedMotion()) solarTimeEl.style.display = 'none'; // orbital motion is disabled entirely under reduced motion
+    refreshSolarTimeControls();
     Array.prototype.forEach.call(solarTimeEl.querySelectorAll('button'), function (button) {
       if (button.id === 'solarscale') { button.addEventListener('click', function () { toggleSolarScale(); }); return; }
       button.addEventListener('click', function () {
@@ -3537,6 +3541,8 @@
     var reduced = solarReducedMotion();
     skyControls.autoRotate = !reduced;
     if (reduced) { shortenActiveFlights(); cancelSolarEventRide(); } // an alignment/transit ride drives the clock itself; stop it rather than sweep the planets
+    refreshSolarTimeControls();
+    if (viewMode === 'solar' && solarCardOpen && solarNav.selectedId) renderSolarPanel(solarNav.selectedId, beaconLang); // the alignment/transit buttons come and go with the setting
   }
   onMediaChange(solarMotionMedia, refreshReducedMotion);
   var skyTwinkleMat = null;
@@ -4304,7 +4310,7 @@
     cancelSolarWarp(); // never snapshot a mid-warp camera — the dormant warp would resume on return
     solarFly = null;
     cancelSolarEventRide(); clearSolarBanner(); // a transit rig must not be the snapshot, nor its caption hang over the sky
-    skyReturnContext = { solar: solarSnapshot(), paused: solarPaused };
+    skyReturnContext = { solar: solarSnapshot(), paused: solarPaused, elapsed: solarElapsed }; // the dive keeps the clock running; the snapshot framed Earth at this time
     clearSolarCard();
     var entered = enterSky('earth');
     if (entered && !solarReducedMotion()) {
@@ -4327,6 +4333,7 @@
     if (solarLabelsEl) solarLabelsEl.style.display = '';
     if (solarBackEl) solarBackEl.style.display = 'block';
     skyReturnContext = null;
+    solarElapsed = context.elapsed; updateSolarMotion(0); // put Earth back where the restored camera framed it (at 16x it had moved off-screen)
     setSolarNavigation(context.solar);
     setSolarPaused(context.paused);
     updateSolarLabels();
