@@ -330,7 +330,7 @@
   // GALAXY_SPIN: radians/sec the whole galaxy rotates about its axis.
   var BLOOM = { strength: 0.08, radius: 0.32, threshold: 0.42 };
   var TONE = { exposure: 1.1 };
-  var DUST = { count: 85000, min: 1500, radius: 360, arms: 4, minorDim: 0.42, tight: 0.85, armWidth: 46, randomness: 0.5, thickness: 24, radPow: 0.72, size: 4.0, brightness: 0.5, inside: 0xffcf8a, outside: 0x86acec, hii: 0xff5fa8, blueStar: 0xcfe6ff };
+  var DUST = { count: 30000, min: 1500, radius: 360, arms: 4, minorDim: 0.42, tight: 0.85, armWidth: 46, randomness: 0.5, thickness: 24, radPow: 0.72, size: 4.0, brightness: 0.5, inside: 0xffcf8a, outside: 0x86acec, hii: 0xff5fa8, blueStar: 0xcfe6ff };
   var GALAXY_SPIN = 0.013;
 
   function setMsg(t) { var el = document.getElementById('msg'); if (el) el.textContent = t || ''; }
@@ -734,7 +734,7 @@
       uniforms: { uSize: { value: DUST.size * renderer.getPixelRatio() }, uCap: { value: 34 * renderer.getPixelRatio() } },
       vertexShader: 'uniform float uSize; uniform float uCap; attribute float aScale; attribute vec3 aColor; varying vec3 vColor;' +
         'void main(){ vec4 mp = modelMatrix * vec4(position,1.0); vec4 vp = viewMatrix * mp; gl_Position = projectionMatrix * vp;' +
-        ' gl_PointSize = min(uSize * aScale * (300.0 / -vp.z), uCap); vColor = aColor; }', // cap: a close pass shows crisp points, not screen-filling blobs
+        ' gl_PointSize = min(uSize * aScale * (300.0 / -vp.z), uCap); vColor = aColor * 0.75 * (0.3 + 0.9 * smoothstep(450.0, 150.0, -vp.z)); }', // quiet over the painting from afar, sparkling up close
       fragmentShader: STAR_FRAG,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
     });
@@ -1004,7 +1004,7 @@
   var BULGE = { count: 2200, radius: 84, flat: 0.5 };
   var coreBreath = []; // the bulge glow sprites + base scales — frame() breathes them ±2.8% on a ~20s sine
   (function centralBulge() {
-    var glows = [{ c: 0xfffdf6, s: 80, o: 0.70 }, { c: 0xfff3da, s: 150, o: 0.50 }, { c: 0xffdc9e, s: 270, o: 0.30 }, { c: 0xffc06a, s: 440, o: 0.13 }]; // hot-white centre → gold halo, multi-scale = smooth
+    var glows = [{ c: 0xfffdf6, s: 80, o: 0.385 }, { c: 0xfff3da, s: 150, o: 0.20 }]; // the painted disc paints its own core; only the hot centre stays a glow
     for (var gi = 0; gi < glows.length; gi++) {
       var G = glows[gi], sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX, color: G.c, transparent: true, opacity: G.o, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); // distance falloff lives in frame(): scene fog drained the core to a navy disc when zoomed out
       sp.position.set(0, 0, 0); sp.scale.set(G.s, G.s, 1); scene.add(sp);
