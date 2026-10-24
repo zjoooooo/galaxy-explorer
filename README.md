@@ -29,9 +29,9 @@ layers real NASA-based surface textures on top for the planets, moons and Sun.
 
 - **Painted Milky Way** — the disc is an oil painting made on the GPU at load:
   brush strokes swept along four spiral arms, dark dust lanes on each arm's inner
-  edge, pink star-forming specks, a cream-gold core and a soft rim. 150,000 thin
-  brush strokes lie on top, and ~30,000 stars stay quiet from afar and sparkle as
-  you fly in, where the painting gives way to the stars.
+  edge, pink star-forming specks, a cream-gold core and a soft rim. ~30,000 stars
+  stay quiet from afar and sparkle as you fly in, where the painting gives way to
+  the stars.
 - **Galactic bulge** — a smooth multi-scale glow core that slowly "breathes".
 - **Deep-field sky** — a twinkling star field plus ~170 tiny distant galaxies
   (ellipticals, spirals, edge-on disks, irregulars), a rich galaxy cluster, and
@@ -182,8 +182,7 @@ Vanilla JavaScript + three.js r128 (vendored under `vendor/`). One self-containe
 
 1. Dust points are scattered on density-wave spiral arms (a `Points` cloud).
 2. A fragment shader paints the disc once into a texture (noise smeared along
-   the spiral flow by line-integral convolution), and 150,000 instanced
-   brush-stroke quads lie on top of it.
+   the spiral flow by line-integral convolution); the disc fades out up close.
 3. Sprite glows form the bulge; a twinkling far-sphere is the background sky.
 4. A procedural texture atlas + billboarded quad batch draws the distant galaxies.
 5. Post-processing: `UnrealBloomPass` for glow, then an ACES tone-map pass.

@@ -362,3 +362,9 @@ git commit -m "feat: dust stars and core glows tuned for the painted disc"
 - [ ] Video: `video-compare.mjs` audit state identical except the expected look; `git apply --check` of the private patch.
 - [ ] Adversarial review workflow; fix confirmed findings.
 - [ ] Push, open the PR with before/after numbers.
+
+---
+
+## Review outcome (2026-10-25)
+
+The adversarial review found that the stroke layer of Task 3 faced −y and was back-face culled in every view above the disc, so the approved sample never showed it; from below it washed the arms white, and made double-sided it erased the dust lanes. Task 3's strokes, its watchdog rung and its self-test asserts were removed; the painted disc alone is the approved look. The review also led to `depthBuffer: false` on the bake targets (32 MiB saved on desktop), mipmaps generated only once the last tile is baked, and four stale comments fixed.

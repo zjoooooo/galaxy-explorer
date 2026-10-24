@@ -15,12 +15,12 @@ Replace the Milky Way's look with the painted style the owner approved from the 
   - A fragment shader baked once into a texture laid in the disc plane, riding `galaxyRoot`. Content and palette match the approved sample: line-integral-convolution strokes along the spiral flow at three scales, arm density from the same arm formula as the dust (so every beacon keeps its place), dark lanes at the inner arm edge, pink HII specks, patchy violet regions, warm core, ragged soft rim.
   - Resolution: 4096² on desktop, 2048² on touch devices. Half-float target where WebGL2 + `EXT_color_buffer_float` allow, 8-bit otherwise.
   - Progressive bake: a 1024² pass at load (cheap), then the full-resolution texture is filled in tiles over the following frames, then swapped in. No single long task on phones.
-- **Brush strokes**: instanced quads lying in the disc, each aligned with the local spiral flow (150k desktop, 60k touch). Their pixel-width floor reads the real drawing-buffer height every frame and widening is capped at 3× (fixes the sample's zero-height bug).
+- **Brush strokes (dropped in review)**: the sample's instanced stroke layer faced −y, so it was back-face culled in every view above the disc — the approved look never contained it — and appeared only from below, where it washed the arms white. Made double-sided it whitened the disc and erased the dust lanes, so it was removed: the painted disc alone is the approved look, and the frame saves ~1–1.5 ms.
 - **Near field ("far: painting, near: stars")**: the disc material fades the painting per fragment by view depth, so the part of the disc close to the camera dissolves into stars while the distant disc stays painted. Dust stars brighten as they get close and stay quiet from afar.
 - **Dust stars**: 30k instead of 85k; colours unchanged; distance-dependent brightness.
 - **Core glows**: the 440- and 270-unit halos are removed and the 80- and 150-unit glows dimmed; the disc paints its own core.
 - **Edge-on**: the disc gets a little vertical thickness so it is not a hairline from the side.
-- **Watchdog**: a new rung halves the brush strokes; existing rungs unchanged.
+- **Watchdog**: rungs unchanged.
 
 ## Unchanged
 
@@ -28,7 +28,7 @@ Beacon positions, external galaxies, the sky view, the Solar System, the bloom/A
 
 ## Verification
 
-- Self-test: painted disc and strokes exist, stroke count matches the device tier, the stroke shader's view-height uniform tracks the drawing buffer.
+- Self-test: painted disc and its two edge-on copies exist and share the baked texture, the old nebula shader is gone, dust count is 30k.
 - A/B renders against main from the sample's views (tilt, load, flyover, near the Sun, top, edge) plus a view from below; a zero-height-at-load regression probe; frame time on desktop @2x and the phone profile; WebKit; video-mode audit state.
 - Adversarial review, then a PR.
 - README galaxy description updated in all four languages.
