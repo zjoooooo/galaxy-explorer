@@ -18,8 +18,7 @@ There is no build step and no dependencies to install.
    ```sh
    python -m http.server 8000   # then open http://localhost:8000/
    ```
-3. Edit `index.html` and reload. Use `?fx=1` to see ambient effects on demand and
-   `?tune=1` for the nebula shader sliders.
+3. Edit `index.html` and reload. Use `?fx=1` to see ambient effects on demand.
 
 ## Guidelines
 

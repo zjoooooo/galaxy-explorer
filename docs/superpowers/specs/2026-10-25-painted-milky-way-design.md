@@ -18,7 +18,7 @@ Replace the Milky Way's look with the painted style the owner approved from the 
 - **Brush strokes**: instanced quads lying in the disc, each aligned with the local spiral flow (150k desktop, 60k touch). Their pixel-width floor reads the real drawing-buffer height every frame and widening is capped at 3× (fixes the sample's zero-height bug).
 - **Near field ("far: painting, near: stars")**: the disc material fades the painting per fragment by view depth, so the part of the disc close to the camera dissolves into stars while the distant disc stays painted. Dust stars brighten as they get close and stay quiet from afar.
 - **Dust stars**: 30k instead of 85k; colours unchanged; distance-dependent brightness.
-- **Core glows**: the 440-unit halo is removed and the 270-unit one dimmed; the disc paints its own core.
+- **Core glows**: the 440- and 270-unit halos are removed and the 80- and 150-unit glows dimmed; the disc paints its own core.
 - **Edge-on**: the disc gets a little vertical thickness so it is not a hairline from the side.
 - **Watchdog**: a new rung halves the brush strokes; existing rungs unchanged.
 
