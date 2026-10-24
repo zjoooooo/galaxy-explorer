@@ -567,6 +567,17 @@
         updateSolarVisibility();
       }
     });
+    check('painted-galaxy', function () {
+      ok(typeof paintedGalaxy === 'object' && paintedGalaxy && paintedGalaxy.disc && paintedGalaxy.strokes, 'painted galaxy missing');
+      ok(typeof nebMat === 'undefined', 'old nebula shader still present');
+      ok(DUST.count === 30000, 'dust count is not 30000');
+      var full = paintedGalaxy.touch ? 60000 : 150000, n = paintedGalaxy.strokes.geometry.instanceCount;
+      ok(n === full || n === Math.round(full / 2), 'stroke count ' + n + ' does not match the device tier');
+      var buf = renderer.getDrawingBufferSize(new THREE.Vector2());
+      paintedGalaxy.strokes.material.uniforms.uViewH.value = 0;
+      paintedGalaxy.strokes.onBeforeRender(renderer);
+      ok(paintedGalaxy.strokes.material.uniforms.uViewH.value === buf.y, 'stroke view height does not track the drawing buffer');
+    });
     solarMotionOverride = runMotionOverride;
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
     if (/[?&]solarTest=1/.test(location.search)) setMsg(failures.length ? failures.join(' | ') : statusText());
