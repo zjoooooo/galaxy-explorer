@@ -849,6 +849,62 @@
         for (var k = 1; k < 3; k++) { layers[k].visible = g > 0.001; layers[k].material.uniforms.uGain.value = g; }
       }
     };
+    // brush strokes: thin instanced quads lying in the disc, each aligned with the local spiral flow
+    var C = DUST.tight * TAU / R, N = touch ? 60000 : 150000;
+    function h(n) { var s = Math.sin(n * 12.9898) * 43758.5453; return s - Math.floor(s); }
+    function vn(x, y) { var xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+      var a = h(xi * 57 + yi * 131), b = h((xi + 1) * 57 + yi * 131), c = h(xi * 57 + (yi + 1) * 131), d = h((xi + 1) * 57 + (yi + 1) * 131);
+      return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
+    var quad = new THREE.InstancedBufferGeometry();
+    quad.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0]), 3));
+    quad.setIndex([0, 1, 2, 0, 2, 3]);
+    var iPos = new Float32Array(N * 3), iDir = new Float32Array(N * 2), iSize = new Float32Array(N * 2), iCol = new Float32Array(N * 3);
+    var col = new THREE.Color(), cA = new THREE.Color(0xffc2a8), cB = new THREE.Color(0x9a9cff), cC = new THREE.Color(0x4c74ff), cW = new THREE.Color(0xe8eeff), cP = new THREE.Color(0xff4470);
+    for (var i = 0; i < N; i++) {
+      var onArm = Math.random() < 0.72, rf = Math.min(1.08, Math.pow(Math.random(), 0.78) * 1.06), r = rf * R;
+      var idx = Math.floor(Math.random() * DUST.arms), major = idx % 2 === 0;
+      if (onArm && !major && Math.random() < 0.35) { idx = (idx + 1) % DUST.arms; major = true; } // the major arms carry more paint
+      var spread = onArm ? (Math.random() + Math.random() + Math.random() - 1.5) * 0.32 : Math.random() * TAU;
+      var ang = idx * (TAU / DUST.arms) + rf * DUST.tight * TAU + spread + (vn(r * 0.02, idx * 3.1) - 0.5) * 0.5;
+      var x = Math.cos(ang) * r, z = Math.sin(ang) * r;
+      iPos[i * 3] = x; iPos[i * 3 + 2] = z; iPos[i * 3 + 1] = (Math.random() + Math.random() - 1) * (5 + 9 * (1 - rf));
+      var er = Math.max(r, 2), ex = x / er, ez = z / er, kk = er * C, dx = ex - ez * kk, dz = ez + ex * kk, dl = Math.hypot(dx, dz); dx /= dl; dz /= dl;
+      var sw = (vn(x * 0.012 + 3, z * 0.012 + 3) - 0.5) * 1.1 + (Math.random() - 0.5) * 0.25, cs = Math.cos(sw), sn = Math.sin(sw);
+      iDir[i * 2] = dx * cs - dz * sn; iDir[i * 2 + 1] = dx * sn + dz * cs;
+      iSize[i * 2] = 1.6 + Math.random() * Math.random() * 6.5; iSize[i * 2 + 1] = 0.28 + Math.random() * 0.3;
+      col.copy(cA).lerp(cB, Math.min(1, Math.max(0, (rf - 0.12) / 0.38)));
+      if (rf > 0.45) col.lerp(cC, Math.min(1, (rf - 0.45) / 0.5));
+      var roll = Math.random();
+      if (roll < 0.03 && rf > 0.2) col.copy(cW);
+      else if (roll < 0.10 && rf > 0.18) { col.copy(cP); iSize[i * 2] = 0.5 + Math.random() * 0.5; iSize[i * 2 + 1] *= 1.3; } // pink HII specks: dots, not dashes
+      var bright = (onArm ? (major ? 1.0 : 0.7) : 0.45) * (0.45 + Math.random() * 0.75) * (rf < 0.12 ? 0.6 : 1) * (1 - 0.6 * Math.max(0, (rf - 0.82) / 0.26));
+      var th = ang - rf * DUST.tight * TAU, ln = Math.pow(Math.max(0, Math.cos(DUST.arms * (th - 0.12)) * 0.5 + 0.5), 7) * (rf > 0.08 && rf < 1 ? 1 : 0);
+      bright *= 1 - 0.85 * ln; // strokes avoid the dust lanes too
+      iCol[i * 3] = col.r * bright; iCol[i * 3 + 1] = col.g * bright; iCol[i * 3 + 2] = col.b * bright;
+    }
+    quad.setAttribute('iPos', new THREE.InstancedBufferAttribute(iPos, 3));
+    quad.setAttribute('iDir', new THREE.InstancedBufferAttribute(iDir, 2));
+    quad.setAttribute('iSize', new THREE.InstancedBufferAttribute(iSize, 2));
+    quad.setAttribute('iCol', new THREE.InstancedBufferAttribute(iCol, 3));
+    quad.instanceCount = N;
+    var strokeMat = new THREE.ShaderMaterial({
+      uniforms: { uViewH: { value: 1 }, uGain: { value: 0.8 } },
+      vertexShader:
+        'attribute vec3 iPos; attribute vec2 iDir; attribute vec2 iSize; attribute vec3 iCol; uniform float uViewH; uniform float uGain; varying vec2 vUv; varying vec3 vCol;' +
+        'void main(){ vec4 mc = modelViewMatrix * vec4(iPos, 1.0);' +
+        '  float pxPerU = projectionMatrix[1][1] * uViewH * 0.5 / max(-mc.z, 0.1);' +
+        '  float k = clamp(1.1 / max(iSize.y * pxPerU, 1e-3), 1.0, 3.0);' + // never thinner than ~1px: widen (at most 3x) and dim instead, so far strokes don't shimmer
+        '  vec3 d = vec3(iDir.x, 0.0, iDir.y), n = vec3(-iDir.y, 0.0, iDir.x);' +
+        '  vec3 off = d * position.x * iSize.x + n * position.y * iSize.y * k;' +
+        '  gl_Position = projectionMatrix * (mc + modelViewMatrix * vec4(off, 0.0));' +
+        '  vUv = position.xy; vCol = iCol * uGain / k; }',
+      fragmentShader: 'varying vec2 vUv; varying vec3 vCol; void main(){ float a = pow(max(0.0, 1.0 - vUv.x * vUv.x), 1.5) * exp(-vUv.y * vUv.y * 2.2); gl_FragColor = vec4(vCol * a, 1.0); }',
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+    });
+    var strokes = new THREE.Mesh(quad, strokeMat); strokes.frustumCulled = false; galaxyRoot.add(strokes);
+    var bufSize = new THREE.Vector2();
+    strokes.onBeforeRender = function (r) { strokeMat.uniforms.uViewH.value = r.getDrawingBufferSize(bufSize).y; }; // the real buffer height every frame (a 0-height first layout once blew every stroke up 1100x)
+    paintedGalaxy.strokes = strokes;
   })();
 
   // ── background star-field: fine sharp points on a far sphere (the fixed "sky").
@@ -4340,7 +4396,7 @@
   // halve the raymarch steps, drop to 1x resolution, drop bloom (tone-mapping stays), hide
   // the raymarched nebulae, and only then halve the dust (perfScale 1 → .5 → .25). Never scales back up.
   var perfScale = 1, perfEMA = 16.7, perfLast = 0, perfNextCheck = videoNow() + 8000;
-  var perfVolHalved = false, perfVolHidden = false, perfBloomOff = false;
+  var perfVolHalved = false, perfVolHidden = false, perfBloomOff = false, perfStrokesHalved = false;
   function flashMsg(text) { setMsg(text); setTimeout(function () { var el = document.getElementById('msg'); if (el && el.textContent === text) setMsg(''); }, 2500); }
   function setBloomEnabled(c, on) { if (c) for (var i = 0; i < c.passes.length; i++) if (c.passes[i] instanceof THREE.UnrealBloomPass) c.passes[i].enabled = on; }
   function degradeRendering(withVolumes) { // one step down the shared, one-way ladder; returns what changed ('' when exhausted)
@@ -4364,6 +4420,11 @@
       perfBloomOff = true;
       setBloomEnabled(composer, false); setBloomEnabled(skyComposer, false); setBloomEnabled(solarComposer, false);
       return 'glow disabled';
+    }
+    if (withVolumes && !perfStrokesHalved && paintedGalaxy && paintedGalaxy.strokes) { // the painted disc's brush strokes: half of them (they are generated in random order)
+      perfStrokesHalved = true;
+      paintedGalaxy.strokes.geometry.instanceCount = Math.round(paintedGalaxy.strokes.geometry.instanceCount / 2);
+      return 'brush strokes reduced';
     }
     if (withVolumes && !perfVolHidden && galaxyVols.length) { // still slow: drop the raymarched nebulae altogether (~13x near the LMC)
       perfVolHidden = true;
