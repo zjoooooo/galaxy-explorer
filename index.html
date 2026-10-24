@@ -744,144 +744,111 @@
   function dustFor() { return Math.max(DUST.min, Math.round(DUST.count * perfScale)); }
   buildDust(DUST.count); // full dust on load
 
-  // HII / reflection nebula clouds are now rendered IN the nebulaField shader as
-  // gradient-coloured (deep-red ↔ blue-white) COHESIVE regions — no more separate
-  // gaussian-point knots (those read as "一个一个小的高斯圆" / individual circles).
-
-  // ── nebula gas as a CONTINUOUS SHADER FIELD (not point sprites) ──────────────
-  // A flat disc in the galaxy plane whose fragment shader computes smooth fBm-noise
-  // clouds modulated by the spiral — a fluid, water-like nebula that wraps the stars
-  // with NO visible circles (point sprites always showed a disc edge). Rides galaxyRoot.
-  var NEBULA = { inside: 0xffc878, outside: 0x5f93e8 }; // warm core ↔ cool arm gas colours
-  var nebMat = null; // module-scope so the ?tune panel can adjust the glow uniforms live
-  (function nebulaField() {
-    var geo = new THREE.PlaneGeometry(DUST.radius * 2.6, DUST.radius * 2.6, 1, 1);
-    nebMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uR: { value: DUST.radius }, uArms: { value: DUST.arms }, uTight: { value: DUST.tight },
-        uInside: { value: new THREE.Color(NEBULA.inside) }, uOutside: { value: new THREE.Color(NEBULA.outside) },
-        uBright: { value: 0.28 }, uMinorDim: { value: DUST.minorDim },
-        uCoreExp: { value: 6.0 }, uCoreStr: { value: 1.55 }, uCoreWhite: { value: 0.5 } // operator-tuned defaults
-      },
+  // ── painted Milky Way ─────────────────────────────────────────────────────────
+  // An oil-painted disc baked once on the GPU (brush strokes smeared along the spiral flow,
+  // dark lanes on each arm's inner edge, pink star-forming specks, a cream-gold core) plus
+  // instanced brush strokes on top. Far away it reads as a painting; up close the painting
+  // fades out and the stars take over. Design: docs/superpowers/specs/2026-10-25-painted-milky-way-design.md
+  var paintedGalaxy = null;
+  (function buildPaintedGalaxy() {
+    var R = DUST.radius, TAU = 6.28318530718;
+    var touch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    var common =
+      'uniform float uR; uniform float uArms; uniform float uTight;' +
+      'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }' +
+      'float noise(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }' +
+      'float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int k = 0; k < 5; k++){ v += a * noise(p); p = p * 2.03 + 1.7; a *= 0.5; } return v; }' +
+      'vec2 flowDir(vec2 p){ float r = max(length(p), 2.0); vec2 er = p / r; vec2 et = vec2(-er.y, er.x); float c = uTight * 6.28318 / uR;' +
+      '  vec2 d = normalize(er + et * r * c);' +
+      '  float sw = (fbm(p * 0.012 + 3.0) - 0.5) * 1.1;' + // coherent swirl: the strokes wander off the ideal spiral like brushwork
+      '  float cs = cos(sw), sn = sin(sw); return vec2(d.x * cs - d.y * sn, d.x * sn + d.y * cs); }' +
+      'float lic(vec2 p, float freq, float len){ float s = 0.0, w = 0.0; vec2 q = p; vec2 o = vec2(13.1, 7.7);' + // line-integral convolution of noise along the flow = brush strands
+      '  for (int i = 0; i < 14; i++){ float t = float(i) / 14.0; float wt = 1.0 - t; s += noise(q * freq + o) * wt; w += wt; q += flowDir(q) * (len / 14.0); }' +
+      '  q = p; for (int i = 0; i < 14; i++){ q -= flowDir(q) * (len / 14.0); float t = float(i + 1) / 14.0; float wt = 1.0 - t; s += noise(q * freq + o) * wt; w += wt; }' +
+      '  return s / w; }';
+    var discFrag =
+      'varying vec2 vP; uniform float uBright; uniform float uInter; uniform float uLane; uniform float uHii;' + common +
+      'void main(){' +
+      '  float r = length(vP), nr = r / uR, ang = atan(vP.y, vP.x);' +
+      '  float edgeN = fbm(vP * 0.008 + 21.0);' +
+      '  float env = smoothstep(1.12, 0.62, nr + (edgeN - 0.5) * 0.22);' + // soft, ragged rim
+      '  if (env <= 0.0 && nr > 0.3) { gl_FragColor = vec4(0.0); return; }' +
+      '  vec2 wp = vP * 0.011; float w1 = fbm(wp), w2 = fbm(wp + 4.3);' +
+      '  float theta = ang + (w1 - 0.5) * 0.55 - nr * uTight * 6.28318;' + // same winding as the dust arms (beacons keep their places)
+      '  float armId = mod(floor(theta * uArms / 6.28318 + 0.5), uArms); float major = 1.0 - step(0.5, mod(armId, 2.0));' +
+      '  float arm = pow(max(0.0, cos(uArms * theta) * 0.5 + 0.5), 2.2) * mix(0.62, 1.0, major);' +
+      '  float lane = pow(max(0.0, cos(uArms * (theta - 0.12 + (w2 - 0.5) * 0.16)) * 0.5 + 0.5), 7.0) * mix(0.7, 1.0, major);' + // dark lane on the inner (concave) edge of each arm
+      '  float fine = lic(vP, 1.25, 7.0);' +    // thin bristle strands
+      '  float coarse = lic(vP, 0.22, 34.0);' + // broad brush sweeps
+      '  float hair = lic(vP, 2.6, 4.5);' +     // the finest bristles
+      '  float strands = clamp((fine - 0.5) * 3.4 + 0.5, 0.0, 1.0) * 0.5 + clamp((coarse - 0.5) * 2.6 + 0.5, 0.0, 1.0) * 0.45 + clamp((hair - 0.5) * 3.0 + 0.5, 0.0, 1.0) * 0.35;' +
+      '  float dens = env * (uInter + (1.0 - uInter) * arm) * (0.12 + 1.15 * strands * strands);' +
+      '  dens *= 0.55 + 0.6 * fbm(vP * 0.03 + vec2(w1, w2) * 3.0);' + // patchy clouds
+      '  float absorb = lane * smoothstep(0.07, 0.24, nr) * smoothstep(1.0, 0.7, nr) * (0.45 + 0.75 * clamp((coarse - 0.35) * 2.5, 0.0, 1.0)) * (0.55 + 0.75 * fbm(vP * 0.045 + 9.0));' +
+      '  dens *= 1.0 - uLane * clamp(absorb * 1.5, 0.0, 1.0);' +
+      // palette: warm core → lavender → blue rim; arms cooler and whiter, the gaps purpler, a few violet patches
+      '  float patchy = fbm(vP * 0.006 + 40.0);' +
+      '  vec3 col = mix(vec3(1.0, 0.74, 0.66), vec3(0.60, 0.60, 1.0), smoothstep(0.1, 0.4, nr));' +
+      '  col = mix(col, vec3(0.26, 0.44, 1.0), smoothstep(0.32, 0.85, nr + (patchy - 0.5) * 0.5));' +
+      '  col = mix(col, vec3(0.72, 0.44, 0.98), smoothstep(0.58, 0.78, patchy) * 0.4 * smoothstep(0.15, 0.4, nr));' +
+      '  col = mix(col * vec3(0.92, 0.72, 1.05), col * vec3(0.95, 1.0, 1.06) + 0.05, arm);' +
+      '  col += (coarse - 0.5) * vec3(0.10, 0.04, 0.14);' +
+      // pink star-forming specks, clustered along the arms
+      '  float kn = smoothstep(0.62, 0.8, noise(vP * 0.55 + 31.0) * 0.55 + noise(vP * 1.6 + 5.0) * 0.45) * (0.35 + 0.65 * arm) * smoothstep(0.16, 0.34, nr) * env * (0.4 + 0.8 * smoothstep(0.4, 0.7, fbm(vP * 0.02 + 70.0)));' +
+      '  col = mix(col, vec3(1.0, 0.26, 0.42), clamp(kn * 1.8, 0.0, 1.0) * uHii);' +
+      '  dens += kn * uHii * (1.0 - uLane * clamp(absorb, 0.0, 1.0));' +
+      // the bulge: cream-gold, brushwork too (the two glow sprites add the hot centre)
+      '  float core = exp(-pow(nr / 0.19, 1.4));' +
+      '  col = mix(col, vec3(1.0, 0.80, 0.52), clamp(core * 1.3, 0.0, 1.0));' +
+      '  float inten = dens * uBright * 0.62 + core * (0.25 + 0.75 * strands) * uBright * 0.85;' +
+      '  gl_FragColor = vec4(col * inten, 1.0);' +
+      '}';
+    var size = touch ? 2048 : 4096, tiles = size / (touch ? 256 : 512); // full-res bake in tiles, one per frame
+    var half = renderer.capabilities.isWebGL2 && renderer.extensions.has('EXT_color_buffer_float');
+    function makeRT(n) { return new THREE.WebGLRenderTarget(n, n, { format: THREE.RGBAFormat, type: half ? THREE.HalfFloatType : THREE.UnsignedByteType, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: true }); }
+    var span = R * 2.5, geo = new THREE.PlaneGeometry(span, span, 1, 1);
+    var bakeMat = new THREE.ShaderMaterial({
+      uniforms: { uR: { value: R }, uArms: { value: DUST.arms }, uTight: { value: DUST.tight }, uBright: { value: 1.0 }, uInter: { value: 0.32 }, uLane: { value: 0.95 }, uHii: { value: 1.0 } },
       vertexShader: 'varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader:
-        'varying vec2 vP; uniform float uR; uniform float uArms; uniform float uTight; uniform vec3 uInside; uniform vec3 uOutside; uniform float uBright; uniform float uMinorDim; uniform float uCoreExp; uniform float uCoreStr; uniform float uCoreWhite;' +
-        'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }' +
-        'float noise(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }' +
-        'float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int k = 0; k < 5; k++){ v += a * noise(p); p = p * 2.0; a *= 0.5; } return v; }' +
-        'float worley(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); float md = 1.0; for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++){ vec2 g = vec2(float(x), float(y)); vec2 o = vec2(hash(i + g), hash(i + g + 3.1)); vec2 d = g + o - f; md = min(md, dot(d, d)); } return sqrt(md); }' + // cellular billows (procedural-clouds shape recipe)
-        'float remap(float v, float a, float b, float c, float e){ return c + (clamp(v, a, b) - a) / (b - a) * (e - c); }' +
-        'void main(){' +
-        '  float r = length(vP); float ang = atan(vP.y, vP.x); float nr = r / uR;' +
-        '  if (nr > 1.2) discard;' +
-        // DOMAIN WARP — two low-freq noise fields bend the arm + the clouds so the perfect
-        // spiral MEANDERS and branches (spurs/feathers), not a regular snail shell.
-        '  vec2 wp = vP * 0.011;' +
-        '  float w1 = fbm(wp);' +
-        '  float w2 = fbm(wp + 4.3);' +
-        '  float angW = ang + (w1 - 0.5) * 0.85;' + // arm wanders (more irregular now)
-        '  float theta = angW - nr * uTight * 6.28318;' + // unwound angle (arms at theta = k*TAU/uArms)
-        '  float spiral = cos(uArms * theta);' + // same winding as the dust arms, but warped
-        '  float armId = mod(floor(theta * uArms / 6.28318 + 0.5), uArms);' + // which arm this point is in
-        '  float arm = pow(max(0.0, spiral * 0.5 + 0.5), 2.3) * mix(uMinorDim, 1.0, step(mod(armId, 2.0), 0.5));' + // EVEN arms major (bright), ODD minor (dim)
-        // flocculent cloud: domain-warp the sample coords by the warp fields → wispy/turbulent
-        '  vec2 q = vP * 0.02 + vec2(w1, w2) * 6.0;' + // stronger domain warp → more irregular, turbulent clouds
-        '  float fl = fbm(q);' +
-        '  float cell = 1.0 - worley(q * 1.6);' + // WORLEY cellular → cauliflower/billow structure
-        '  float shape = fl * 0.6 + cell * 0.4;' + // blend fBm + Worley (the clouds-skill shape recipe)
-        '  float cov = remap(shape, 0.42, 0.92, 0.0, 1.0);' + // COVERAGE REMAP → crisp wisps + dark gaps, not a smooth wash
-        '  float erosion = fbm(q * 3.5 + vec2(w1, w2) * 3.0) * 0.4;' + // DETAIL EROSION → torn, wispy edges
-        '  float clump = max(cov - erosion, 0.0) * 1.9;' +
-        '  float dens = arm * (0.12 + clump) + 0.035 * fl * fl;' + // clumpy arm + a faint inter-arm disc haze (not dead black)
-        '  dens *= 0.3 + 0.7 * smoothstep(0.28, 0.62, w2);' + // darker DUST LANES — stronger arm/lane contrast, like the ref
-        // radial envelope = a RING: clear core, densest just outside the bulge, long gentle fade to the rim
-        '  float radial = smoothstep(0.06, 0.38, nr) * smoothstep(1.0, 0.42, nr);' + // outer fade earlier → dimmer rim
-        '  float a = dens * radial * uBright;' +
-        '  if (a < 0.008) discard;' +
-        // Palette: warm cream CORE → a PURPLE→BLUE gradient across the disc (ref img 2). The purple↔blue
-        // factor `pb` is mostly RADIAL (inner arms magenta-violet, outer arms azure-blue) + a big low-freq
-        // noise so it's organic patches, not a clean ring — some reach bluer/purpler, like the reference.
-        '  float pb = clamp(smoothstep(0.18, 0.85, nr) + (fbm(vP * 0.004 + 7.0) - 0.5) * 0.5, 0.0, 1.0);' +
-        '  vec3 disc = mix(vec3(0.64, 0.34, 0.90), vec3(0.28, 0.56, 0.98), pb);' + // magenta-violet → azure-blue
-        '  vec3 col = mix(vec3(0.98, 0.84, 0.70), disc, smoothstep(0.05, 0.26, nr));' + // warm core → disc gradient
-        // per-cloud colour GRADIENT: a smooth left→right ramp perturbed by low-freq noise,
-        // so every cloud transitions organically from one colour to the other (not monotone).
-        '  float gcol = clamp(0.5 + 0.42 * (vP.x / uR) + (fbm(vP * 0.009 + 30.0) - 0.5) * 0.95, 0.0, 1.0);' +
-        // MINOR arms (odd armId) → blue-white gas, gradient light-blue → blue-white
-        '  float isMinor = 1.0 - step(mod(armId, 2.0), 0.5);' +
-        '  col = mix(col, mix(vec3(0.44, 0.54, 0.94), vec3(0.64, 0.72, 0.98), gcol), isMinor * clamp(clump, 0.0, 1.0) * 0.50);' +
-        // HII clouds: SAME shape (region/halpha byte-for-byte unchanged) — only the COLOUR changes to muted rose↔periwinkle
-        '  float region = fbm(vP * 0.006 + 11.0);' +
-        '  float halpha = smoothstep(0.6, 0.8, region) * clamp(clump * 1.5, 0.0, 1.0);' +
-        '  vec3 hii = mix(vec3(0.92, 0.44, 0.70), vec3(0.46, 0.60, 0.98), gcol);' + // soft ROSE-magenta ↔ clear PERIWINKLE (reads, still soft)
-        '  col = mix(col, hii, halpha * 0.55);' +
-        // GLOWING CORES (ref): the densest knots of gas EMIT like star-forming regions. Isolate the
-        // density peaks and intensify emission in the LOCAL hue (pink stays pink, blue stays blue), with
-        // a hot near-white centre only at the very peak. Additive + bloom turn this into a glow-from-within.
-        // Colour/emission only — `a` (opacity/footprint) is untouched.
-        '  float core = pow(clamp(clump, 0.0, 1.0), uCoreExp);' + // isolate the densest peaks (tunable: uCoreExp)
-        '  col *= 1.0 + core * uCoreStr;' +                       // coloured emission boost at the cores (uCoreStr)
-        '  col = mix(col, vec3(1.0), core * uCoreWhite);' +       // hot near-white only at the very peak (uCoreWhite)
-        '  col += (fl - 0.5) * 0.06;' + // subtle colour variation across the clouds
-        '  gl_FragColor = vec4(col, a);' +
-        '}',
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
+      fragmentShader: discFrag, blending: THREE.NoBlending, depthWrite: false
     });
-    var plane = new THREE.Mesh(geo, nebMat); plane.rotation.x = Math.PI / 2; plane.frustumCulled = false;
-    if (!/[?&]tune/i.test(location.search)) {
-      // the pattern is completely static — bake the ~150-noise-ops-per-pixel shader ONCE
-      // into a texture and draw a plain quad forever after (?tune keeps the live shader)
-      var bakeHalf = DUST.radius * 1.3, bakeRT = new THREE.WebGLRenderTarget(2048, 2048, { format: THREE.RGBAFormat });
-      var bakeMat = nebMat.clone(); bakeMat.blending = THREE.NoBlending;
-      var bakeScene = new THREE.Scene(); bakeScene.add(new THREE.Mesh(geo, bakeMat));
-      var bakeCam = new THREE.OrthographicCamera(-bakeHalf, bakeHalf, bakeHalf, -bakeHalf, 0.1, 10);
-      bakeCam.position.z = 1; bakeCam.lookAt(0, 0, 0);
-      var bakeNebula = function () {
-        var bakeClear = renderer.getClearColor(new THREE.Color()), bakeAlpha = renderer.getClearAlpha();
-        renderer.setRenderTarget(bakeRT); renderer.setClearColor(0x000000, 0); renderer.clear();
-        renderer.render(bakeScene, bakeCam);
-        renderer.setRenderTarget(null); renderer.setClearColor(bakeClear, bakeAlpha);
-        bakeMat.dispose(); // frees the program; three recompiles it if a restore needs another bake
-      };
-      bakeNebula();
-      cv.addEventListener('webglcontextrestored', bakeNebula); // a restored context brings the target back empty (three's own restore listener runs first)
-      plane.material = new THREE.MeshBasicMaterial({ map: bakeRT.texture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
-      nebMat.dispose();
-    } // +π/2 so local y → world +z (matches the dust's world angle, no mirror)
-    galaxyRoot.add(plane); // lies flat in the disc, rotates with the galaxy + the stars
-  })();
-
-  // ── nebula glow TUNING panel — only shows with ?tune in the URL (e.g. /galaxy?tune=1).
-  // Temporary aid: drag the sliders to find the best look, hit 复制当前值, and send me the
-  // numbers — I'll bake them in and drop the panel. Adjusts the shader uniforms in real time.
-  if (/[?&]tune/i.test(location.search)) (function () {
-    var TUNES = [
-      { k: 'uCoreExp', label: '发光点大小 (小=大片)', min: 0.5, max: 6, step: 0.05 },
-      { k: 'uCoreStr', label: '发光强度', min: 0, max: 5, step: 0.05 },
-      { k: 'uCoreWhite', label: '峰尖白热 (小=更彩)', min: 0, max: 1, step: 0.01 },
-      { k: 'uBright', label: '整体亮度', min: 0, max: 1.5, step: 0.02 }
-    ];
-    var tp = document.createElement('div');
-    tp.style.cssText = 'position:fixed;top:14px;right:14px;z-index:60;width:250px;padding:12px 14px;background:rgba(9,11,20,.86);border:1px solid #2b3a5c;border-radius:10px;color:#d6e4ff;font:12px/1.5 ui-monospace,Consolas,monospace;backdrop-filter:blur(4px)';
-    var h = '<div style="font-weight:600;margin-bottom:2px;color:#9cc0ff">☁ 气云发光调节</div>';
-    for (var i = 0; i < TUNES.length; i++) {
-      var tt = TUNES[i], vv = nebMat.uniforms[tt.k].value;
-      h += '<div style="margin-top:8px">' + tt.label + ' <span id="tv_' + tt.k + '" style="float:right;color:#8fb6ff">' + vv.toFixed(2) + '</span></div>' +
-        '<input id="ti_' + tt.k + '" type="range" min="' + tt.min + '" max="' + tt.max + '" step="' + tt.step + '" value="' + vv + '" style="width:100%;accent-color:#6f9bff">';
+    var bakeScene = new THREE.Scene(); bakeScene.add(new THREE.Mesh(geo, bakeMat));
+    var bakeCam = new THREE.OrthographicCamera(-span / 2, span / 2, span / 2, -span / 2, 0.1, 10); bakeCam.position.z = 1; bakeCam.lookAt(0, 0, 0);
+    function bakeTile(rt, tile, grid) { // render one cell of a grid×grid split of the target (grid 1 = whole target)
+      var n = rt.width / grid, cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha();
+      rt.scissor.set((tile % grid) * n, Math.floor(tile / grid) * n, n, n); rt.scissorTest = grid > 1;
+      renderer.setRenderTarget(rt); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(bakeScene, bakeCam);
+      renderer.setRenderTarget(null); renderer.setClearColor(cc, ca); rt.scissorTest = false;
     }
-    h += '<div id="tp_out" style="margin-top:10px;padding-top:8px;border-top:1px solid #2b3a5c;color:#aeb9d6;word-break:break-all"></div>' +
-      '<button id="tp_copy" style="margin-top:8px;width:100%;padding:5px;background:#24345c;color:#dbe7ff;border:1px solid #3a4f7d;border-radius:6px;cursor:pointer">复制当前值</button>';
-    tp.innerHTML = h; document.body.appendChild(tp);
-    var tpOut = function () { var s = TUNES.map(function (x) { return x.k + '=' + nebMat.uniforms[x.k].value.toFixed(2); }).join(', '); document.getElementById('tp_out').textContent = s; return s; };
-    TUNES.forEach(function (x) {
-      var el = document.getElementById('ti_' + x.k), lab = document.getElementById('tv_' + x.k);
-      el.addEventListener('input', function () { var v = parseFloat(el.value); nebMat.uniforms[x.k].value = v; lab.textContent = v.toFixed(2); tpOut(); });
+    var preview = makeRT(1024), full = makeRT(size), mapU = { value: preview.texture }, next = 0;
+    bakeTile(preview, 0, 1); // ~1/16 of the full cost: the disc is there on the first frame
+    function finish() { mapU.value = full.texture; if (preview) { preview.dispose(); preview = null; } }
+    function bakeAll() { for (var t = 0; t < tiles * tiles; t++) bakeTile(full, t, tiles); next = tiles * tiles; finish(); }
+    function stepBake() { if (next >= tiles * tiles) return; bakeTile(full, next++, tiles); if (next < tiles * tiles) requestAnimationFrame(stepBake); else finish(); }
+    if (videoMode) bakeAll(); else requestAnimationFrame(stepBake); // captures need the final texture on their first frame
+    cv.addEventListener('webglcontextrestored', bakeAll); // a restored context brings the target back empty
+    // the disc: the painting fades by view depth, so whatever is close to the camera dissolves into stars.
+    // Two faint copies above/below give it some body edge-on; they only draw at grazing angles.
+    var layers = [0, 3.5, -3.5].map(function (y, i) {
+      var m = new THREE.ShaderMaterial({
+        uniforms: { uMap: mapU, uGain: { value: i ? 0 : 1 } },
+        vertexShader: 'varying vec2 vUv; varying float vDepth; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); vDepth = -mv.z; gl_Position = projectionMatrix * mv; }',
+        fragmentShader: 'uniform sampler2D uMap; uniform float uGain; varying vec2 vUv; varying float vDepth;' +
+          'void main(){ float near = mix(0.15, 1.0, smoothstep(40.0, 240.0, vDepth)); gl_FragColor = vec4(texture2D(uMap, vUv).rgb * near * uGain, 1.0); }',
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
+      });
+      var mesh = new THREE.Mesh(geo, m); mesh.rotation.x = Math.PI / 2; mesh.position.y = y; mesh.frustumCulled = false; mesh.visible = !i;
+      galaxyRoot.add(mesh);
+      return mesh;
     });
-    document.getElementById('tp_copy').addEventListener('click', function () {
-      var s = tpOut(); if (navigator.clipboard) { navigator.clipboard.writeText(s); }
-      var b = document.getElementById('tp_copy'); b.textContent = '已复制 ✓'; setTimeout(function () { b.textContent = '复制当前值'; }, 1200);
-    });
-    tpOut();
+    paintedGalaxy = {
+      touch: touch, disc: layers[0], layers: layers, strokes: null, bakeAll: bakeAll,
+      updateView: function (cam) { // edge-on body: fade the two copies in below ~14° elevation
+        var sinEl = Math.abs(cam.position.y) / Math.max(cam.position.length(), 1e-3), g = Math.max(0, 1 - sinEl / 0.25) * 0.35;
+        layers[0].material.uniforms.uGain.value = 1 - g;
+        for (var k = 1; k < 3; k++) { layers[k].visible = g > 0.001; layers[k].material.uniforms.uGain.value = g; }
+      }
+    };
   })();
 
   // ── background star-field: fine sharp points on a far sphere (the fixed "sky").
@@ -4502,6 +4469,7 @@
     }
     if (bgTwinkleMat && !solarReducedMotion()) bgTwinkleMat.uniforms.uTime.value = t; // background-star twinkle
     var cbw = solarReducedMotion() ? 0 : Math.sin(t * 0.32), cbr = 1 + 0.07 * cbw; // ~20s galactic-core breathe
+    if (paintedGalaxy) paintedGalaxy.updateView(camera);
     var cbk = 0.0012 * camera.position.length(), cbf = Math.min(0.75, Math.max(0.32, Math.exp(-cbk * cbk))); // the scene-fog curve the halos were tuned under, held between d≈450 (cap: no extra close-up glare) and the d≈890 load view (floor: zooming out keeps the core)
     for (var cbi = 0; cbi < coreBreath.length; cbi++) {
       var cb = coreBreath[cbi], cbs = cb.s * cbr;
