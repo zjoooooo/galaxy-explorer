@@ -4406,7 +4406,7 @@
       setBloomEnabled(composer, false); setBloomEnabled(skyComposer, false); setBloomEnabled(solarComposer, false);
       return 'glow disabled';
     }
-    if (withVolumes && !perfVolHidden && galaxyVols.length) { // still slow: drop the raymarched nebulae altogether (~13x near the LMC)
+    if (withVolumes && !perfVolHidden && galaxyVols.length) { // still slow: drop the raymarched volumes altogether (now only Centaurus A's dust lane)
       perfVolHidden = true;
       return 'nebulae hidden';
     }
@@ -5002,7 +5002,7 @@
 
   var galaxyLODs = []; // {pts, mat, center, maxN, refDist, baseSize, q0, axis, spin} per particle galaxy — LOD + self-rotation each frame
   var galaxyVeils = []; // dreamy pastel gas veils (Magellanic Clouds) — slow desynced opacity breathing, updated in the frame loop
-  var galaxyVols = []; // raymarched volumetric nebulae — REAL gas clouds with depth/parallax, updated in the frame loop
+  var galaxyVols = []; // raymarched volumes (Centaurus A's dust lane), updated in the frame loop
   var VEIL_TEX_LOADER = new THREE.TextureLoader(); // for real-photo plates (ESO/NOIRLab imagery, credited in THIRD-PARTY-NOTICES)
   var galSpinTmp = new THREE.Quaternion();
   (function galaxies() {
@@ -5047,52 +5047,6 @@
       var vmesh = new THREE.Mesh(new THREE.PlaneGeometry(R * 2.8, R * 2.8), vmat);
       vmesh.position.copy(P); vmesh.renderOrder = 7; scene.add(vmesh); // multiplies AFTER the galaxy's additive layers
       galaxyVols.push({ mesh: vmesh, mat: vmat, steps: 18 }); // same per-frame care: face camera, slow churn, watchdog gate
-    }
-    function buildVolumeNebula(P, q0, R, v) { // TRUE volumetric gas — raymarched 3D noise density, real depth + parallax while orbiting
-      var frag =
-        'uniform vec3 uCenter; uniform float uR; uniform float uFlat; uniform vec3 uHot; uniform float uHotW; uniform float uSoft;' +
-        'uniform float uGain; uniform float uTime; uniform mat3 uBasis; uniform vec3 uColA; uniform vec3 uColB; uniform float uSteps; varying vec3 vWorld;' +
-        'float h3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }' +
-        'float vn3(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);' +
-        ' float a = h3(i), b = h3(i + vec3(1,0,0)), c = h3(i + vec3(0,1,0)), d = h3(i + vec3(1,1,0));' +
-        ' float e = h3(i + vec3(0,0,1)), g = h3(i + vec3(1,0,1)), h = h3(i + vec3(0,1,1)), k = h3(i + vec3(1,1,1));' +
-        ' return mix(mix(mix(a,b,f.x), mix(c,d,f.x), f.y), mix(mix(e,g,f.x), mix(h,k,f.x), f.y), f.z); }' +
-        'float fbm3(vec3 p){ float s = 0.0, a = 0.55, q = 1.0; for (int o = 0; o < 3; o++){ s += a * vn3(p * q); a *= 0.5; q *= 2.15; } return s; }' +
-        'void main(){' +
-        ' vec3 rd = normalize(vWorld - cameraPosition); vec3 oc = cameraPosition - uCenter;' +
-        ' float RR = uR * 1.15; float b = dot(oc, rd); float c = dot(oc, oc) - RR * RR; float hh = b * b - c;' +
-        ' if (hh < 0.0) discard; float sh = sqrt(hh); float t0 = max(-b - sh, 0.0), t1 = -b + sh; if (t1 <= t0) discard;' +
-        ' float dj = h3(vec3(gl_FragCoord.xy * 0.37, 1.7)); float seg = (t1 - t0) / uSteps; vec3 col = vec3(0.0);' +
-        ' for (int i = 0; i < 26; i++){ if (float(i) >= uSteps) break;' +
-        '  vec3 p = cameraPosition + rd * (t0 + seg * (float(i) + dj));' +
-        '  vec3 q = uBasis * (p - uCenter) / uR; vec3 qf = vec3(q.x, q.y * uFlat, q.z);' +
-        '  float body = smoothstep(1.05, 0.2, length(qf));' +
-        '  if (body < 0.003) continue;' +
-        '  vec3 w = q * 1.35 + uTime * vec3(0.010, 0.006, 0.008);' +
-        '  vec3 warp = vec3(fbm3(w + 5.2), fbm3(w - 3.1), fbm3(w + 9.7));' +
-        '  float n = fbm3(q * 2.7 + 1.9 * warp);' +
-        '  float d = mix(max(0.0, n - 0.44) * 2.7, 0.28 + 0.5 * n, uSoft) * body;' +
-        '  if (d <= 0.0) continue;' +
-        '  float cn = fbm3(q * 1.15 + vec3(8.3, 2.1, 5.7) + uTime * vec3(0.004, 0.003, 0.005));' +
-        '  vec3 tint = mix(uColA, uColB, smoothstep(0.30, 0.70, cn));' + // warm heart → cyan-blue rim
-        '  float hw = uHotW * exp(-dot(q - uHot, q - uHot) * 7.0);' +
-        '  tint = mix(tint, vec3(1.0, 0.5, 0.68), clamp(hw, 0.0, 0.85)); d *= 1.0 + hw * 1.6;' + // rose boost wrapping 30 Dor
-        '  col += d * (0.35 + d * 1.2) * tint * seg;' +
-        ' }' +
-        ' col *= uGain / uR; col *= 0.94 + 0.12 * dj; if (max(col.r, max(col.g, col.b)) < 0.004) discard;' +
-        ' gl_FragColor = vec4(col, 1.0); }';
-      var basis = new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(q0.clone().invert()));
-      var vmat = new THREE.ShaderMaterial({
-        uniforms: { uCenter: { value: P.clone() }, uR: { value: R }, uFlat: { value: v.flat || 2.4 },
-          uHot: { value: new THREE.Vector3().fromArray(v.hot || [0, 0, 0]).divideScalar(R) }, uHotW: { value: v.hot ? 1.0 : 0.0 }, uSoft: { value: v.soft || 0 },
-          uGain: { value: v.gain || 1.0 }, uTime: { value: 0 }, uBasis: { value: basis },
-          uColA: { value: new THREE.Color(v.colA != null ? v.colA : 0x76b6d8) }, uColB: { value: new THREE.Color(v.colB != null ? v.colB : 0xe887ae) }, uSteps: { value: 26 } },
-        vertexShader: 'varying vec3 vWorld; void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vWorld = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }',
-        fragmentShader: frag, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending
-      });
-      var vmesh = new THREE.Mesh(new THREE.PlaneGeometry(R * 2.4, R * 2.4), vmat); // camera-facing proxy quad; the shader marches the real ellipsoid behind it
-      vmesh.position.copy(P); vmesh.renderOrder = 6; scene.add(vmesh);
-      galaxyVols.push({ mesh: vmesh, mat: vmat, steps: 26 });
     }
     // ── painted external galaxies ──
     // The Milky Way's oil-paint idea (noise smeared along a flow field = brush strands), one shared bake program
@@ -5379,7 +5333,6 @@
         pts.add(vsp); // child of the particle cloud — co-rotates, stays glued to the bar and the in-galaxy LOD features (same frame as kid-beacon lp)
         galaxyVeils.push({ mat: vsp.material, o: V.op, T: V.T || 18, ph: vi * 2.6, r0: V.rot || 0, dr: V.drift || 0, amp: V.amp != null ? V.amp : 0.3, lod: lodRef, hn: V.hideNear ? [R * 1.4, R * 2.4] : null }); // drift: filaments crawl imperceptibly; amp: photo plates breathe gently
       }
-      if (o.vol) buildVolumeNebula(P, q0, R, o.vol); // the real gas — raymarched volume sharing this disc's orientation
       if (o.dustVol) buildDustLaneVol(P, q0, R, o.dustVol); // volumetric absorption lane — thickness + torn edges from any angle
       if (o.dustBand && !o.dustVol) { // flat dark lane sheet (Sombrero ring etc.) — superseded by the volumetric slab when dustVol is set
         var ringLane = o.dustBand === 'ring'; // 'ring' = Sombrero-style dust-torus rim; true = centred dark sheet (Cen A)
