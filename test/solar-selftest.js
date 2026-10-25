@@ -577,7 +577,7 @@
     });
     check('painted-external', function () {
       paintFlush(); // analytic paintings bake now; photo-plate ones join the queue when their plate loads
-      var want = { M31: 1, M33: 1, M104: 2, M87: 1 }, size = paintedGalaxy.touch ? 1024 : 2048;
+      var want = { M31: 1, M33: 1, M104: 2, M87: 1, 'NGC 5128': 1 }, size = paintedGalaxy.touch ? 1024 : 2048;
       galaxyLODs.forEach(function (L) {
         if (!want[L.cat]) return;
         ok(L.paint && L.paint.length === want[L.cat], L.cat + ' has no painting');
