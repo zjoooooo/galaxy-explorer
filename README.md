@@ -16,7 +16,7 @@ entirely in the browser with WebGL (three.js). No backend, no build step, no
 dependencies to install, no API keys — just open the page and explore.
 
 The galaxy itself is generated in code at load time: **almost no image assets**
-— the spiral arms, nebula gas, star clusters, distant galaxies and supernovae
+— the spiral arms, the painted disc, star clusters, distant galaxies and supernovae
 are all math (the Magellanic Clouds and Centaurus A additionally sample their
 star positions and colours from three CC BY photo plates). The Solar System
 layers real NASA-based surface textures on top for the planets, moons and Sun.
@@ -27,10 +27,11 @@ layers real NASA-based surface textures on top for the planets, moons and Sun.
 
 ## ✨ Features
 
-- **Spiral disc** — ~85,000 dust points on four density-wave arms, with a warm
-  core fading to cool blue arms, bright star knots, HII regions and blue clusters.
-- **Volumetric-looking nebula** — a continuous fBm + Worley noise shader field
-  (domain-warped spiral, dust lanes, glowing cores) that wraps the arms in gas.
+- **Painted Milky Way** — the disc is an oil painting made on the GPU at load:
+  brush strokes swept along four spiral arms, dark dust lanes on each arm's inner
+  edge, pink star-forming specks, a cream-gold core and a soft rim. ~30,000 stars
+  stay quiet from afar and sparkle as you fly in, where the painting gives way to
+  the stars.
 - **Galactic bulge** — a smooth multi-scale glow core that slowly "breathes".
 - **Deep-field sky** — a twinkling star field plus ~170 tiny distant galaxies
   (ellipticals, spirals, edge-on disks, irregulars), a rich galaxy cluster, and
@@ -94,7 +95,7 @@ layers real NASA-based surface textures on top for the planets, moons and Sun.
 
 - **Learning & teaching** — a compact, readable, single-file example of WebGL,
   three.js, GLSL shaders, procedural generation, particle systems and noise
-  (fBm/Worley). Great for astronomy, computer-graphics and creative-coding
+  (fBm, line-integral convolution). Great for astronomy, computer-graphics and creative-coding
   classes. Every subsystem is self-contained and commented.
 - **Backgrounds & screensavers** — an ambient galaxy for a landing page hero,
   a desktop/second-monitor background, or an idle screen.
@@ -141,8 +142,6 @@ nginx, or any web host. Just upload the folder — there is nothing to build.
 
 - `?fx=1` — demo mode: forces a shooting star / meteor shower / supernova every
   4 s so you can see the ambient effects immediately.
-- `?tune=1` — live sliders for the nebula-glow shader; tweak the look in real
-  time and copy the values into the tunables when you like them.
 
 ## 🎛️ Customise
 
@@ -150,7 +149,7 @@ Open `index.html` and edit the **tunables** block near the top of the `<script>`
 
 ```js
 var BLOOM = { strength: 0.08, radius: 0.32, threshold: 0.42 }; // glow
-var DUST  = { count: 85000, radius: 360, arms: 4, tight: 0.85, brightness: 0.5, ... };
+var DUST  = { count: 30000, radius: 360, arms: 4, tight: 0.85, brightness: 0.5, ... };
 var GALAXY_SPIN = 0.013; // rotation speed (radians/sec)
 ```
 
@@ -182,8 +181,8 @@ Vanilla JavaScript + three.js r128 (vendored under `vendor/`). One self-containe
 `index.html`. The galaxy is built once at load:
 
 1. Dust points are scattered on density-wave spiral arms (a `Points` cloud).
-2. A flat plane in the disc plane runs a fragment shader that computes fBm +
-   Worley cloud noise modulated by the spiral for the nebula gas.
+2. A fragment shader paints the disc once into a texture (noise smeared along
+   the spiral flow by line-integral convolution); the disc fades out up close.
 3. Sprite glows form the bulge; a twinkling far-sphere is the background sky.
 4. A procedural texture atlas + billboarded quad batch draws the distant galaxies.
 5. Post-processing: `UnrealBloomPass` for glow, then an ACES tone-map pass.

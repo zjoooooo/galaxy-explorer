@@ -567,6 +567,14 @@
         updateSolarVisibility();
       }
     });
+    check('painted-galaxy', function () {
+      ok(typeof paintedGalaxy === 'object' && paintedGalaxy && paintedGalaxy.disc && paintedGalaxy.layers.length === 3, 'painted galaxy missing');
+      ok(typeof nebMat === 'undefined', 'old nebula shader still present');
+      ok(DUST.count === 30000, 'dust count is not 30000');
+      var map = paintedGalaxy.disc.material.uniforms.uMap.value;
+      ok(map && map.image && (map.image.width === 1024 || map.image.width === (paintedGalaxy.touch ? 2048 : 4096)), 'painted disc texture has an unexpected size');
+      ok(paintedGalaxy.layers.every(function (l) { return l.material.uniforms.uMap === paintedGalaxy.disc.material.uniforms.uMap; }), 'the edge-on copies do not share the painted texture');
+    });
     solarMotionOverride = runMotionOverride;
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
     if (/[?&]solarTest=1/.test(location.search)) setMsg(failures.length ? failures.join(' | ') : statusText());
