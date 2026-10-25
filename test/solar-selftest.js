@@ -575,6 +575,20 @@
       ok(map && map.image && (map.image.width === 1024 || map.image.width === (paintedGalaxy.touch ? 2048 : 4096)), 'painted disc texture has an unexpected size');
       ok(paintedGalaxy.layers.every(function (l) { return l.material.uniforms.uMap === paintedGalaxy.disc.material.uniforms.uMap; }), 'the edge-on copies do not share the painted texture');
     });
+    check('painted-external', function () {
+      paintFlush(); // analytic paintings bake now; photo-plate ones join the queue when their plate loads
+      var want = { M31: 1 }, size = paintedGalaxy.touch ? 1024 : 2048;
+      galaxyLODs.forEach(function (L) {
+        if (!want[L.cat]) return;
+        ok(L.paint && L.paint.length === want[L.cat], L.cat + ' has no painting');
+        L.paint.forEach(function (P) {
+          ok(P.mesh.parent === L.pts, L.cat + ' painting is not mounted on its stars');
+          var m = P.mat.uniforms.uMap.value; ok(m && m.image.width === P.size && P.size <= size, L.cat + ' painting is not baked at its size');
+          ok(!P.mat.uniforms.uSize && !P.mat.uniforms.uCap, L.cat + ' painting would be rescaled as a point layer');
+        });
+      });
+      ok(typeof paintPending === 'function', 'paintPending missing');
+    });
     solarMotionOverride = runMotionOverride;
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
     if (/[?&]solarTest=1/.test(location.search)) setMsg(failures.length ? failures.join(' | ') : statusText());

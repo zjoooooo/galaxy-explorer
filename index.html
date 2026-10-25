@@ -1204,7 +1204,10 @@
       { p: galPos(69.7, -56.6, 0.0409),
         t: {"en":["TRAPPIST-1"],"hans":["TRAPPIST-1"],"hant":["TRAPPIST-1"],"ja":["トラピスト1"],"ko":["트라피스트-1"]},
         info: { en:{"type":"Ultracool red dwarf star","distance":"~40 light-years","constellation":"Aquarius","facts":[["Planets","7 (all Earth-size)"],["In habitable zone","3-4"]],"desc":"This dim, ultracool red dwarf is circled by seven roughly Earth-size planets — more Earth-size worlds than are known around any other single star. Three or four of them orbit within the habitable zone, where liquid water could exist. That makes TRAPPIST-1 the richest known laboratory for studying potentially habitable worlds.","catalog":"TRAPPIST-1"}, hans:{"type":"超冷红矮星","distance":"约 40 光年","constellation":"宝瓶座","facts":[["行星数量","7 颗（均为地球大小）"],["宜居带内","3–4 颗"]],"desc":"这颗昏暗的超冷红矮星拥有七颗与地球大小相近的行星，是目前已知拥有地球大小行星最多的单星系统。其中三到四颗位于可能存在液态水的宜居带内。这使 TRAPPIST-1 成为研究潜在宜居世界最丰富的天然实验室。","catalog":"TRAPPIST-1"}, hant:{"type":"超冷紅矮星","distance":"約 40 光年","constellation":"寶瓶座","facts":[["行星數量","7 顆（均為地球大小）"],["宜居帶內","3–4 顆"]],"desc":"這顆昏暗的超冷紅矮星擁有七顆與地球大小相近的行星，是目前已知擁有地球大小行星最多的單一恆星系統。其中三到四顆位於可能存在液態水的宜居帶內。這使 TRAPPIST-1 成為研究潛在宜居世界最豐富的天然實驗室。","catalog":"TRAPPIST-1"}, ja:{"type":"超低温の赤色矮星","distance":"約40光年","constellation":"みずがめ座","facts":[["惑星の数","7個（すべて地球サイズ）"],["ハビタブルゾーン内","3〜4個"]],"desc":"この暗く低温の赤色矮星の周りには、地球とほぼ同じ大きさの惑星が7個も回っており、単一の恒星を回る地球サイズの惑星の数としては知られる中で最多です。そのうち3〜4個は液体の水が存在しうるハビタブルゾーンに位置しています。トラピスト1は、生命を宿しうる世界を研究するうえで最も恵まれた天然の実験場です。","catalog":"TRAPPIST-1"}, ko:{"type":"극저온 적색왜성","distance":"약 40광년","constellation":"물병자리","facts":[["행성 수","7개 (모두 지구 크기)"],["생명체 거주가능 영역 내","3~4개"]],"desc":"이 어둡고 극저온인 적색왜성 주위에는 지구와 비슷한 크기의 행성이 7개나 돌고 있으며, 이는 하나의 항성을 도는 지구 크기 행성 수로는 알려진 것 중 가장 많습니다. 그중 3~4개는 액체 물이 존재할 수 있는 생명체 거주가능 영역에 놓여 있습니다. 이 덕분에 트라피스트-1은 잠재적 거주 가능 행성을 연구하기에 가장 풍부한 자연 실험실입니다.","catalog":"TRAPPIST-1"} } },
-      { p: galPos(121, -21.6, 202), cls: 'ext', fixed: true, gal: { mode: 'spiral', opts: { sq: 0.42, arms: 2 }, size: 330, fade: 0.7, stars: { count: 26000, radius: 132, arms: 2, tight: 0.9, inc: 1.3, roll: 0.6, warm: 0.32, warmK: 2.2 } },
+      { p: galPos(121, -21.6, 202), cls: 'ext', fixed: true, gal: { mode: 'spiral', opts: { sq: 0.42, arms: 2 }, size: 330, fade: 0.7, stars: { count: 26000, radius: 132, arms: 2, tight: 1.5, inc: 1.3, roll: 0.6, warm: 0.32, warmK: 2.2, starGain: 0.45, // tight = the painted arcs' winding
+        paint: { kind: 0, seed: 31, arm: [2, 1.5, 1.6, 0.6], rim: [1.2, 0.6, 0.2], body: [0.36, 1.0, 0.7, 0.12], ring: [0.66, 0.2, 0.75], lane: [0.9, 9, 0.12], core: [0.14, 0.9, 0.15, 1.2], tint: [0.35, 0, 0, 0.12],
+          pal: [[0, 0xfff1dc], [0.2, 0xffe2c0], [0.42, 0xf4c49a], [0.55, 0xe9c4d2], [0.8, 0xb8c2ff], [1.0, 0xa6b2f4]], young: 0xdbe4ff, hiiCol: 0xe85a72, hii: [0.45, 0, 1],
+          anchors: [[80, 34, 8, 0.6, 0xcfdcff]], bright: 0.55 } } }, // telescope palette: cream nucleus, tan inner disc, mauve, blue-violet ring; NGC 206 at its marker
         t: {"en":["Andromeda Galaxy","beyond the Milky Way"],"hans":["仙女座星系","银河系之外"],"hant":["仙女座星系","銀河系之外"],"ja":["アンドロメダ銀河","天の川銀河の外"],"ko":["안드로메다 은하","우리은하 너머"]},
         info: { en:{"type":"Spiral galaxy · external · not to scale","distance":"~2.5 million light-years","constellation":"Andromeda","facts":[["Diameter","~152,000 ly"],["Group","Local Group"]],"desc":"The nearest large galaxy to the Milky Way and the most distant object easily visible to the naked eye. It is heading our way at about 110 km/s; recent studies put the chance that the two galaxies merge within the next 10 billion years at roughly 50% to 90%, so the outcome is still uncertain. Shown on the far sky — far beyond the Milky Way and not to scale.","catalog":"M31"}, hans:{"type":"旋涡星系 · 银河系外 · 非真实比例","distance":"约 250 万光年","constellation":"仙女座","facts":[["直径","约 15.2 万光年"],["所属","本星系群"]],"desc":"距离银河系最近的大型星系，也是肉眼容易看到的最远天体。它正以约每秒 110 公里的速度向我们靠近；近年的研究估计，两者在未来 100 亿年内并合的概率约为 50% 到 90%，结局仍未确定。这里画在远方天幕上——远在银河系之外，非真实比例。","catalog":"M31"}, hant:{"type":"螺旋星系 · 銀河系外 · 非真實比例","distance":"約 250 萬光年","constellation":"仙女座","facts":[["直徑","約 15.2 萬光年"],["所屬","本星系群"]],"desc":"距離銀河系最近的大型星系，也是肉眼容易看到的最遠天體。它正以約每秒 110 公里的速度向我們靠近；近年的研究估計，兩者在未來 100 億年內合併的機率約為 50% 到 90%，結局仍未確定。這裡畫在遠方天幕上——遠在銀河系之外，非真實比例。","catalog":"M31"}, ja:{"type":"渦巻銀河 · 天の川銀河の外 · 実スケールではない","distance":"約250万光年","constellation":"アンドロメダ座","facts":[["直径","約15.2万光年"],["所属","局部銀河群"]],"desc":"天の川銀河に最も近い大型銀河で、肉眼でたやすく見える最も遠い天体です。秒速約110kmでこちらに近づいており、近年の研究では、今後100億年以内に二つの銀河が合体する確率は約50〜90%と見積もられ、結末はまだ定まっていません。ここでは遠くの天空に描いており、天の川銀河のはるか外側で実際のスケールではありません。","catalog":"M31"}, ko:{"type":"나선 은하 · 우리은하 밖 · 실제 비율 아님","distance":"약 250만 광년","constellation":"안드로메다자리","facts":[["지름","약 15.2만 광년"],["소속","국부 은하군"]],"desc":"우리은하에서 가장 가까운 대형 은하이며 맨눈으로 쉽게 볼 수 있는 가장 먼 천체입니다. 초속 약 110km로 우리에게 다가오고 있으며, 최근 연구들은 앞으로 100억 년 안에 두 은하가 병합할 확률을 약 50~90%로 추정해 결말은 아직 불확실합니다. 여기서는 먼 하늘에 그려져 있으며 우리은하 훨씬 바깥이고 실제 비율은 아닙니다.","catalog":"M31"} } },
       { p: galPos(133.61, -31.33, 175), cls: 'ext', fixed: true, gal: { mode: 'spiral', opts: { sq: 0.82, arms: 2, tight: 4.2, seed: 12.1 }, size: 250, fade: 0.72, stars: { count: 24000, radius: 108, arms: 2, tight: 0.72, inc: 0.78, roll: 2.2, warm: 0.04, warmK: 4, hii: 0.03, haloSize: 0.5, haloOpacity: 0.1, coreSize: 0.14, coreOpacity: 0.6 } },
@@ -4469,6 +4472,8 @@
       L.mat.uniforms.uSize.value = L.baseSize * Math.min(3.2, Math.max(0.8, dst / L.refDist)) * renderer.getPixelRatio();
       if (L.mat.uniforms.uCap) L.mat.uniforms.uCap.value = 34 * renderer.getPixelRatio(); // keeps the close-up star cap in sync if the perf watchdog drops pixelRatio
       if (!solarReducedMotion()) L.pts.quaternion.copy(L.q0).premultiply(galSpinTmp.setFromAxisAngle(L.axis, t * L.spin)); // spins in its own disc plane
+      if (L.paint) for (var pj = 0; pj < L.paint.length; pj++) { var PJ = L.paint[pj]; if (PJ.born === -1) PJ.born = t; // painting fades in when its bake lands
+        if (PJ.born !== null) PJ.mat.uniforms.uFade.value = videoMode || solarReducedMotion() ? 1 : Math.min(1, (t - PJ.born) / 0.6); }
     }
     for (var gvi = 0; gvi < galaxyVeils.length; gvi++) { // Magellanic gas veils breathe ±30% on long desynced periods (still under reduced motion)
       var GV = galaxyVeils[gvi];
@@ -5073,6 +5078,122 @@
       vmesh.position.copy(P); vmesh.renderOrder = 6; scene.add(vmesh);
       galaxyVols.push({ mesh: vmesh, mat: vmat, steps: 26 });
     }
+    // ── painted external galaxies ──
+    // The Milky Way's oil-paint idea (noise smeared along a flow field = brush strands), one shared bake program
+    // for all seven. Each galaxy brings its own shape and a palette sampled from telescope images, so none is a
+    // recoloured Milky Way. kind 0 = spiral disc, 1 = spheroid (drawn on a camera-facing impostor), 2 = photo plate.
+    // uBody per kind — 0: [old-disc scale, old weight, arm weight, inter-arm floor]; 1: [core radius, slope, -, stroke contrast];
+    // 2: [plate sky level, stroke contrast]. Positions are in the galaxy's local units; p is the Milky Way bake frame (R = 360).
+    var EXT_PAINT_FRAG =
+      'varying vec2 vP;' +
+      'uniform float uScale; uniform float uKind; uniform vec2 uSeed; uniform float uDetail; uniform float uBright;' +
+      'uniform vec4 uArm; uniform vec4 uRim; uniform vec4 uBody; uniform vec4 uRing; uniform vec4 uLane; uniform vec4 uCore; uniform vec4 uTint;' +
+      'uniform vec3 uPal[6]; uniform float uStop[6]; uniform vec3 uYoung; uniform vec3 uHiiCol; uniform vec4 uHii;' +
+      'uniform vec4 uAnchor[4]; uniform vec3 uAnchorCol[4]; uniform sampler2D uGuideLo; uniform sampler2D uGuideMid; uniform vec4 uPlateP;' +
+      'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }' +
+      'float noise(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }' +
+      'float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int k = 0; k < 5; k++){ v += a * noise(p); p = p * 2.03 + 1.7; a *= 0.5; } return v; }' +
+      'vec2 plateUv(vec2 l){ return vec2(l.x / uPlateP.x + 0.5, 0.5 - l.y / uPlateP.x); }' + // plate rows run top-down; the guide textures are flipped
+      'float plum(vec2 l){ return dot(texture2D(uGuideLo, plateUv(l)).rgb, vec3(0.3, 0.5, 0.2)); }' +
+      'vec2 flowDir(vec2 p){ float r = max(length(p), 2.0); vec2 er = p / r; vec2 et = vec2(-er.y, er.x); vec2 d = et;' +
+      '  if (uKind < 0.5) d = normalize(er + et * r * uArm.y * 6.28318 / 360.0);' + // spiral: the same winding as the star arms
+      '  else if (uKind > 1.5) { vec2 l = p / uScale; float h = uPlateP.x * 0.04; vec2 g = vec2(plum(l + vec2(h, 0.0)) - plum(l - vec2(h, 0.0)), plum(l + vec2(0.0, h)) - plum(l - vec2(0.0, h)));' +
+      '    if (dot(g, g) > 1e-7) d = normalize(vec2(-g.y, g.x)); }' + // photo: strokes follow the plate's brightness contours
+      '  float sw = (fbm(p * 0.012 + 3.0 + uSeed) - 0.5) * uArm.w; float cs = cos(sw), sn = sin(sw); return vec2(d.x * cs - d.y * sn, d.x * sn + d.y * cs); }' +
+      'float lic(vec2 p, float freq, float len){ float s = 0.0, w = 0.0; vec2 q = p; vec2 o = vec2(13.1, 7.7) + uSeed;' +
+      '  for (int i = 0; i < 14; i++){ float t = float(i) / 14.0; float wt = 1.0 - t; s += noise(q * freq + o) * wt; w += wt; q += flowDir(q) * (len / 14.0); }' +
+      '  q = p; for (int i = 0; i < 14; i++){ q -= flowDir(q) * (len / 14.0); float t = float(i + 1) / 14.0; float wt = 1.0 - t; s += noise(q * freq + o) * wt; w += wt; }' +
+      '  return s / w; }' +
+      'void main(){' +
+      '  vec2 p = vP * uScale; float r = length(p), nr = r / 360.0, ang = atan(p.y, p.x);' +
+      '  float edgeN = fbm(p * 0.008 + 21.0 + uSeed), env = smoothstep(uRim.x, uRim.y, nr + (edgeN - 0.5) * uRim.z);' +
+      '  vec3 pl = vec3(0.0); float G = 0.0;' +
+      '  if (uKind > 1.5) { pl = texture2D(uGuideMid, plateUv(vP)).rgb; env = smoothstep(uRim.x, uRim.y, plum(vP) + (edgeN - 0.5) * uRim.z);' + // photo: the rim follows the plate itself
+      '    G = pow(clamp((dot(pl, vec3(0.3, 0.5, 0.2)) - uBody.x) / (uPlateP.y - uBody.x), 0.0, 1.0), uPlateP.z); }' +
+      '  float pli = dot(pl, vec3(0.3, 0.5, 0.2)) + 0.02, blue = (pl.b - pl.r) / pli, red = (pl.r - pl.g) / pli;' + // the plates are colour-graded: read their hue, not their colours
+      '  if (env <= 0.0) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }' +
+      '  vec2 wp = p * 0.011 + uSeed; float w1 = fbm(wp), w2 = fbm(wp + 4.3);' +
+      '  float theta = ang + (w1 - 0.5) * 0.55 - nr * uArm.y * 6.28318;' +
+      '  float arm = uKind < 0.5 ? pow(max(0.0, cos(uArm.x * theta) * 0.5 + 0.5), uArm.z) : 0.0;' +
+      '  float lane = uKind < 0.5 ? pow(max(0.0, cos(uArm.x * (theta - uLane.z + (w2 - 0.5) * 0.16)) * 0.5 + 0.5), uLane.y) : 0.0;' +
+      '  float fine = lic(p, 1.25 * uDetail, 7.0 / uDetail), coarse = lic(p, 0.22 * uDetail, 34.0 / uDetail);' +
+      '  float strands = clamp((fine - 0.5) * 3.4 + 0.5, 0.0, 1.0) * 0.6 + clamp((coarse - 0.5) * 2.6 + 0.5, 0.0, 1.0) * 0.5;' +
+      '  float young = arm * mix(1.0, exp(-pow((nr - uRing.x) / uRing.y, 2.0)), uRing.z);' +
+      '  float dens = uKind > 1.5 ? G * mix(1.0, 0.12 + 1.15 * strands * strands, uBody.y)' +
+      '    : uKind > 0.5 ? pow(1.0 + nr * nr / (uBody.x * uBody.x), -uBody.y) * mix(1.0, 0.12 + 1.15 * strands * strands, uBody.w)' +
+      '    : exp(-nr / uBody.x) * uBody.y * (0.7 + 0.3 * strands) + (uBody.w + (1.0 - uBody.w) * young) * uBody.z * (0.12 + 1.15 * strands * strands);' +
+      '  dens *= env * (0.6 + 0.55 * fbm(p * 0.03 + vec2(w1, w2) * 3.0));' + // patchy
+      '  float absorb = lane * smoothstep(0.12, 0.3, nr) * smoothstep(1.0, 0.75, nr) * (0.45 + 0.75 * clamp((coarse - 0.35) * 2.5, 0.0, 1.0)) * (0.55 + 0.75 * fbm(p * 0.045 + 9.0 + uSeed));' +
+      '  absorb = clamp(absorb * 1.5, 0.0, 1.0) * uLane.x; dens *= 1.0 - absorb;' + // dark lanes on each arm's inner edge
+      '  float t = mix(nr, 1.0 - G, uPlateP.w) + (fbm(p * 0.006 + 40.0 + uSeed) - 0.5) * uTint.w;' + // palette by radius, or by plate brightness
+      '  vec3 col = uPal[0]; for (int i = 1; i < 6; i++) col = mix(col, uPal[i], smoothstep(uStop[i - 1], uStop[i], t));' +
+      '  col *= mix(vec3(1.0), vec3(1.0, 0.78, 0.62), absorb);' + // lane rims redden (brown dust)
+      '  float yw = uKind > 1.5 ? smoothstep(uTint.y, uTint.z, blue) : young * strands;' +
+      '  col = mix(col, uYoung, clamp(yw * uTint.x, 0.0, 1.0));' + // young blue stars: on the arms, or where the plate is blue
+      '  float kn = smoothstep(0.62 - uHii.w, 0.8 - uHii.w, noise(p * 0.55 * uDetail + 31.0 + uSeed) * 0.55 + noise(p * 1.6 * uDetail + 5.0 + uSeed) * 0.45) * env * (0.4 + 0.8 * smoothstep(0.4, 0.7, fbm(p * 0.02 + 70.0 + uSeed)));' +
+      '  kn *= uKind > 1.5 ? (uHii.y + (1.0 - uHii.y) * smoothstep(0.22, 0.32, red)) * smoothstep(0.05, 0.3, G) : (0.35 + 0.65 * young) * smoothstep(0.16, 0.34, nr);' +
+      '  col = mix(col, uHiiCol, clamp(kn * 1.8, 0.0, 1.0) * uHii.x); dens += kn * uHii.x * uHii.z * (1.0 - absorb);' + // pink star-forming specks
+      '  for (int i = 0; i < 4; i++){ vec4 A = uAnchor[i]; if (A.w > 0.0) { float d = length(vP - A.xy) / A.z;' + // named nebulae / star clouds under their markers
+      '    float a = exp(-d * d) * A.w * (0.2 + 1.4 * strands * strands) * (0.6 + 0.8 * fbm(p * 0.05 + float(i) * 7.0)), hot = exp(-d * d * 6.0) * A.w;' +
+      '    col = mix(col, uAnchorCol[i], clamp(a * 1.5, 0.0, 1.0)); col = mix(col, vec3(1.0, 0.92, 0.94), clamp(hot, 0.0, 0.7)); dens += a + hot * 0.6; } }' +
+      '  float core = exp(-pow(nr / uCore.x, uCore.w));' +
+      '  col = mix(col, uPal[0], clamp(core * 1.3, 0.0, 1.0));' +
+      '  vec3 c = col * (dens * 0.62 + core * uCore.y * (1.0 - uCore.z + uCore.z * strands)) * uBright;' +
+      '  gl_FragColor = vec4(sqrt(clamp(c, 0.0, 1.0)) + (hash(gl_FragCoord.xy) - 0.5) / 255.0, 1.0);' + // sqrt-encoded 8-bit: dark outskirts keep their gradations
+      '}';
+    var EXT_DISC_VERT = 'varying vec2 vUv; varying float vDepth; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); vDepth = -mv.z; gl_Position = projectionMatrix * mv; }';
+    var EXT_IMPOSTOR_VERT = // spheroid: a quad facing the camera, squashed along the projected short axis by the axis ratio this view sees
+      'uniform vec3 uAxis; uniform float uQ; varying vec2 vUv; varying float vDepth;' +
+      'void main(){ vec3 C = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz, V = normalize(cameraPosition - C); float ci = dot(uAxis, V);' +
+      '  vec3 n = uAxis - V * ci; n = dot(n, n) > 1e-6 ? normalize(n) : normalize(cross(V, abs(V.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));' +
+      '  vec3 wp = C + cross(n, V) * position.x + n * position.y * sqrt(ci * ci + uQ * uQ * (1.0 - ci * ci));' +
+      '  vUv = uv; vec4 mv = viewMatrix * vec4(wp, 1.0); vDepth = -mv.z; gl_Position = projectionMatrix * mv; }';
+    var EXT_DISPLAY_FRAG = 'uniform sampler2D uMap; uniform float uGain; uniform float uFade; uniform vec3 uNear; varying vec2 vUv; varying float vDepth;' +
+      'void main(){ vec3 c = texture2D(uMap, vUv).rgb; c *= c; gl_FragColor = vec4(c * mix(uNear.z, 1.0, smoothstep(uNear.x, uNear.y, vDepth)) * uGain * uFade, 1.0); }';
+    function paintGalaxy(L, sp, R, plate, plateSpan) { // bake one painting and mount it under the galaxy's stars (plate: the 256² canvas of its photo)
+      var touch = paintedGalaxy.touch, size = sp.size ? (touch ? sp.size / 2 : sp.size) : (touch ? 1024 : 2048), kind = sp.kind || 0;
+      var span = kind === 2 ? plateSpan : R * (sp.span || 2.5);
+      function lin(h) { return new THREE.Color(h).convertSRGBToLinear(); }
+      function v4(a, d) { a = a || d; return new THREE.Vector4(a[0], a[1], a[2] || 0, a[3] || 0); }
+      function guide(n) { var src = plate; while (src.width > n) { var h = document.createElement('canvas'); h.width = h.height = src.width / 2; h.getContext('2d').drawImage(src, 0, 0, h.width, h.height); src = h; } // box-halve down to n²
+        var t = new THREE.CanvasTexture(src); t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; return t; }
+      var an = sp.anchors || [], anchors = [], anchorCols = [];
+      for (var ai = 0; ai < 4; ai++) { anchors.push(an[ai] ? new THREE.Vector4(an[ai][0], an[ai][1], an[ai][2], an[ai][3]) : new THREE.Vector4()); anchorCols.push(lin(an[ai] ? an[ai][4] : 0)); }
+      var pl = sp.plate || [1, 1, 0];
+      var u = {
+        uScale: { value: 360 / R }, uKind: { value: kind }, uSeed: { value: new THREE.Vector2(sp.seed || 0, (sp.seed || 0) * 0.37) },
+        uDetail: { value: sp.detail || 0.6 }, uBright: { value: sp.bright || 1 },
+        uArm: { value: v4(sp.arm, [2, 1, 2, 0.8]) }, uRim: { value: v4(sp.rim, [1.12, 0.62, 0.22]) }, uBody: { value: v4(sp.body, [0.3, 0, 1, 0.3]) },
+        uRing: { value: v4(sp.ring, [0.5, 0.2, 0]) }, uLane: { value: v4(sp.lane, [0, 7, 0.12]) }, uCore: { value: v4(sp.core, [0.15, 0, 0.5, 1.4]) },
+        uTint: { value: v4(sp.tint, [0, 0.12, 0.25, 0.12]) },
+        uPal: { value: sp.pal.map(function (s) { return lin(s[1]); }) }, uStop: { value: sp.pal.map(function (s) { return s[0]; }) },
+        uYoung: { value: lin(sp.young || 0xdbe4ff) }, uHiiCol: { value: lin(sp.hiiCol || 0xe85a72) }, uHii: { value: v4(sp.hii, [0, 0, 1, 0]) },
+        uAnchor: { value: anchors }, uAnchorCol: { value: anchorCols },
+        uGuideLo: { value: plate ? guide(32) : null }, uGuideMid: { value: plate ? guide(64) : null },
+        uPlateP: { value: new THREE.Vector4(span, pl[0], pl[1], pl[2]) } // span, brightness norm, gamma, palette-by-brightness
+      };
+      var rt = new THREE.WebGLRenderTarget(size, size, { depthBuffer: false, format: THREE.RGBAFormat, type: THREE.UnsignedByteType, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: true });
+      rt.texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      var geo = new THREE.PlaneGeometry(span, span, 1, 1), bakeScene = new THREE.Scene();
+      bakeScene.add(new THREE.Mesh(geo, new THREE.ShaderMaterial({ uniforms: u, fragmentShader: EXT_PAINT_FRAG, blending: THREE.NoBlending, depthWrite: false,
+        vertexShader: 'varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }' })));
+      var bakeCam = new THREE.OrthographicCamera(-span / 2, span / 2, span / 2, -span / 2, 0.1, 10); bakeCam.position.z = 1; bakeCam.lookAt(0, 0, 0);
+      var near = sp.near || [0.35, 1.5, 0.12], mapU = { value: null };
+      var mat = new THREE.ShaderMaterial({
+        uniforms: { uMap: mapU, uGain: { value: sp.gain || 1 }, uFade: { value: 0 }, uNear: { value: new THREE.Vector3(near[0] * R, near[1] * R, near[2]) }, uAxis: { value: L.axis }, uQ: { value: sp.q || 1 } },
+        vertexShader: kind === 1 ? EXT_IMPOSTOR_VERT : EXT_DISC_VERT, fragmentShader: EXT_DISPLAY_FRAG,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
+      });
+      var mesh = new THREE.Mesh(geo, mat); mesh.visible = false; // shown once baked, then fades in
+      if (kind === 1) mesh.frustumCulled = false; else mesh.rotation.x = Math.PI / 2; // plane (x, y) → the galaxy's (x, z), the frame of its stars
+      L.pts.add(mesh);
+      var P = { mesh: mesh, mat: mat, size: size, born: null };
+      (L.paint = L.paint || []).push(P);
+      var job = { rt: rt, scene: bakeScene, cam: bakeCam, grid: size / (touch ? 256 : 512), next: 0,
+        done: function () { mapU.value = rt.texture; mesh.visible = true; if (P.born === null) P.born = -1; } };
+      paintSchedule(job);
+      cv.addEventListener('webglcontextrestored', function () { job.next = 0; paintFinish(job); }); // a restored context brings the target back empty
+    }
     function buildGalaxyStars(P, o) {
       var TAU = 6.28318530718, N = Math.max(600, (o.count || 12000) | 0); // full LOD count; per-frame drawRange trims by distance
       var R = o.radius || 120, kind = o.kind || 'spiral';
@@ -5158,6 +5279,9 @@
           colA[i * 3] = mix.r; colA[i * 3 + 1] = mix.g; colA[i * 3 + 2] = mix.b;
         }
       }
+      if (o.starGain) for (i = 0; i < N * 3; i++) colA[i] *= o.starGain; // painted galaxies: the painting carries the light, the stars dress it
+      var paints = o.paint ? [].concat(o.paint) : [];
+      if (o.photo && paints.some(function (s) { return s.kind === 2; })) paintWaiting++;
       var g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       g.setAttribute('aColor', new THREE.BufferAttribute(colA, 3));
@@ -5194,8 +5318,11 @@
             }
             placed++;
           }
+          if (o.starGain) for (var di = 0; di < NN * 3; di++) ca.array[di] *= o.starGain;
           pa.needsUpdate = ca.needsUpdate = sa.needsUpdate = true;
+          if (paints.some(function (s) { return s.kind === 2; })) { paints.forEach(function (s) { if (s.kind === 2) paintGalaxy(selfLOD, s, R, pc, span); }); paintWaiting--; }
         };
+        im.onerror = function () { if (paints.some(function (s) { return s.kind === 2; })) paintWaiting--; }; // no plate: keep the procedural stars, unpainted
         im.src = o.photo.src;
       })(g, N);
       var gmat = new THREE.ShaderMaterial({
@@ -5219,12 +5346,14 @@
       galaxyLODs.push({ pts: pts, mat: gmat, center: P.clone(), maxN: N, refDist: R * 3, baseSize: (o.pointSize || 1.9),
         q0: q0, axis: nrm.clone(), spin: (o.spin != null ? o.spin : 0.018) }); // per-frame LOD + slow self-rotation about the disc axis
       // bulge = a bright compact nucleus + a faint extended warm halo (avoids a solid grey ball)
-      function bulge(sz, op, hex) { var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: BULGE_TEX, color: new THREE.Color(hex), transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.copy(P); s.scale.set(sz, sz, 1); scene.add(s); }
-      bulge(R * (o.haloSize || 0.62), o.haloOpacity || 0.16, o.halo || 0xffcf8a); // soft outer bulge glow
-      bulge(R * (o.coreSize || 0.2), o.coreOpacity || 0.9, o.core || 0xfff1dc);   // bright nucleus
+      function bulge(sz, op, hex) { if (!op) return; var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: BULGE_TEX, color: new THREE.Color(hex), transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.copy(P); s.scale.set(sz, sz, 1); scene.add(s); }
+      bulge(R * (o.haloSize || 0.62), o.haloOpacity != null ? o.haloOpacity : 0.16, o.halo || 0xffcf8a); // soft outer bulge glow
+      bulge(R * (o.coreSize || 0.2), o.coreOpacity != null ? o.coreOpacity : 0.9, o.core || 0xfff1dc);   // bright nucleus
       if (o.halo2Size) bulge(R * o.halo2Size, o.halo2Opacity || 0.07, o.halo2 || 0xfdf6ea); // extra faint extended envelope — stacked gaussians ≈ smooth edgeless falloff (Sombrero)
       if (o.nucleusSize) { bulge(R * o.nucleusSize * 1.9, 0.9, o.nucleus || 0xfffdf6); bulge(R * o.nucleusSize, 1.0, 0xffffff); } // a single blazing nucleus body — outshines the particle grain at the very centre
       var lodRef = galaxyLODs[galaxyLODs.length - 1];
+      var selfLOD = lodRef;
+      paints.forEach(function (s) { if (s.kind !== 2) paintGalaxy(lodRef, s, R); }); // photo-plate paintings wait for their plate
       if (o.veils) for (var vi = 0; vi < o.veils.length; vi++) { // dreamy pastel gas veils — large faint additive blobs; depth comes from stacking thin layers, never one dense one
         var V = o.veils[vi];
         var vmap = V.img != null ? VEIL_TEX_LOADER.load(V.img) : (V.wisp != null ? wispTexture(V.wisp) : BULGE_TEX); // real-photo plate > procedural strands > smooth glow
