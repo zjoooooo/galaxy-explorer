@@ -4527,6 +4527,7 @@
     var fnow = nowMs;
     if (perfLast) { perfEMA += (Math.min(fnow - perfLast, 500) - perfEMA) * 0.05; }
     perfLast = fnow;
+    if (paintQueue.length) perfNextCheck = Math.max(perfNextCheck, fnow + 8000); // tile bakes are a one-off cost: judge the frame rate only after them
     if (!videoMode && fnow > perfNextCheck) {
       perfNextCheck = fnow + 10000;
       if (perfEMA > 40) { // sustained < ~25fps
@@ -5088,18 +5089,18 @@
       '  float lane = uKind < 0.5 ? pow(max(0.0, cos(uArm.x * (theta - uLane.z + (w2 - 0.5) * 0.16)) * 0.5 + 0.5), uLane.y) : 0.0;' +
       '  float fine = lic(p, 1.25 * uDetail, 7.0 / uDetail), coarse = lic(p, 0.22 * uDetail, 34.0 / uDetail);' +
       '  float strands = clamp((fine - 0.5) * 3.4 + 0.5, 0.0, 1.0) * 0.6 + clamp((coarse - 0.5) * 2.6 + 0.5, 0.0, 1.0) * 0.5;' +
-      '  float young = arm * mix(1.0, exp(-pow((nr - uRing.x) / uRing.y, 2.0)), uRing.z);' +
+      '  float rz = (nr - uRing.x) / uRing.y, young = arm * mix(1.0, exp(-rz * rz), uRing.z);' + // rz * rz, not pow(): pow of a negative base is undefined in GLSL
       '  float dens = uKind > 1.5 ? G * mix(1.0, 0.12 + 1.15 * strands * strands, uBody.y)' +
       '    : uKind > 0.5 ? pow(1.0 + nr * nr / (uBody.x * uBody.x), -uBody.y) * mix(1.0, 0.12 + 1.15 * strands * strands, uBody.w)' +
       '    : exp(-nr / uBody.x) * uBody.y * (0.7 + 0.3 * strands) + (uBody.w + (1.0 - uBody.w) * young) * uBody.z * (0.12 + 1.15 * strands * strands);' +
       '  dens *= env * (0.6 + 0.55 * fbm(p * 0.03 + vec2(w1, w2) * 3.0));' + // patchy
       '  float absorb = lane * smoothstep(0.12, 0.3, nr) * smoothstep(1.0, 0.75, nr) * (0.45 + 0.75 * clamp((coarse - 0.35) * 2.5, 0.0, 1.0)) * (0.55 + 0.75 * fbm(p * 0.045 + 9.0 + uSeed));' +
-      '  absorb = clamp(clamp(absorb * 1.5, 0.0, 1.0) * uLane.x + uLane.w * exp(-pow((nr - uRing.x + 0.04) / (uRing.y * 0.7), 2.0)) * (0.5 + 0.8 * clamp((coarse - 0.35) * 2.5, 0.0, 1.0)), 0.0, 1.0);' +
+      '  absorb = clamp(clamp(absorb * 1.5, 0.0, 1.0) * uLane.x + uLane.w * exp(-(rz + 0.04 / uRing.y) * (rz + 0.04 / uRing.y) / 0.49) * (0.5 + 0.8 * clamp((coarse - 0.35) * 2.5, 0.0, 1.0)), 0.0, 1.0);' +
       '  dens *= 1.0 - absorb;' + // dark lanes on each arm's inner edge, plus an optional dust ring just inside the star ring (Sombrero)
       '  float t = mix(nr, 1.0 - G, uPlateP.w) + (fbm(p * 0.006 + 40.0 + uSeed) - 0.5) * uTint.w;' + // palette by radius, or by plate brightness
       '  vec3 col = uPal[0]; for (int i = 1; i < 6; i++) col = mix(col, uPal[i], smoothstep(uStop[i - 1], uStop[i], t));' +
       '  col *= mix(vec3(1.0), vec3(1.0, 0.78, 0.62), absorb);' + // lane rims redden (brown dust)
-      '  float yw = uKind > 1.5 ? smoothstep(uTint.y, uTint.z, blue) : young * strands;' +
+      '  float yw = uKind > 1.5 ? smoothstep(uTint.y, max(uTint.z, uTint.y + 0.01), blue) : young * strands;' +
       '  col = mix(col, uYoung, clamp(yw * uTint.x, 0.0, 1.0));' + // young blue stars: on the arms, or where the plate is blue
       '  float kn = smoothstep(0.62 - uHii.w, 0.8 - uHii.w, noise(p * 0.55 * uDetail + 31.0 + uSeed) * 0.55 + noise(p * 1.6 * uDetail + 5.0 + uSeed) * 0.45) * env * (0.4 + 0.8 * smoothstep(0.4, 0.7, fbm(p * 0.02 + 70.0 + uSeed)));' +
       '  kn *= uKind > 1.5 ? (uHii.y + (1.0 - uHii.y) * smoothstep(0.22, 0.32, red)) * smoothstep(0.05, 0.3, G) : (0.35 + 0.65 * young) * smoothstep(0.16, 0.34, nr);' +
@@ -5163,7 +5164,7 @@
       var job = { rt: rt, scene: bakeScene, cam: bakeCam, grid: size / (touch ? 256 : 512), next: 0,
         done: function () { mapU.value = rt.texture; mesh.visible = true; if (P.born === null) P.born = -1; } };
       paintSchedule(job);
-      cv.addEventListener('webglcontextrestored', function () { job.next = 0; paintFinish(job); }); // a restored context brings the target back empty
+      cv.addEventListener('webglcontextrestored', function () { job.next = 0; mesh.visible = false; P.born = null; if (paintQueue.indexOf(job) < 0) paintSchedule(job); }); // a restored context brings the target back empty: re-bake tile by tile and fade in again
     }
     function buildGalaxyStars(P, o) {
       var TAU = 6.28318530718, N = Math.max(600, (o.count || 12000) | 0); // full LOD count; per-frame drawRange trims by distance
@@ -5260,6 +5261,7 @@
       if (o.photo) (function (gg, NN) { // repaint the cloud from a real photograph once it loads: positions importance-sampled by brightness, colors straight from the pixels — crisp at ANY zoom, unlike a billboard
         var im = new Image();
         im.onload = function () {
+          if (paints.some(function (s) { return s.kind === 2; })) paintWaiting--; // first: a throw below must not leave paintPending() stuck
           var PS = 256, pc = document.createElement('canvas'); pc.width = pc.height = PS;
           var px = pc.getContext('2d'); px.drawImage(im, 0, 0, PS, PS);
           var idata = px.getImageData(0, 0, PS, PS).data;
@@ -5291,7 +5293,7 @@
           }
           if (o.starGain) for (var di = 0; di < NN * 3; di++) ca.array[di] *= o.starGain;
           pa.needsUpdate = ca.needsUpdate = sa.needsUpdate = true;
-          if (paints.some(function (s) { return s.kind === 2; })) { paints.forEach(function (s) { if (s.kind === 2) paintGalaxy(selfLOD, s, R, pc, span); }); paintWaiting--; }
+          paints.forEach(function (s) { if (s.kind === 2) paintGalaxy(selfLOD, s, R, pc, span); });
         };
         im.onerror = function () { if (paints.some(function (s) { return s.kind === 2; })) paintWaiting--; }; // no plate: keep the procedural stars, unpainted
         im.src = o.photo.src;
