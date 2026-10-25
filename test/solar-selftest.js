@@ -588,6 +588,7 @@
         });
       });
       ok(typeof paintPending === 'function', 'paintPending missing');
+      ok(galaxyVols.length === 2, 'expected only the SMC volume and the Cen A lane, got ' + galaxyVols.length);
     });
     solarMotionOverride = runMotionOverride;
     window.__solarTestResult = { passed: failures.length === 0, failures: failures };
