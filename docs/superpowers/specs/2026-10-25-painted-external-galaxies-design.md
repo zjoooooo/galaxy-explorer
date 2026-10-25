@@ -1,6 +1,6 @@
 # Painted External Galaxies Design
 
-**Status:** Draft for owner review
+**Status:** Approved (owner, 2026-10-25)
 **Date:** 2026-10-25
 
 Sub-project 2 of 3. Sub-project 1 (the painted Milky Way) shipped in PR #20. Sub-project 3 (the sci-fi HUD frame and captions) follows as a separate spec.
