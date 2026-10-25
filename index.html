@@ -748,6 +748,35 @@
   // An oil-painted disc baked once on the GPU (brush strokes smeared along the spiral flow,
   // dark lanes on each arm's inner edge, pink star-forming specks, a cream-gold core). Far away
   // it reads as a painting; up close the painting fades out and the stars take over. Design: docs/superpowers/specs/2026-10-25-painted-milky-way-design.md
+  // Big painted textures are filled one tile per frame from a shared queue: the Milky Way first, then the
+  // external galaxies (photo-plate ones join when their plate loads). Video mode bakes each job at once.
+  var paintQueue = [], paintRaf = 0, paintWaiting = 0; // paintWaiting: photo plates still loading
+  function paintTile(job) { // render one cell of a grid×grid split of the job's target (grid 1 = whole target)
+    var rt = job.rt, grid = job.grid, tile = job.next++, n = rt.width / grid, cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha();
+    rt.scissor.set((tile % grid) * n, Math.floor(tile / grid) * n, n, n); rt.scissorTest = grid > 1;
+    rt.texture.generateMipmaps = tile === grid * grid - 1; // three remips the whole target after every render; only the finished bake is ever sampled
+    renderer.setRenderTarget(rt); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(job.scene, job.cam);
+    renderer.setRenderTarget(null); renderer.setClearColor(cc, ca); rt.scissorTest = false;
+  }
+  function paintFinish(job) { // bake whatever is left of a job right now
+    while (job.next < job.grid * job.grid) paintTile(job);
+    var i = paintQueue.indexOf(job); if (i >= 0) paintQueue.splice(i, 1);
+    job.done();
+  }
+  function paintStep() {
+    paintRaf = 0;
+    var job = paintQueue[0]; if (!job) return;
+    paintTile(job);
+    if (job.next >= job.grid * job.grid) { paintQueue.shift(); job.done(); }
+    if (paintQueue.length) paintRaf = requestAnimationFrame(paintStep);
+  }
+  function paintSchedule(job) {
+    if (videoMode) { paintFinish(job); return; } // captures need every painting on their first frame
+    paintQueue.push(job);
+    if (!paintRaf) paintRaf = requestAnimationFrame(paintStep);
+  }
+  function paintFlush() { while (paintQueue.length) paintFinish(paintQueue[0]); }
+  function paintPending() { return paintQueue.length + paintWaiting; }
   var paintedGalaxy = null;
   (function buildPaintedGalaxy() {
     var R = DUST.radius, TAU = 6.28318530718;
@@ -813,19 +842,12 @@
     });
     var bakeScene = new THREE.Scene(); bakeScene.add(new THREE.Mesh(geo, bakeMat));
     var bakeCam = new THREE.OrthographicCamera(-span / 2, span / 2, span / 2, -span / 2, 0.1, 10); bakeCam.position.z = 1; bakeCam.lookAt(0, 0, 0);
-    function bakeTile(rt, tile, grid) { // render one cell of a grid×grid split of the target (grid 1 = whole target)
-      var n = rt.width / grid, cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha();
-      rt.scissor.set((tile % grid) * n, Math.floor(tile / grid) * n, n, n); rt.scissorTest = grid > 1;
-      rt.texture.generateMipmaps = tile === grid * grid - 1; // three remips the whole target after every render; only the finished bake is ever sampled
-      renderer.setRenderTarget(rt); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(bakeScene, bakeCam);
-      renderer.setRenderTarget(null); renderer.setClearColor(cc, ca); rt.scissorTest = false;
-    }
-    var preview = makeRT(1024), full = makeRT(size), mapU = { value: preview.texture }, next = 0;
-    bakeTile(preview, 0, 1); // ~1/16 of the full cost: the disc is there on the first frame
+    var preview = makeRT(1024), full = makeRT(size), mapU = { value: preview.texture };
+    paintFinish({ rt: preview, scene: bakeScene, cam: bakeCam, grid: 1, next: 0, done: function () {} }); // ~1/16 of the full cost: the disc is there on the first frame
     function finish() { mapU.value = full.texture; if (preview) { preview.dispose(); preview = null; } }
-    function bakeAll() { for (var t = 0; t < tiles * tiles; t++) bakeTile(full, t, tiles); next = tiles * tiles; finish(); }
-    function stepBake() { if (next >= tiles * tiles) return; bakeTile(full, next++, tiles); if (next < tiles * tiles) requestAnimationFrame(stepBake); else finish(); }
-    if (videoMode) bakeAll(); else requestAnimationFrame(stepBake); // captures need the final texture on their first frame
+    var job = { rt: full, scene: bakeScene, cam: bakeCam, grid: tiles, next: 0, done: finish };
+    function bakeAll() { job.next = 0; paintFinish(job); }
+    paintSchedule(job);
     cv.addEventListener('webglcontextrestored', bakeAll); // a restored context brings the target back empty
     // the disc: the painting fades by view depth, so whatever is close to the camera dissolves into stars.
     // Two faint copies above/below give it some body edge-on; they only draw at grazing angles.
