@@ -46,12 +46,15 @@ layers real NASA-based surface textures on top for the planets, moons and Sun.
   globular clusters, supernova remnants, and radio jets, each with its own card.
   A bottom strip lists all 25 beacons inside the Milky Way, so nothing needs
   hunting.
-- **Photo-sampled neighbour galaxies** — the Magellanic Clouds and Centaurus A
-  take their star positions and colours from real ESO/NOIRLab photographs. The
-  Clouds are raymarched volumes (26 steps through domain-warped 3D noise, two
-  hues blending through their own noise field), and Centaurus A's dust lane is a
-  raymarched absorption slab that reddens at its thin edges. Every star in the
-  external galaxies and along the Milky Way's arms has a hot core inside a
+- **Painted neighbour galaxies** — the seven external galaxies are painted the
+  same way, each in the colours telescopes see: Andromeda's cream core and
+  blue-violet ring, Triangulum's pink star-forming knots, the Sombrero's ivory
+  crown and dark brim, M87's warm glow. Ellipticals sit on camera-facing
+  paintings that flatten as you orbit them. The Magellanic Clouds and
+  Centaurus A take their star positions and colours from real ESO/NOIRLab
+  photographs, and their paintings follow those plates; Centaurus A's dust lane
+  is a raymarched absorption slab that reddens at its thin edges. Every star in
+  the external galaxies and along the Milky Way's arms has a hot core inside a
   coloured halo; in the external galaxies they are also size-capped so close
   fly-bys stay crisp.
 - **Radio-galaxy jets** — **Centaurus A**'s jet borrows the comet's ion-tail
